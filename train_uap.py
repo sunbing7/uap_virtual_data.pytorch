@@ -20,45 +20,45 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
     # pretrained
-    parser.add_argument('--dataset', default='imagenet', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
-                        help='Used dataset to generate UAP (default: imagenet)')
-    parser.add_argument('--pretrained_dataset', default='imagenet', choices=['cifar10', 'cifar100', 'imagenet'],
-                        help='Used dataset to train the initial model (default: imagenet)')
-    parser.add_argument('--pretrained_arch', default='vgg16', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+                        help='Used dataset to generate UAP (default: cifar10)')
+    parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
+                        help='Used dataset to train the initial model (default: cifar10)')
+    parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                        'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                        'inception_v3'],
-                        help='Used model architecture: (default: vgg16)')
+                        help='Used model architecture: (default: alexnet)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     # Parameters regarding UAP
     parser.add_argument('--epsilon', type=float, default=0.03922,
                         help='Norm restriction of UAP (default: 10/255)')
-    parser.add_argument('--num_iterations', type=int, default=2000,
+    parser.add_argument('--num_iterations', type=int, default=5000,
                         help='Number of iterations (default: 2000)')
-    parser.add_argument('--result_subfolder', default='default', type=str,
+    parser.add_argument('--result_subfolder', default='result', type=str,
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
     # Optimization options
-    parser.add_argument('--loss_function', default='ce', choices=['ce', 'neg_ce', 'logit', 'bounded_logit', 
+    parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
                                                                   'bounded_logit_fixed_ref', 'bounded_logit_neg'],
-                        help='Used loss function for source classes: (default: cw_logit)')
+                        help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
     parser.add_argument('--confidence', default=0., type=float,
                         help='Confidence value for C&W losses (default: 0.0)')
-    parser.add_argument('--targeted',  action='store_true',
+    parser.add_argument('--targeted',  action='store_true', default='True',
                         help='Target a specific class (default: False)')
-    parser.add_argument('--target_class', type=int, default=0,
-                        help='Target class (default: 0)')
+    parser.add_argument('--target_class', type=int, default=7,
+                        help='Target class (default: 7)')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='Learning Rate (default: 0.001)')
     parser.add_argument('--print_freq', default=200, type=int, metavar='N',
                         help='print frequency (default: 200)')
-    parser.add_argument('--ngpu', type=int, default=1,
+    parser.add_argument('--ngpu', type=int, default=0,
                         help='Number of used GPUs (0 = CPU) (default: 1)')
-    parser.add_argument('--workers', type=int, default=6,
+    parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
     args = parser.parse_args()
 
@@ -123,7 +123,7 @@ def main():
     model_path = get_model_path(dataset_name=args.pretrained_dataset,
                                 network_arch=args.pretrained_arch,
                                 random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, "checkpoint.pth.tar")
+    model_weights_path = os.path.join(model_path, "alexnet_cifar10.pth")
 
     target_network = get_network(args.pretrained_arch,
                                 input_size=input_size,
@@ -136,8 +136,16 @@ def main():
     target_network.eval()
     # Imagenet models use the pretrained pytorch weights
     if args.pretrained_dataset != "imagenet":
-        network_data = torch.load(model_weights_path)
-        target_network.load_state_dict(network_data['state_dict'])
+        #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        #target_network.load_state_dict(network_data['state_dict'])
+        #target_network.load_state_dict(network_data.state_dict())
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    #test
+    #for input, gt in pretrained_data_test_loader:
+    #    clean_output = target_network(input)
+
+
 
     # Set all weights to not trainable
     set_parameter_requires_grad(target_network, requires_grad=False)

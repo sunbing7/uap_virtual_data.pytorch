@@ -28,7 +28,7 @@ def get_data_specs(pretrained_dataset):
         mean = [0., 0., 0.]
         std = [1., 1., 1.]
         num_classes = 10
-        input_size = 32
+        input_size = 224#32
         num_channels = 3
     elif pretrained_dataset == "cifar100":
         mean = [0., 0., 0.]
@@ -46,15 +46,34 @@ def get_data(dataset, pretrained_dataset):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
 
     if dataset == 'cifar10':
+
+        train_transform = transforms.Compose([
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+        '''
         train_transform = transforms.Compose(
                 [transforms.RandomHorizontalFlip(),
                  transforms.RandomCrop(input_size, padding=4),
                  transforms.ToTensor(),
                  transforms.Normalize(mean, std)])
+        
 
         test_transform = transforms.Compose(
                 [transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
+        '''
 
         train_data = dset.CIFAR10(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
         test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
