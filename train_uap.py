@@ -34,7 +34,7 @@ def parse_arguments():
     # Parameters regarding UAP
     parser.add_argument('--epsilon', type=float, default=0.03922,
                         help='Norm restriction of UAP (default: 10/255)')
-    parser.add_argument('--num_iterations', type=int, default=5000,
+    parser.add_argument('--num_iterations', type=int, default=2000,
                         help='Number of iterations (default: 2000)')
     parser.add_argument('--result_subfolder', default='result', type=str,
                         help='result subfolder name')
@@ -47,7 +47,7 @@ def parse_arguments():
     parser.add_argument('--confidence', default=0., type=float,
                         help='Confidence value for C&W losses (default: 0.0)')
     parser.add_argument('--targeted',  action='store_true', default='True',
-                        help='Target a specific class (default: False)')
+                        help='Target a specific class (default: True)')
     parser.add_argument('--target_class', type=int, default=7,
                         help='Target class (default: 7)')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -60,6 +60,8 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
+    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
+                        help='model name (default: alexnet_cifar10.pth)')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -123,7 +125,7 @@ def main():
     model_path = get_model_path(dataset_name=args.pretrained_dataset,
                                 network_arch=args.pretrained_arch,
                                 random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, "alexnet_cifar10.pth")
+    model_weights_path = os.path.join(model_path, args.model_name)
 
     target_network = get_network(args.pretrained_arch,
                                 input_size=input_size,
@@ -209,7 +211,7 @@ def main():
         criterion.cuda()
 
     optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
-    
+    #'''
     # Measure the time needed for the UAP generation
     start = time.time()
     train(data_loader=data_train_loader,
@@ -227,6 +229,7 @@ def main():
     print_log("Time needed for UAP generation: {}".format(end - start), log)
     # evaluate
     print_log("Final evaluation:", log)
+    #'''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
                     perturbed_model=perturbed_net,
@@ -241,7 +244,7 @@ def main():
       'state_dict'  : perturbed_net.module.generator.state_dict(),
       'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
-    }, result_path, 'checkpoint.pth.tar')
+    }, result_path, 'checkpoint_cifar10.pth.tar')
 
     log.close()
 

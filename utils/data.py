@@ -15,6 +15,9 @@ from config.config import IMAGENET_PATH, DATASET_BASE_PATH
 from config.config import COCO_2017_TRAIN_IMGS, COCO_2017_VAL_IMGS, COCO_2017_TRAIN_ANN, COCO_2017_VAL_ANN, VOC_2012_ROOT, PLACES365_ROOT
 from dataset_utils.voc0712 import VOCDetection
 
+import utils.utils_backdoor as utils_backdoor
+DATA_DIR = 'data'  # data folder
+DATA_FILE = 'cifar_dataset.h5'  # dataset file
 
 def get_data_specs(pretrained_dataset):
     if pretrained_dataset == "imagenet":
@@ -46,7 +49,8 @@ def get_data(dataset, pretrained_dataset):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
 
     if dataset == 'cifar10':
-
+        #return get_data_class(data_file=('%s/%s' % (DATA_DIR, DATA_FILE)), cur_class=3)
+        '''
         train_transform = transforms.Compose([
             transforms.Resize(size=(224, 224)),
             transforms.ToTensor(),
@@ -65,6 +69,7 @@ def get_data(dataset, pretrained_dataset):
         '''
         train_transform = transforms.Compose(
                 [transforms.RandomHorizontalFlip(),
+                 transforms.Resize(size=(224, 224)),
                  transforms.RandomCrop(input_size, padding=4),
                  transforms.ToTensor(),
                  transforms.Normalize(mean, std)])
@@ -72,8 +77,9 @@ def get_data(dataset, pretrained_dataset):
 
         test_transform = transforms.Compose(
                 [transforms.ToTensor(),
+                transforms.Resize(size=(224, 224)),
                 transforms.Normalize(mean, std)])
-        '''
+
 
         train_data = dset.CIFAR10(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
         test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
@@ -178,3 +184,98 @@ def get_data(dataset, pretrained_dataset):
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
     
     return train_data, test_data
+
+def get_data_class(data_file, cur_class=3):
+    #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
+    train_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize(size=(224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+        )
+    ])
+
+    test_transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize(size=(224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+        )
+    ])
+    '''
+    train_transform = transforms.Compose(
+            [transforms.RandomHorizontalFlip(),
+             transforms.RandomCrop(input_size, padding=4),
+             transforms.ToTensor(),
+             transforms.Normalize(mean, std)])
+
+
+    test_transform = transforms.Compose(
+            [transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+    '''
+
+    train_data = CustomCifarDataset(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
+    test_data = CustomCifarDataset(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
+
+    return train_data, test_data
+
+class CustomCifarDataset(Dataset):
+    def __init__(self, data_file, is_train=False, cur_class=3, transform=False):
+        self.is_train = is_train
+        self.cur_class = cur_class
+        self.data_file = data_file
+        self.transform = transform
+        dataset = utils_backdoor.load_dataset(data_file, keys=['X_train', 'Y_train', 'X_test', 'Y_test'])
+        #trig_mask = np.load(RESULT_DIR + "uap_trig_0.08.npy") * 255
+        x_train = dataset['X_train'].astype("float32")# / 255
+        y_train = dataset['Y_train'].T[0]#self.to_categorical(dataset['Y_train'], 10)
+        #y_train = self.to_categorical(dataset['Y_train'], 10)
+        x_test = dataset['X_test'].astype("float32") #/ 255
+        y_test = dataset['Y_test'].T[0]#self.to_categorical(dataset['Y_test'], 10)
+        #y_test = self.to_categorical(dataset['Y_test'], 10)
+
+        x_out = []
+        y_out = []
+        for i in range(0, len(x_test)):
+            #if np.argmax(y_test[i], axis=1) == cur_class:
+            if y_test[i] == cur_class:
+                x_out.append(x_test[i])# + trig_mask)
+                y_out.append(y_test[i])
+        self.X_test = np.uint8(np.array(x_out))
+        self.Y_test = np.uint8(np.squeeze(np.array(y_out)))
+
+        x_out = []
+        y_out = []
+        for i in range(0, len(x_train)):
+            #if np.argmax(y_train[i], axis=1) == cur_class:
+            if y_train[i] == cur_class:
+                x_out.append(x_train[i])# + trig_mask)
+                y_out.append(y_train[i])
+        self.X_train = np.uint8(np.array(x_out))
+        self.Y_train = np.uint8(np.squeeze(np.array(y_out)))
+
+    def __len__(self):
+        if self.is_train:
+            return len(self.X_train)
+        else:
+            return len(self.X_test)
+
+    def __getitem__(self, idx):
+        if self.is_train:
+            image = self.X_train[idx]
+            label = self.Y_train[idx]
+        else:
+            image = self.X_test[idx]
+            label = self.Y_test[idx]
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, label
+
+    def to_categorical(self, y, num_classes):
+        """ 1-hot encodes a tensor """
+        return np.eye(num_classes, dtype='uint8')[y]
