@@ -3,6 +3,7 @@ import numpy as np
 import os, shutil, time
 import itertools
 import torch
+import torch.nn as nn
 
 from utils.utils import time_string, print_log
 
@@ -207,6 +208,90 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
+def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, log=None, use_cuda=True):
+    '''
+    perform causality analysis on the dense layer before logit layer
+    Args:
+        data_loader: loader that loads original images with uap
+        filter_model:
+        uap:
+        filter_arch:
+        target_class:
+        num_sample: number of samples to use for causality analysis
+        log:
+        use_cuda:
+
+    Returns:
+
+    '''
+    #split the model
+    model1, model2 = split_model(filter_model, filter_arch)
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+
+    total_num_samples = 0
+    out = []
+    do_predict_avg = []
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+
+        # compute output
+        with torch.no_grad():
+            dense_output = model1(input + uap)
+            ori_output = model2(dense_output)
+            #ori_output = filter_model(input)
+            do_predict_neu = []
+            do_predict = []
+            #do convention for each neuron
+            for i in range(0, len(dense_output[0])):
+                hidden_do = np.zeros(shape=dense_output[:, i].shape)
+                dense_output_ = torch.clone(dense_output)
+                dense_output_[:, i] = torch.from_numpy(hidden_do)
+                output_do = model2(dense_output_).cpu().detach().numpy()
+                do_predict_neu.append(output_do) # 4096x32x10
+            do_predict_neu = np.array(do_predict_neu)
+            do_predict_neu = np.abs(ori_output.cpu().detach().numpy() - do_predict_neu)
+            do_predict = np.mean(np.array(do_predict_neu), axis=1)  #4096x10
+            #do_predict = do_predict_neu[:,target_class]
+
+        do_predict_avg.append(do_predict) #batchx4096x11
+        total_num_samples += len(gt)
+    # average of all baches
+    do_predict_avg = np.mean(np.array(do_predict_avg), axis=0) #4096x10
+    # insert neuron index
+    idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
+    do_predict_avg = np.c_[idx, do_predict_avg]
+
+    return do_predict_avg
+
+def split_model(ori_model, model_name):
+    '''
+    split given model from the dense layer before logits
+    Args:
+        ori_model:
+        model_name: model name
+    Returns:
+        splitted models
+    '''
+    if model_name == 'vgg19':
+        modules = list(ori_model.children())
+        layers = list(modules[0]) + [modules[1]] + list(modules[2])
+        module1 = layers[:38]
+        moduel2 = layers[38:41]
+        module3 = layers[41:]
+        model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+        model_2nd = nn.Sequential(*module3)
+    else:
+        return None, None
+
+    return model_1st, model_2nd
+
 
 class AverageMeter(object):
   """Computes and stores the average and current value"""
@@ -299,3 +384,12 @@ class RecorderMeter(object):
       fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
       print ('---- save figure {} into {}'.format(title, save_path))
     plt.close(fig)
+
+
+class Flatten(nn.Module):
+    def __init__(self):
+        super(Flatten, self).__init__()
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)
+        return x

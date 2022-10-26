@@ -9,12 +9,12 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data
+from utils.data import get_data_specs, get_data, get_data_perturbed
 from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import train, save_checkpoint, metrics_evaluate
+from utils.training import train, save_checkpoint, metrics_evaluate, solve_causal
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 
 from matplotlib import pyplot as plt
@@ -24,6 +24,8 @@ def parse_arguments():
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
+
+    # candidate model
     parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
                         help='Used dataset to train the initial model (default: cifar10)')
     parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
@@ -31,23 +33,32 @@ def parse_arguments():
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                        'inception_v3'],
                         help='Used model architecture: (default: alexnet)')
+    parser.add_argument('--uap_name', type=str, default='checkpoint_cifar10.pth.tar',
+                        help='uap file name (default: checkpoint_cifar10.pth.tar)')
+    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
+                        help='model name (default: alexnet_cifar10.pth)')
+
+    # filter model
+    parser.add_argument('--filter_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
+                                                                       'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                                       'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                                                       'inception_v3'])
+    parser.add_argument('--filter_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+                        help='dataset to train the filter model (default: cifar10)')
+    parser.add_argument('--filter_name', type=str, default='vgg19_cifar10.pth',
+                        help='filter model name (default: vgg19_cifar10.pth)')
+
+
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     # Parameters regarding UAP
-    #parser.add_argument('--epsilon', type=float, default=0.03922,
-    #                    help='Norm restriction of UAP (default: 10/255)')
-    parser.add_argument('--num_iterations', type=int, default=2000,
-                        help='Number of iterations (default: 2000)')
+    parser.add_argument('--num_iterations', type=int, default=32,
+                        help='Number of iterations for causality analysis (default: 32)')
     parser.add_argument('--result_subfolder', default='result', type=str,
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
-    # Optimization options
-    #parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
-    #                                                              'bounded_logit_fixed_ref', 'bounded_logit_neg'],
-    #                    help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
-    #parser.add_argument('--confidence', default=0., type=float,
-    #                    help='Confidence value for C&W losses (default: 0.0)')
+
     parser.add_argument('--targeted',  action='store_true', default='True',
                         help='Target a specific class (default: True)')
     parser.add_argument('--target_class', type=int, default=1,
@@ -55,20 +66,11 @@ def parse_arguments():
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
 
-    #parser.add_argument('--learning_rate', type=float, default=0.001,
-    #                    help='Learning Rate (default: 0.001)')
-    #parser.add_argument('--print_freq', default=200, type=int, metavar='N',
-    #                    help='print frequency (default: 200)')
     parser.add_argument('--ngpu', type=int, default=0,
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
-                        help='model name (default: alexnet_cifar10.pth)')
-    parser.add_argument('--uap_name', type=str, default='checkpoint_cifar10.pth.tar',
-                        help='uap file name (default: checkpoint_cifar10.pth.tar)')
-    parser.add_argument('--causal_layer', type=str, default='feature',
-                        help='layer to perform causality analysis (default: dense layer before logits)')
+
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -115,7 +117,15 @@ def main():
                                                     num_workers=args.workers,
                                                     pin_memory=True)
 
-    ##### Dataloader for training ####
+    ##### Dataloader for training: perturbed data ####
+    #load uap
+    uap_path = get_uap_path(dataset_name=args.pretrained_dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed)
+    uap_fn = os.path.join(uap_path, 'uap.npy')
+    uap = np.load(uap_fn)
+    uap = torch.from_numpy(uap)
+
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
     data_train, _ = get_data(args.dataset, args.pretrained_dataset)
@@ -127,158 +137,94 @@ def main():
 
     ####################################
     # Init model, criterion, and optimizer
-    print_log("=> Creating model '{}'".format(args.pretrained_arch), log)
+    print_log("=> Creating model '{}'".format(args.filter_arch), log)
     # get a path for loading the model to be attacked
-    model_path = get_model_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
+    model_path = get_model_path(dataset_name=args.filter_dataset,
+                                network_arch=args.filter_arch,
                                 random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.model_name)
+    model_weights_path = os.path.join(model_path, args.filter_name)
 
-    target_network = get_network(args.pretrained_arch,
+    filter_network = get_network(args.filter_arch,
                                 input_size=input_size,
                                 num_classes=num_classes,
                                 finetune=False)
 
-    print_log("=> Network :\n {}".format(target_network), log)
-    target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+    print_log("=> Network :\n {}".format(filter_network), log)
+    filter_network = torch.nn.DataParallel(filter_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
-    target_network.eval()
+    filter_network.eval()
     # Imagenet models use the pretrained pytorch weights
     if args.pretrained_dataset != "imagenet":
         #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
         #target_network.load_state_dict(network_data['state_dict'])
         #target_network.load_state_dict(network_data.state_dict())
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
-    #test
-    #for input, gt in pretrained_data_test_loader:
-    #    clean_output = target_network(input)
-
-
+        filter_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
     #set_parameter_requires_grad(target_network, requires_grad=False)
+    total_params = get_num_parameters(filter_network)
 
-    #non_trainale_params = get_num_non_trainable_parameters(target_network)
-    #trainale_params = get_num_trainable_parameters(target_network)
-    total_params = get_num_parameters(target_network)
-    #print_log("Target Network Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Target Network Non Trainable parameters: {}".format(non_trainale_params), log)
-    print_log("Target Network Total # parameters: {}".format(total_params), log)
+    print_log("Filter Network Total # parameters: {}".format(total_params), log)
 
-    #print_log("=> Inserting Generator", log)
-
-    generator = UAP(shape=(input_size, input_size),
-                num_channels=num_channels,
-                mean=mean,
-                std=std,
-                use_cuda=args.use_cuda)
-
-    #load perturbed network data
-    # get a path for loading the model to be attacked
-    model_path = get_uap_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
-                                random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.uap_name)
-
-    network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
-    generator.load_state_dict(network_data['state_dict'])
-
-    print_log("=> Generator :\n {}".format(generator), log)
-    #non_trainale_params = get_num_non_trainable_parameters(generator)
-    #trainale_params = get_num_trainable_parameters(generator)
-    total_params = get_num_parameters(generator)
-    #print_log("Generator Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Generator Non Trainable parameters: {}".format(non_trainale_params), log)
-    print_log("Generator Total # parameters: {}".format(total_params), log)
-
-    perturbed_net = nn.Sequential(OrderedDict([('generator', generator), ('target_model', target_network)]))
-    perturbed_net = torch.nn.DataParallel(perturbed_net, device_ids=list(range(args.ngpu)))
-
-    #non_trainale_params = get_num_non_trainable_parameters(perturbed_net)
-    #trainale_params = get_num_trainable_parameters(perturbed_net)
-    total_params = get_num_parameters(perturbed_net)
-    #print_log("Perturbed Net Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Perturbed Net Non Trainable parameters: {}".format(non_trainale_params), log)
-    print_log("Perturbed Net Total # parameters: {}".format(total_params), log)
-
-    # Set the target model into evaluation mode
-    perturbed_net.module.target_model.eval()
-    perturbed_net.module.generator.train()
-    '''
-    if args.loss_function == "ce":
-        criterion = torch.nn.CrossEntropyLoss()
-    elif args.loss_function == "neg_ce":
-        criterion = NegativeCrossEntropy()
-    elif args.loss_function == "logit":
-        criterion = LogitLoss(num_classes=num_classes, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit":
-        criterion = BoundedLogitLoss(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_fixed_ref":
-        criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_neg":
-        criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    else:
-        raise ValueError
-    '''
     if args.use_cuda:
-        target_network.cuda()
-        generator.cuda()
-        perturbed_net.cuda()
-        #criterion.cuda()
+        filter_network.cuda()
 
-    #plot uap
     '''
-    tuap = torch.unsqueeze(generator.uap, dim=0)
-    plot_tuap = tuap[0].cpu().detach().numpy()
-    plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
-    plot_tuap_normal = plot_tuap + 0.5
-    plot_tuap_amp = plot_tuap / 2 + 0.5
-    tuap_range = np.max(plot_tuap_amp) - np.min(plot_tuap_amp)
-    plot_tuap_amp = plot_tuap_amp / tuap_range + 0.5
-    plot_tuap_amp -= np.min(plot_tuap_amp)
-
-    imgplot = plt.imshow(plot_tuap_amp)
-    plt.show()
-    '''
-    '''
-    #optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
-    # Measure the time needed for the UAP generation
-    start = time.time()
-    train(data_loader=data_train_loader,
-            model=perturbed_net,
-            criterion=criterion,
-            optimizer=optimizer,
-            epsilon=args.epsilon,
-            num_iterations=args.num_iterations,
-            targeted=args.targeted,
-            target_class=args.target_class,
-            log=log,
-            print_freq=args.print_freq,
-            use_cuda=args.use_cuda)
-    end = time.time()
-    print_log("Time needed for UAP generation: {}".format(end - start), log)
-    # evaluate
-    print_log("Final evaluation:", log)
-    '''
-    #'''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
-                    target_model=target_network,
-                    perturbed_model=perturbed_net,
+                    target_model=filter_network,
+                    perturbed_model=filter_network,
                     targeted=args.targeted,
                     target_class=args.target_class,
                     log=log,
                     use_cuda=args.use_cuda)
+    '''
 
-    save_checkpoint({
-      'arch'        : args.pretrained_arch,
-      # 'state_dict'  : perturbed_net.state_dict(),
-      'state_dict'  : perturbed_net.module.generator.state_dict(),
-      #'optimizer'   : optimizer.state_dict(),
-      'args'        : copy.deepcopy(args),
-    }, result_path, 'checkpoint_cifar10.pth.tar')
-    #'''
+    # perform causality analysis
+    neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
+                                    target_class=args.target_class,
+                                    num_sample=args.num_iterations,
+                                    log=log,
+                                    use_cuda=args.use_cuda)
+
+    # find outstanding neuron neuron_ranking shape: 4096x11
+    temp = neuron_ranking[:, [0, (args.target_class + 1)]]
+    ind = np.argsort(temp[:, 1])[::-1]
+    temp = temp[ind]
+    top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
+    print('top:{}'.format(len(top)))
+    outstanding_neuron = temp[0: len(top)][:, 0]
+    np.save(result_path + 'outstanding.pny', outstanding_neuron)
     log.close()
+    return
+
+def outlier_detection(cmp_list, max_val, verbose=False):
+    cmp_list = list(np.array(cmp_list) / max_val)
+    consistency_constant = 1.4826  # if normal distribution
+    median = np.median(cmp_list)
+    mad = consistency_constant * np.median(np.abs(cmp_list - median))  # median of the deviation
+    min_mad = np.abs(np.min(cmp_list) - median) / mad
+
+    # print('median: %f, MAD: %f' % (median, mad))
+    # print('anomaly index: %f' % min_mad)
+
+    flag_list = []
+    i = 0
+    for cmp in cmp_list:
+        if cmp_list[i] < median:
+            i = i + 1
+            continue
+        if np.abs(cmp_list[i] - median) / mad > 2:
+            flag_list.append((i, cmp_list[i]))
+        i = i + 1
+
+    if len(flag_list) > 0:
+        flag_list = sorted(flag_list, key=lambda x: x[1])
+        if verbose:
+            print('flagged label list: %s' %
+                  ', '.join(['%d: %2f' % (idx, val)
+                             for idx, val in flag_list]))
+    return flag_list
+
 
 if __name__ == '__main__':
     main()

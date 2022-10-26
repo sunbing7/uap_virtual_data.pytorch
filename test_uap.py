@@ -240,7 +240,9 @@ def main():
 
     imgplot = plt.imshow(plot_tuap_amp)
     plt.savefig(result_path + '/uap.png')
+    np.save(model_path + '/uap.npy', tuap.cpu().detach().numpy())
     #plt.show()
+    print('uap saved!')
     #'''
     '''
     #optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
@@ -262,7 +264,7 @@ def main():
     # evaluate
     print_log("Final evaluation:", log)
     '''
-    #'''
+    '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
                     perturbed_model=perturbed_net,
@@ -278,7 +280,7 @@ def main():
       #'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
     }, result_path, 'checkpoint_cifar10.pth.tar')
-    #'''
+    '''
     log.close()
 
 if __name__ == '__main__':

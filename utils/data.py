@@ -193,6 +193,55 @@ def get_data(dataset, pretrained_dataset):
     
     return train_data, test_data
 
+
+def get_data_perturbed(pretrained_dataset, uap):
+
+    if pretrained_dataset == 'cifar10':
+        '''
+        train_transform = transforms.Compose([
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+        '''
+        train_transform = transforms.Compose(
+            [transforms.Resize(size=(224, 224)),
+             transforms.Lambda(lambda y: (y + uap)),
+             transforms.RandomHorizontalFlip(),
+             transforms.RandomCrop(224, padding=4),
+             transforms.ToTensor(),
+             # transforms.Normalize(mean, std),
+             transforms.Normalize(
+                 (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+             )
+             ])
+
+        test_transform = transforms.Compose(
+            [transforms.Resize(size=(224, 224)),
+             transforms.Lambda(lambda y: (y + uap)),
+             transforms.ToTensor(),
+             # transforms.Normalize(mean, std),
+             transforms.Normalize(
+                 (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+             )
+             ])
+
+        train_data = dset.CIFAR10(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
+        test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
+
+    return train_data, test_data
+
+
 def get_data_class(data_file, cur_class=3):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
     train_transform = transforms.Compose([
