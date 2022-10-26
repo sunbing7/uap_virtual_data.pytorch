@@ -271,6 +271,63 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
 
     return do_predict_avg
 
+
+def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
+
+
+    # switch to evaluate mode
+    target_model.eval()
+
+    total_num_samples = 0
+    num_attack_success = 0
+
+    for input, gt in train_data_loader:
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            uap = uap.cuda()
+
+        # compute output
+        with torch.no_grad():
+            attack_output = target_model(input + uap)
+            ori_output = target_model(input)
+
+        # Calculating Fooling Ratio params
+        #clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+        pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+
+        num_attack_success += np.sum(pert_out_class == target_class)
+
+        total_num_samples += len(gt)
+    train_sr = num_attack_success / total_num_samples * 100
+
+    total_num_samples = 0
+    num_attack_success = 0
+    clean_correctly_classified = 0
+    for input, gt in test_data_loader:
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            uap = uap.cuda()
+
+        # compute output
+        with torch.no_grad():
+            attack_output = target_model(input + uap)
+            ori_output = target_model(input)
+
+        # Calculating Fooling Ratio params
+        clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+        pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+
+        clean_correctly_classified += np.sum(clean_out_class == gt.cpu())
+        num_attack_success += np.sum(pert_out_class == target_class)
+
+        total_num_samples += len(gt)
+    test_sr = num_attack_success / total_num_samples * 100
+    clean_test_acc = clean_correctly_classified / total_num_samples * 100
+    return train_sr, test_sr, clean_test_acc
+
+
 def split_model(ori_model, model_name):
     '''
     split given model from the dense layer before logits

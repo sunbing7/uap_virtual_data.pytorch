@@ -14,7 +14,7 @@ from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import train, save_checkpoint, metrics_evaluate
+from utils.training import train, save_checkpoint, metrics_evaluate, eval_uap
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 
 from matplotlib import pyplot as plt
@@ -24,6 +24,7 @@ def parse_arguments():
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
+    # candidate model
     parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
                         help='Used dataset to train the initial model (default: cifar10)')
     parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
@@ -31,6 +32,7 @@ def parse_arguments():
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                        'inception_v3'],
                         help='Used model architecture: (default: alexnet)')
+
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     # Parameters regarding UAP
@@ -150,12 +152,6 @@ def main():
         #target_network.load_state_dict(network_data.state_dict())
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
-    #test
-    #for input, gt in pretrained_data_test_loader:
-    #    clean_output = target_network(input)
-
-
-
     # Set all weights to not trainable
     #set_parameter_requires_grad(target_network, requires_grad=False)
 
@@ -205,27 +201,11 @@ def main():
     # Set the target model into evaluation mode
     perturbed_net.module.target_model.eval()
     perturbed_net.module.generator.train()
-    '''
-    if args.loss_function == "ce":
-        criterion = torch.nn.CrossEntropyLoss()
-    elif args.loss_function == "neg_ce":
-        criterion = NegativeCrossEntropy()
-    elif args.loss_function == "logit":
-        criterion = LogitLoss(num_classes=num_classes, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit":
-        criterion = BoundedLogitLoss(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_fixed_ref":
-        criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_neg":
-        criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    else:
-        raise ValueError
-    '''
+
     if args.use_cuda:
         target_network.cuda()
         generator.cuda()
         perturbed_net.cuda()
-        #criterion.cuda()
 
     #plot uap
     #'''
@@ -244,26 +224,17 @@ def main():
     #plt.show()
     print('uap saved!')
     #'''
-    '''
-    #optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
-    # Measure the time needed for the UAP generation
-    start = time.time()
-    train(data_loader=data_train_loader,
-            model=perturbed_net,
-            criterion=criterion,
-            optimizer=optimizer,
-            epsilon=args.epsilon,
-            num_iterations=args.num_iterations,
-            targeted=args.targeted,
-            target_class=args.target_class,
-            log=log,
-            print_freq=args.print_freq,
-            use_cuda=args.use_cuda)
-    end = time.time()
-    print_log("Time needed for UAP generation: {}".format(end - start), log)
-    # evaluate
-    print_log("Final evaluation:", log)
-    '''
+    #test
+    #for input, gt in pretrained_data_test_loader:
+    #    clean_output = target_network(input)
+    #    attack_output = target_network(input + tuap)
+
+    # evaluate uap  eval_uap(train_data_loader, test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
+
+    train_sr, test_sr, clean_test_acc = eval_uap(data_train_loader, pretrained_data_test_loader, target_network, tuap,
+                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda)
+    print('UAP targeted attack training set SR:{}%, testing set SR:{}%'.format(train_sr, test_sr))
+    print('Clean sample test accuracy: {}%'.format(clean_test_acc))
     '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
