@@ -277,10 +277,10 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
 
     # switch to evaluate mode
     target_model.eval()
-
+    '''
     total_num_samples = 0
     num_attack_success = 0
-
+    
     for input, gt in train_data_loader:
         if use_cuda:
             gt = gt.cuda()
@@ -300,7 +300,7 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
 
         total_num_samples += len(gt)
     train_sr = num_attack_success / total_num_samples * 100
-
+    '''
     total_num_samples = 0
     num_attack_success = 0
     clean_correctly_classified = 0
@@ -319,7 +319,7 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
         clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
         pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
 
-        clean_correctly_classified += np.sum(clean_out_class == gt.cpu())
+        clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
         num_attack_success += np.sum(pert_out_class == target_class)
 
         total_num_samples += len(gt)

@@ -233,8 +233,8 @@ def main():
 
     train_sr, test_sr, clean_test_acc = eval_uap(data_train_loader, pretrained_data_test_loader, target_network, tuap,
                                                  target_class=args.target_class, log=log, use_cuda=args.use_cuda)
-    print('UAP targeted attack training set SR:{}%, testing set SR:{}%'.format(train_sr, test_sr))
-    print('Clean sample test accuracy: {}%'.format(clean_test_acc))
+    print('UAP targeted attack training set SR:{.2f}%, testing set SR:{.2f}%'.format(train_sr, test_sr))
+    print('Clean sample test accuracy: {.2f}%'.format(clean_test_acc))
     '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
