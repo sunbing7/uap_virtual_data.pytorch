@@ -240,6 +240,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         if use_cuda:
             gt = gt.cuda()
             input = input.cuda()
+            uap = uap.cuda()
 
         # compute output
         with torch.no_grad():
