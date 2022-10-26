@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 from networks.uap import UAP
 from utils.data import get_data_specs, get_data, get_data_perturbed
-from utils.utils import get_model_path, get_result_path, get_uap_path
+from utils.utils import get_model_path, get_result_path, get_uap_path, get_neuron_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -193,7 +193,12 @@ def main():
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
     print('top:{}'.format(len(top)))
     outstanding_neuron = temp[0: len(top)][:, 0]
-    np.save(result_path + '/outstanding', outstanding_neuron)
+
+    neuron_path = get_neuron_path(dataset_name=args.pretrained_dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed)
+    uap_fn = os.path.join(neuron_path, 'outstanding.npy')
+    np.save(uap_fn, outstanding_neuron)
     log.close()
     return
 

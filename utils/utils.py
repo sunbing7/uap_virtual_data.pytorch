@@ -5,7 +5,7 @@ import torch
 import json
 import numpy as np
 
-from config.config import RESULT_PATH, MODEL_PATH, PROJECT_PATH, UAP_PATH
+from config.config import RESULT_PATH, MODEL_PATH, PROJECT_PATH, UAP_PATH, NEURON_PATH
 
 def get_model_path(dataset_name, network_arch, random_seed):
     if not os.path.isdir(MODEL_PATH):
@@ -22,6 +22,16 @@ def get_uap_path(dataset_name, network_arch, random_seed):
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
     return model_path
+
+
+def get_neuron_path(dataset_name, network_arch, random_seed):
+    if not os.path.isdir(NEURON_PATH):
+        os.makedirs(NEURON_PATH)
+    model_path = os.path.join(NEURON_PATH, "{}_{}_{}".format(dataset_name, network_arch, random_seed))
+    if not os.path.isdir(model_path):
+        os.makedirs(model_path)
+    return model_path
+
 
 def get_result_path(dataset_name, network_arch, random_seed, result_subfolder, postfix=''):
     if not os.path.isdir(RESULT_PATH):
