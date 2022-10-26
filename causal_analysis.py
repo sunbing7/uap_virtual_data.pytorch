@@ -17,6 +17,8 @@ from utils.network import get_num_parameters, get_num_non_trainable_parameters, 
 from utils.training import train, save_checkpoint, metrics_evaluate
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 
+from matplotlib import pyplot as plt
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
     # pretrained
@@ -179,7 +181,7 @@ def main():
                                 random_seed=args.pretrained_seed)
     model_weights_path = os.path.join(model_path, args.uap_name)
 
-    network_data = torch.load(model_weights_path)
+    network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
     generator.load_state_dict(network_data['state_dict'])
 
     print_log("=> Generator :\n {}".format(generator), log)
@@ -225,8 +227,22 @@ def main():
         perturbed_net.cuda()
         #criterion.cuda()
 
-    #optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
+    #plot uap
     '''
+    tuap = torch.unsqueeze(generator.uap, dim=0)
+    plot_tuap = tuap[0].cpu().detach().numpy()
+    plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
+    plot_tuap_normal = plot_tuap + 0.5
+    plot_tuap_amp = plot_tuap / 2 + 0.5
+    tuap_range = np.max(plot_tuap_amp) - np.min(plot_tuap_amp)
+    plot_tuap_amp = plot_tuap_amp / tuap_range + 0.5
+    plot_tuap_amp -= np.min(plot_tuap_amp)
+
+    imgplot = plt.imshow(plot_tuap_amp)
+    plt.show()
+    '''
+    '''
+    #optimizer = torch.optim.Adam(perturbed_net.parameters(), lr=state['learning_rate'])
     # Measure the time needed for the UAP generation
     start = time.time()
     train(data_loader=data_train_loader,
@@ -245,6 +261,7 @@ def main():
     # evaluate
     print_log("Final evaluation:", log)
     '''
+    #'''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
                     perturbed_model=perturbed_net,
@@ -260,7 +277,7 @@ def main():
       #'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
     }, result_path, 'checkpoint_cifar10.pth.tar')
-
+    #'''
     log.close()
 
 if __name__ == '__main__':
