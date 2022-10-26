@@ -193,7 +193,7 @@ def main():
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
     print('top:{}'.format(len(top)))
     outstanding_neuron = temp[0: len(top)][:, 0]
-    np.save(result_path + '/outstanding.pny', outstanding_neuron)
+    np.save(result_path + '/outstanding', outstanding_neuron)
     log.close()
     return
 
