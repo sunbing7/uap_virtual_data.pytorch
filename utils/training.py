@@ -284,8 +284,8 @@ def split_model(ori_model, model_name):
         modules = list(ori_model.children())
         layers = list(modules[0]) + [modules[1]] + list(modules[2])
         module1 = layers[:38]
-        moduel2 = layers[38:41]
-        module3 = layers[41:]
+        moduel2 = layers[38:43]
+        module3 = layers[43:]
         model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
         model_2nd = nn.Sequential(*module3)
     else:
