@@ -5,12 +5,20 @@ import torch
 import json
 import numpy as np
 
-from config.config import RESULT_PATH, MODEL_PATH, PROJECT_PATH
+from config.config import RESULT_PATH, MODEL_PATH, PROJECT_PATH, UAP_PATH
 
 def get_model_path(dataset_name, network_arch, random_seed):
     if not os.path.isdir(MODEL_PATH):
         os.makedirs(MODEL_PATH)
     model_path = os.path.join(MODEL_PATH, "{}_{}_{}".format(dataset_name, network_arch, random_seed))
+    if not os.path.isdir(model_path):
+        os.makedirs(model_path)
+    return model_path
+
+def get_uap_path(dataset_name, network_arch, random_seed):
+    if not os.path.isdir(UAP_PATH):
+        os.makedirs(UAP_PATH)
+    model_path = os.path.join(UAP_PATH, "{}_{}_{}".format(dataset_name, network_arch, random_seed))
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
     return model_path
