@@ -351,6 +351,42 @@ def split_model(ori_model, model_name):
     return model_1st, model_2nd
 
 
+def reconstruct_model(ori_model, model_name, mask):
+    '''
+    reconstruct filter model for uap generation
+    Args:
+        ori_model:
+        model_name:
+        mask:
+
+    Returns:
+
+    '''
+    modules = list(ori_model.children())
+    layers = list(modules[0]) + [modules[1]] + list(modules[2])
+    module1 = layers[:38]
+    moduel2 = layers[38:43]
+    module3 = layers[43:]
+    model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+    model_2nd = nn.Sequential(*module3)
+
+    if model_name == 'vgg19':
+        modules = list(ori_model.children())
+        layers = list(modules[0]) + [modules[1]] + list(modules[2])
+        module1 = layers[:38]
+        moduel2 = layers[38:43]
+        module3 = layers[43:]
+        model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+        model_2nd = nn.Sequential(*module3)
+
+        # add mask
+        model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
+    else:
+        return None
+
+    return model
+
+
 class AverageMeter(object):
   """Computes and stores the average and current value"""
   def __init__(self):
@@ -450,4 +486,13 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
+        return x
+
+
+class Mask(nn.Module):
+    def __init__(self, mask):
+        super(Mask, self).__init__()
+        self.mask = mask.to(torch.float)
+    def forward(self, x):
+        x = x * self.mask
         return x
