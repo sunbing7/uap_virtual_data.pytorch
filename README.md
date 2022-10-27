@@ -50,3 +50,21 @@ Run `bash ./run.sh` to generate UAPs for different target models trained on Imag
   year={2020}
 }
 ```
+
+
+gen UAP from candidate models:
+python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=alexnet --pretrained_seed=123 --epsilon=0.08 --num_iterations=5000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=alexnet_cifar10.pth
+python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=googlenet --pretrained_seed=123 --epsilon=0.08 --num_iterations=5000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=googlenet_cifar10.pth
+python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=vgg16 --pretrained_seed=123 --epsilon=0.08 --num_iterations=5000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=vgg16_cifar10.pth
+python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=vgg19 --pretrained_seed=123 --epsilon=0.08 --num_iterations=5000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=vgg19_cifar10.pth
+python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=resnet152 --pretrained_seed=123 --epsilon=0.08 --num_iterations=10000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=resnet152_cifar10.pth
+
+
+test generated UAPs:
+python test_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=alexnet --pretrained_seed=123 --result_subfolder=result --target_class=1 --ngpu=1 --workers=4 --model_name=alexnet_cifar10.pth --uap_name=checkpoint_cifar10.pth.tar
+
+causal analysis on filter model with candidate UAPs:
+python causal_analysis.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=alexnet --uap_name=checkpoint_cifar10.pth.tar --model_name=alexnet_cifar10.pth --filter_arch=vgg19 --filter_dataset=cifar10 --filter_name=vgg19_cifar10.pth --pretrained_seed=123 --num_iterations=1562 --result_subfolder=result --target_class=1 --batch_size=32 --ngpu=1 --workers=4
+
+generate general uap using filter model:
+python train_general_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=vgg19 --pretrained_seed=123 --epsilon=0.08 --num_iterations=5000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=0 --target_class=1 --ngpu=1 --workers=4 --model_name=vgg19_cifar10.pth
