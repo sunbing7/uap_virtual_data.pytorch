@@ -43,6 +43,8 @@ def parse_arguments():
                         help='uap file name (default: uap.npy)')
 
     # model to test
+    parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+                        help='Test model training set (default: cifar10)')
     parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                    'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                    'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
