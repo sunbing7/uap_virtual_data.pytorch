@@ -303,6 +303,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
     '''
     total_num_samples = 0
     num_attack_success = 0
+    num_non_t_succ = 0
     clean_correctly_classified = 0
     for input, gt in test_data_loader:
         if use_cuda:
@@ -321,11 +322,13 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
 
         clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
         num_attack_success += np.sum(pert_out_class == target_class)
+        num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
 
         total_num_samples += len(gt)
     test_sr = num_attack_success / total_num_samples * 100
     clean_test_acc = clean_correctly_classified / total_num_samples * 100
-    return test_sr, clean_test_acc
+    nt_sr = num_non_t_succ / total_num_samples * 100
+    return test_sr, nt_sr, clean_test_acc
 
 
 def split_model(ori_model, model_name):
