@@ -383,7 +383,6 @@ def reconstruct_model(ori_model, model_name, mask):
         model_2nd = nn.Sequential(*module3)
 
         # add mask
-        mask.cuda()
         model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
     else:
         return None
@@ -498,5 +497,5 @@ class Mask(nn.Module):
         super(Mask, self).__init__()
         self.mask = mask.to(torch.float)
     def forward(self, x):
-        x = x * self.mask
+        x = x #* self.mask
         return x
