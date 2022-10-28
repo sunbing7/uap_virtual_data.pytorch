@@ -129,7 +129,7 @@ def main():
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
-    data_train, _ = get_data(args.dataset, args.pretrained_dataset)
+    data_train, _ = get_data(args.filter_dataset, args.filter_dataset)
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
                                                     shuffle=True,

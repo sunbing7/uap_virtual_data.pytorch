@@ -106,8 +106,10 @@ def main():
     plot_tuap_amp -= np.min(plot_tuap_amp)
 
     imgplot = plt.imshow(plot_tuap_amp)
-    np.save(model_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
+    plt.savefig(model_path + '/uap.png')
     plt.show()
+    np.save(model_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
+
     print('uap saved!')
 
 

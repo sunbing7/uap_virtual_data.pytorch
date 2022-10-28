@@ -297,6 +297,7 @@ def main():
                             random_seed=args.pretrained_seed)
 
     np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
+    plt.savefig(uap_path + '/uap.png')
     #plt.show()
     print('uap saved!')
 
