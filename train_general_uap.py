@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 from networks.uap import UAP
 from utils.data import get_data_specs, get_data
-from utils.utils import get_model_path, get_result_path, get_neuron_path, get_uap_path
+from utils.utils import get_model_path, get_result_path, get_neuron_path, get_uap_path, get_neuron_name
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -153,9 +153,7 @@ def main():
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # add mask based on outstanding neuron
-    neuron_path = get_neuron_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
-                                random_seed=args.pretrained_seed)
+    neuron_path = get_neuron_path()
     neu_idx_list = []
     for fn in os.listdir(neuron_path):
         neu_idx = np.zeros(4096)

@@ -24,12 +24,19 @@ def get_uap_path(uap_data, model_data, network_arch, random_seed):
     return model_path
 
 
-def get_neuron_path(dataset_name, network_arch, random_seed):
+def get_neuron_path():
     if not os.path.isdir(NEURON_PATH):
         os.makedirs(NEURON_PATH)
-    model_path = os.path.join(NEURON_PATH, "{}_{}_{}".format(dataset_name, network_arch, random_seed))
+    model_path = NEURON_PATH
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
+    return model_path
+
+
+def get_neuron_name(uap_data, uap_arch, filter_data, filter_arch, random_seed):
+    if not os.path.isdir(NEURON_PATH):
+        os.makedirs(NEURON_PATH)
+    model_path = "{}_{}_{}_{}_{}_outstanding.npy".format(uap_data, uap_arch, filter_data, filter_arch, random_seed)
     return model_path
 
 
