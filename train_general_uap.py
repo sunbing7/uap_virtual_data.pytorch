@@ -167,8 +167,8 @@ def main():
         neu_idx = list_and(neu_idx, np.array(idx))
 
     neu_idx = torch.from_numpy(neu_idx)
-    #if args.use_cuda:
-    #    neu_idx.cuda()
+    if args.use_cuda:
+        neu_idx = neu_idx.cuda()
     #update the network
     target_network = reconstruct_model(target_network, args.pretrained_arch, neu_idx)
 

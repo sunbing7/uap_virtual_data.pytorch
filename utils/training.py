@@ -495,9 +495,7 @@ class Flatten(nn.Module):
 class Mask(nn.Module):
     def __init__(self, mask):
         super(Mask, self).__init__()
-
         self.mask = mask.to(torch.float)
-        self.mask.cuda()
     def forward(self, x):
         x = x * self.mask
         return x
