@@ -383,6 +383,7 @@ def reconstruct_model(ori_model, model_name, mask):
         model_2nd = nn.Sequential(*module3)
 
         # add mask
+        mask.cuda()
         model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
     else:
         return None
