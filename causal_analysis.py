@@ -9,7 +9,7 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data, get_data_perturbed
+from utils.data import get_data_specs, get_data
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_neuron_path, get_neuron_name
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad

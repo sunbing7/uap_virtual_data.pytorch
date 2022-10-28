@@ -15,9 +15,9 @@ from config.config import IMAGENET_PATH, DATASET_BASE_PATH
 from config.config import COCO_2017_TRAIN_IMGS, COCO_2017_VAL_IMGS, COCO_2017_TRAIN_ANN, COCO_2017_VAL_ANN, VOC_2012_ROOT, PLACES365_ROOT
 from dataset_utils.voc0712 import VOCDetection
 
-import utils.utils_backdoor as utils_backdoor
-DATA_DIR = 'data'  # data folder
-DATA_FILE = 'cifar_dataset.h5'  # dataset file
+#import utils.utils_backdoor as utils_backdoor
+#DATA_DIR = 'data'  # data folder
+#DATA_FILE = 'cifar_dataset.h5'  # dataset file
 
 def get_data_specs(pretrained_dataset):
     if pretrained_dataset == "imagenet":
@@ -194,26 +194,10 @@ def get_data(dataset, pretrained_dataset):
     return train_data, test_data
 
 
+'''
 def get_data_perturbed(pretrained_dataset, uap):
 
     if pretrained_dataset == 'cifar10':
-        '''
-        train_transform = transforms.Compose([
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-
-        test_transform = transforms.Compose([
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-        '''
         train_transform = transforms.Compose(
             [transforms.Resize(size=(224, 224)),
              transforms.Lambda(lambda y: (y + uap)),
@@ -240,8 +224,8 @@ def get_data_perturbed(pretrained_dataset, uap):
         test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
 
     return train_data, test_data
-
-
+'''
+'''
 def get_data_class(data_file, cur_class=3):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
     train_transform = transforms.Compose([
@@ -261,18 +245,6 @@ def get_data_class(data_file, cur_class=3):
             (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
         )
     ])
-    '''
-    train_transform = transforms.Compose(
-            [transforms.RandomHorizontalFlip(),
-             transforms.RandomCrop(input_size, padding=4),
-             transforms.ToTensor(),
-             transforms.Normalize(mean, std)])
-
-
-    test_transform = transforms.Compose(
-            [transforms.ToTensor(),
-            transforms.Normalize(mean, std)])
-    '''
 
     train_data = CustomCifarDataset(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
     test_data = CustomCifarDataset(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
@@ -336,3 +308,4 @@ class CustomCifarDataset(Dataset):
     def to_categorical(self, y, num_classes):
         """ 1-hot encodes a tensor """
         return np.eye(num_classes, dtype='uint8')[y]
+'''
