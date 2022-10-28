@@ -169,7 +169,7 @@ def main():
     uap = np.load(uap_fn)
     tuap = torch.from_numpy(uap)
 
-    train_sr, test_sr, clean_test_acc = eval_uap(data_test_loader, target_network, tuap,
+    test_sr, clean_test_acc = eval_uap(data_test_loader, target_network, tuap,
                                                  target_class=args.target_class, log=log, use_cuda=args.use_cuda)
     print('UAP targeted attack testing set SR: %.2f' % (test_sr))
     print('Clean sample test accuracy: %.2f' % clean_test_acc)
