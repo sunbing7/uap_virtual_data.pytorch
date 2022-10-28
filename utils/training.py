@@ -272,7 +272,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
     return do_predict_avg
 
 
-def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
+def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
 
 
     # switch to evaluate mode
@@ -280,7 +280,7 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
 
     total_num_samples = 0
     num_attack_success = 0
-    
+    '''
     for input, gt in train_data_loader:
         if use_cuda:
             gt = gt.cuda()
@@ -300,7 +300,7 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
 
         total_num_samples += len(gt)
     train_sr = num_attack_success / total_num_samples * 100
-
+    '''
     total_num_samples = 0
     num_attack_success = 0
     clean_correctly_classified = 0
@@ -325,7 +325,7 @@ def eval_uap(train_data_loader, test_data_loader, target_model, uap, target_clas
         total_num_samples += len(gt)
     test_sr = num_attack_success / total_num_samples * 100
     clean_test_acc = clean_correctly_classified / total_num_samples * 100
-    return train_sr, test_sr, clean_test_acc
+    return test_sr, clean_test_acc
 
 
 def split_model(ori_model, model_name):

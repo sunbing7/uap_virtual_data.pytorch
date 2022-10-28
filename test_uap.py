@@ -21,56 +21,51 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
-    # pretrained
+    # dataset used to train UAP
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
-    # candidate model
+    # dataset used to train UAP model
     parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
                         help='Used dataset to train the initial model (default: cifar10)')
+    # model used to train UAP
     parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                        'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                        'inception_v3'],
                         help='Used model architecture: (default: alexnet)')
-
+    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
+                        help='model name (default: alexnet_cifar10.pth)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
+    parser.add_argument('--uap_model', type=str, default='checkpoint.pth.tar',
+                        help='uap model name (default: checkpoint.pth.tar)')
+    parser.add_argument('--uap_name', type=str, default='uap.npy',
+                        help='uap file name (default: uap.npy)')
+
+    # model to test
+    parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
+                                                                   'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                                   'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                                                   'inception_v3'],
+                        help='Test model architecture: (default: vgg19)')
+    parser.add_argument('--test_name', type=str, default='vgg19_cifar10.pth',
+                        help='Test model name (default: vgg19_cifar10.pth)')
+
     # Parameters regarding UAP
-    #parser.add_argument('--epsilon', type=float, default=0.03922,
-    #                    help='Norm restriction of UAP (default: 10/255)')
-    parser.add_argument('--num_iterations', type=int, default=2000,
-                        help='Number of iterations (default: 2000)')
     parser.add_argument('--result_subfolder', default='result', type=str,
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
-    # Optimization options
-    #parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
-    #                                                              'bounded_logit_fixed_ref', 'bounded_logit_neg'],
-    #                    help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
-    #parser.add_argument('--confidence', default=0., type=float,
-    #                    help='Confidence value for C&W losses (default: 0.0)')
     parser.add_argument('--targeted',  action='store_true', default='True',
                         help='Target a specific class (default: True)')
     parser.add_argument('--target_class', type=int, default=1,
                         help='Target class (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
-
-    #parser.add_argument('--learning_rate', type=float, default=0.001,
-    #                    help='Learning Rate (default: 0.001)')
-    #parser.add_argument('--print_freq', default=200, type=int, metavar='N',
-    #                    help='print frequency (default: 200)')
     parser.add_argument('--ngpu', type=int, default=0,
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
-                        help='model name (default: alexnet_cifar10.pth)')
-    parser.add_argument('--uap_name', type=str, default='checkpoint_cifar10.pth.tar',
-                        help='uap file name (default: checkpoint_cifar10.pth.tar)')
-    parser.add_argument('--causal_layer', type=str, default='feature',
-                        help='layer to perform causality analysis (default: dense layer before logits)')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -109,9 +104,9 @@ def main():
     print_log("Torch  version : {}".format(torch.__version__), log)
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
-    _, pretrained_data_test = get_data(args.pretrained_dataset, args.pretrained_dataset)
+    _, data_test = get_data(args.test_dataset, args.test_dataset)
 
-    pretrained_data_test_loader = torch.utils.data.DataLoader(pretrained_data_test,
+    data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
                                                     shuffle=False,
                                                     num_workers=args.workers,
@@ -120,23 +115,23 @@ def main():
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
-    data_train, _ = get_data(args.dataset, args.pretrained_dataset)
-    data_train_loader = torch.utils.data.DataLoader(data_train,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
+    #data_train, _ = get_data(args.dataset, args.pretrained_dataset)
+    #data_train_loader = torch.utils.data.DataLoader(data_train,
+    #                                                batch_size=args.batch_size,
+    #                                                shuffle=True,
+    #                                                num_workers=args.workers,
+    #                                                pin_memory=True)
 
     ####################################
     # Init model, criterion, and optimizer
-    print_log("=> Creating model '{}'".format(args.pretrained_arch), log)
+    print_log("=> Creating model '{}'".format(args.test_arch), log)
     # get a path for loading the model to be attacked
-    model_path = get_model_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
+    model_path = get_model_path(dataset_name=args.test_dataset,
+                                network_arch=args.test_arch,
                                 random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.model_name)
+    model_weights_path = os.path.join(model_path, args.test_name)
 
-    target_network = get_network(args.pretrained_arch,
+    target_network = get_network(args.test_arch,
                                 input_size=input_size,
                                 num_classes=num_classes,
                                 finetune=False)
@@ -145,95 +140,36 @@ def main():
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
-    # Imagenet models use the pretrained pytorch weights
-    if args.pretrained_dataset != "imagenet":
-        #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        #target_network.load_state_dict(network_data['state_dict'])
-        #target_network.load_state_dict(network_data.state_dict())
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
     #set_parameter_requires_grad(target_network, requires_grad=False)
 
-    #non_trainale_params = get_num_non_trainable_parameters(target_network)
-    #trainale_params = get_num_trainable_parameters(target_network)
     total_params = get_num_parameters(target_network)
-    #print_log("Target Network Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Target Network Non Trainable parameters: {}".format(non_trainale_params), log)
     print_log("Target Network Total # parameters: {}".format(total_params), log)
-
-    #print_log("=> Inserting Generator", log)
-
-    generator = UAP(shape=(input_size, input_size),
-                num_channels=num_channels,
-                mean=mean,
-                std=std,
-                use_cuda=args.use_cuda)
-
-    #load perturbed network data
-    # get a path for loading the model to be attacked
-    model_path = get_uap_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
-                                random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.uap_name)
-
-    network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
-    generator.load_state_dict(network_data['state_dict'])
-
-    print_log("=> Generator :\n {}".format(generator), log)
-    #non_trainale_params = get_num_non_trainable_parameters(generator)
-    #trainale_params = get_num_trainable_parameters(generator)
-    total_params = get_num_parameters(generator)
-    #print_log("Generator Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Generator Non Trainable parameters: {}".format(non_trainale_params), log)
-    print_log("Generator Total # parameters: {}".format(total_params), log)
-
-    perturbed_net = nn.Sequential(OrderedDict([('generator', generator), ('target_model', target_network)]))
-    perturbed_net = torch.nn.DataParallel(perturbed_net, device_ids=list(range(args.ngpu)))
-
-    #non_trainale_params = get_num_non_trainable_parameters(perturbed_net)
-    #trainale_params = get_num_trainable_parameters(perturbed_net)
-    total_params = get_num_parameters(perturbed_net)
-    #print_log("Perturbed Net Trainable parameters: {}".format(trainale_params), log)
-    #print_log("Perturbed Net Non Trainable parameters: {}".format(non_trainale_params), log)
-    print_log("Perturbed Net Total # parameters: {}".format(total_params), log)
-
-    # Set the target model into evaluation mode
-    perturbed_net.module.target_model.eval()
-    perturbed_net.module.generator.train()
 
     if args.use_cuda:
         target_network.cuda()
-        generator.cuda()
-        perturbed_net.cuda()
 
-    #plot uap
-    #'''
-    tuap = torch.unsqueeze(generator.uap, dim=0)
-    plot_tuap = tuap[0].cpu().detach().numpy()
-    plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
-    plot_tuap_normal = plot_tuap + 0.5
-    plot_tuap_amp = plot_tuap / 2 + 0.5
-    tuap_range = np.max(plot_tuap_amp) - np.min(plot_tuap_amp)
-    plot_tuap_amp = plot_tuap_amp / tuap_range + 0.5
-    plot_tuap_amp -= np.min(plot_tuap_amp)
-
-    imgplot = plt.imshow(plot_tuap_amp)
-    plt.savefig(result_path + '/uap.png')
-    np.save(model_path + '/uap.npy', tuap.cpu().detach().numpy())
-    #plt.show()
-    print('uap saved!')
-    #'''
     #test
     #for input, gt in pretrained_data_test_loader:
     #    clean_output = target_network(input)
     #    attack_output = target_network(input + tuap)
 
-    # evaluate uap  eval_uap(train_data_loader, test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
+    # evaluate uap
+    #load uap
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
+    uap_fn = os.path.join(uap_path, args.uap_name)
+    uap = np.load(uap_fn)
+    tuap = torch.from_numpy(uap)
 
-    train_sr, test_sr, clean_test_acc = eval_uap(data_train_loader, pretrained_data_test_loader, target_network, tuap,
+    train_sr, test_sr, clean_test_acc = eval_uap(data_test_loader, target_network, tuap,
                                                  target_class=args.target_class, log=log, use_cuda=args.use_cuda)
-    print('UAP targeted attack training set SR: %.2f, testing set SR: %.2f' % (train_sr, test_sr))
+    print('UAP targeted attack testing set SR: %.2f' % (test_sr))
     print('Clean sample test accuracy: %.2f' % clean_test_acc)
     '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,

@@ -15,10 +15,10 @@ def get_model_path(dataset_name, network_arch, random_seed):
         os.makedirs(model_path)
     return model_path
 
-def get_uap_path(dataset_name, network_arch, random_seed):
+def get_uap_path(uap_data, model_data, network_arch, random_seed):
     if not os.path.isdir(UAP_PATH):
         os.makedirs(UAP_PATH)
-    model_path = os.path.join(UAP_PATH, "{}_{}_{}".format(dataset_name, network_arch, random_seed))
+    model_path = os.path.join(UAP_PATH, "{}_{}_{}_{}".format(uap_data, model_data, network_arch, random_seed))
     if not os.path.isdir(model_path):
         os.makedirs(model_path)
     return model_path

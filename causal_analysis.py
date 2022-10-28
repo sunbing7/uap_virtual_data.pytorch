@@ -117,14 +117,15 @@ def main():
                                                     num_workers=args.workers,
                                                     pin_memory=True)
 
-    ##### Dataloader for training: perturbed data ####
-    #load uap
-    uap_path = get_uap_path(dataset_name=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
-                                random_seed=args.pretrained_seed)
+    ##### Dataloader for training: perturbed data ####    #load uap
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, 'uap.npy')
     uap = np.load(uap_fn)
     uap = torch.from_numpy(uap)
+
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 

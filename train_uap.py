@@ -10,12 +10,15 @@ from collections import OrderedDict
 
 from networks.uap import UAP
 from utils.data import get_data_specs, get_data
-from utils.utils import get_model_path, get_result_path
+from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import train, save_checkpoint, metrics_evaluate
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
+
+from matplotlib import pyplot as plt
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
@@ -29,6 +32,8 @@ def parse_arguments():
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                        'inception_v3'],
                         help='Used model architecture: (default: alexnet)')
+    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
+                        help='model name (default: alexnet_cifar10.pth)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     # Parameters regarding UAP
@@ -40,6 +45,10 @@ def parse_arguments():
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
+    parser.add_argument('--uap_model', type=str, default='checkpoint.pth.tar',
+                        help='uap model name (default: checkpoint.pth.tar)')
+    parser.add_argument('--uap_name', type=str, default='uap.npy',
+                        help='uap file name (default: uap.npy)')
     # Optimization options
     parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
                                                                   'bounded_logit_fixed_ref', 'bounded_logit_neg'],
@@ -60,8 +69,6 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
-                        help='model name (default: alexnet_cifar10.pth)')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -244,7 +251,30 @@ def main():
       'state_dict'  : perturbed_net.module.generator.state_dict(),
       'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
-    }, result_path, 'checkpoint_cifar10.pth.tar')
+    }, result_path, args.uap_model)
+
+    #export uap and save it
+    #'''
+    tuap = torch.unsqueeze(generator.uap, dim=0)
+    plot_tuap = tuap[0].cpu().detach().numpy()
+    plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
+    plot_tuap_normal = plot_tuap + 0.5
+    plot_tuap_amp = plot_tuap / 2 + 0.5
+    tuap_range = np.max(plot_tuap_amp) - np.min(plot_tuap_amp)
+    plot_tuap_amp = plot_tuap_amp / tuap_range + 0.5
+    plot_tuap_amp -= np.min(plot_tuap_amp)
+
+    imgplot = plt.imshow(plot_tuap_amp)
+    plt.savefig(result_path + '/' + args.uap_name)
+
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
+
+    np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
+    #plt.show()
+    print('uap saved!')
 
     log.close()
 
