@@ -272,6 +272,57 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
     return do_predict_avg
 
 
+def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, num_sample, log=None, use_cuda=True):
+    '''
+    find most active neurons
+    Args:
+        data_loader:
+        filter_model:
+        uap:
+        filter_arch:
+        target_class:
+        num_sample:
+        log:
+        use_cuda:
+
+    Returns:
+
+    '''
+    #split the model
+    model1, model2 = split_model(filter_model, filter_arch)
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+
+    total_num_samples = 0
+    out = []
+    dense_avg = []
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            uap = uap.cuda()
+
+        # compute output
+        with torch.no_grad():
+            dense_output = model1(input + uap)
+            ori_output = model2(dense_output)
+            dense_this = np.mean(np.array(torch.from_numpy(dense_output)), axis=0) #4096
+
+        dense_avg.append(dense_this) #batchx4096
+        total_num_samples += len(gt)
+    # average of all baches
+    dense_avg = np.mean(np.array(dense_avg), axis=0) #4096x10
+    # insert neuron index
+    idx = np.arange(0, len(dense_avg), 1, dtype=int)
+    dense_avg = np.c_[idx, dense_avg]
+
+    return dense_avg
+
+
 def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
 
 
