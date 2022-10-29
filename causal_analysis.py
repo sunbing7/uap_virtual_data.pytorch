@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
-    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act'],
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact'],
                         help='Causality analysis type (default: logit)')
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
