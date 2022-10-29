@@ -165,7 +165,7 @@ def main():
     neu_idx = np.ones(4096)
     for idx in neu_idx_list:
         neu_idx = list_and(neu_idx, np.array(idx))
-    print('Number of common outstanding neurons: {}'.format(len(neu_idx)))
+    print('Number of common outstanding neurons: {}'.format(np.sum(neu_idx == 1)))
     neu_idx = torch.from_numpy(neu_idx)
     if args.use_cuda:
         neu_idx = neu_idx.cuda()
