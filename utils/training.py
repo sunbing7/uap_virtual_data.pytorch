@@ -310,7 +310,7 @@ def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, 
         with torch.no_grad():
             dense_output = model1(input + uap)
             ori_output = model2(dense_output)
-            dense_this = np.mean(np.array(torch.from_numpy(dense_output)), axis=0) #4096
+            dense_this = np.mean(dense_output.cpu().detach().numpy(), axis=0) #4096
 
         dense_avg.append(dense_this) #batchx4096
         total_num_samples += len(gt)
