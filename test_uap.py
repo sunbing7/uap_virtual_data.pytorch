@@ -169,10 +169,12 @@ def main():
     uap = np.load(uap_fn)
     tuap = torch.from_numpy(uap)
 
-    test_sr, nt_sr, clean_test_acc = eval_uap(data_test_loader, target_network, tuap,
-                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda)
-    print('UAP targeted attack testing set SR: %.2f' % (test_sr))
-    print('UAP non-targeted attack testing set SR: %.2f' % (nt_sr))
+    test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(data_test_loader, target_network, tuap,
+                                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda)
+    print('All samples: UAP targeted attack testing set SR: %.2f' % (test_sr))
+    print('All samples: UAP non-targeted attack testing set SR: %.2f' % (nt_sr))
+    print('UAP targeted attack testing set SR: %.2f' % (_test_sr))
+    print('UAP non-targeted attack testing set SR: %.2f' % (_nt_sr))
     print('Clean sample test accuracy: %.2f' % clean_test_acc)
     '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,

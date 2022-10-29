@@ -287,7 +287,6 @@ def main():
     plot_tuap_amp -= np.min(plot_tuap_amp)
 
     imgplot = plt.imshow(plot_tuap_amp)
-    plt.savefig(result_path + '/' + args.uap_name)
 
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
@@ -295,7 +294,7 @@ def main():
                             random_seed=args.pretrained_seed)
 
     np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
-    plt.savefig(uap_path + '/uap.png')
+    plt.savefig(uap_path + '/uap_general.png')
     #plt.show()
     print('uap saved!')
 
