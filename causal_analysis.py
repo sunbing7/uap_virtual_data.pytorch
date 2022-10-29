@@ -208,8 +208,8 @@ def main():
 
     uap_fn = os.path.join(neuron_path, neuron_fn)
     np.save(uap_fn, outstanding_neuron)
-    neuron_fn = os.path.join(neuron_path, 'ranking_' + args.pretrained_arch + '.npy')
-    np.save(neuron_fn, temp)
+    #neuron_fn = os.path.join(neuron_path, 'ranking_' + args.pretrained_arch + '.npy')
+    #np.save(neuron_fn, temp)
     log.close()
     return
 
