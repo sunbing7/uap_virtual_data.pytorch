@@ -188,7 +188,7 @@ def main():
                                     use_cuda=args.use_cuda)
 
     # find outstanding neuron neuron_ranking shape: 4096x11
-    temp = neuron_ranking[:, [0, (args.target_class + 1)]]
+    temp = neuron_ranking
     ind = np.argsort(temp[:, 1])[::-1]
     temp = temp[ind]
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
