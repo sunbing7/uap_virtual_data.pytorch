@@ -331,7 +331,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
         #exclude samples from target class
         non_target_class_idxs = [i != target_class for i in gt]
         non_target_class_mask = non_target_class_idxs
-        if non_target_class_mask > 0:
+        if len(non_target_class_mask) > 0:
             gt_non_target_class = gt[non_target_class_mask]
             pert_output_non_target_class = pert_out_class[non_target_class_mask]
 
