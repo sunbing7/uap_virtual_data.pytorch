@@ -208,7 +208,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
-def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, log=None, use_cuda=True):
+def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, causal_type='logit', log=None, use_cuda=True):
     '''
     perform causality analysis on the dense layer before logit layer
     Args:
@@ -218,6 +218,9 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         filter_arch:
         target_class:
         num_sample: number of samples to use for causality analysis
+        causal_type:
+            - logit: analyze ACE of dense layer neuron on logits
+            - act: analyze ACE of uap on dense layer
         log:
         use_cuda:
 
@@ -230,46 +233,73 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
     # switch to evaluate mode
     model1.eval()
     model2.eval()
-
-    total_num_samples = 0
     out = []
-    do_predict_avg = []
-    for input, gt in data_loader:
-        if total_num_samples >= num_sample:
-            break
-        if use_cuda:
-            gt = gt.cuda()
-            input = input.cuda()
-            uap = uap.cuda()
+    if causal_type == 'logit':
+        total_num_samples = 0
+        out = []
+        do_predict_avg = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
 
-        # compute output
-        with torch.no_grad():
-            dense_output = model1(input + uap)
-            ori_output = model2(dense_output)
-            #ori_output = filter_model(input)
-            do_predict_neu = []
-            do_predict = []
-            #do convention for each neuron
-            for i in range(0, len(dense_output[0])):
-                hidden_do = np.zeros(shape=dense_output[:, i].shape)
-                dense_output_ = torch.clone(dense_output)
-                dense_output_[:, i] = torch.from_numpy(hidden_do)
-                output_do = model2(dense_output_).cpu().detach().numpy()
-                do_predict_neu.append(output_do) # 4096x32x10
-            do_predict_neu = np.array(do_predict_neu)
-            do_predict_neu = np.abs(ori_output.cpu().detach().numpy() - do_predict_neu)
-            do_predict = np.mean(np.array(do_predict_neu), axis=1)  #4096x10
-            #do_predict = do_predict_neu[:,target_class]
+            # compute output
+            with torch.no_grad():
+                dense_output = model1(input + uap)
+                ori_output = model2(dense_output)
+                #ori_output = filter_model(input)
+                do_predict_neu = []
+                do_predict = []
+                #do convention for each neuron
+                for i in range(0, len(dense_output[0])):
+                    hidden_do = np.zeros(shape=dense_output[:, i].shape)
+                    dense_output_ = torch.clone(dense_output)
+                    dense_output_[:, i] = torch.from_numpy(hidden_do)
+                    output_do = model2(dense_output_).cpu().detach().numpy()
+                    do_predict_neu.append(output_do) # 4096x32x10
+                do_predict_neu = np.array(do_predict_neu)
+                do_predict_neu = np.abs(ori_output.cpu().detach().numpy() - do_predict_neu)
+                do_predict = np.mean(np.array(do_predict_neu), axis=1)  #4096x10
+                #do_predict = do_predict_neu[:,target_class]
 
-        do_predict_avg.append(do_predict) #batchx4096x11
-        total_num_samples += len(gt)
-    # average of all baches
-    do_predict_avg = np.mean(np.array(do_predict_avg), axis=0) #4096x10
-    # insert neuron index
-    idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
-    do_predict_avg = np.c_[idx, do_predict_avg]
+            do_predict_avg.append(do_predict) #batchx4096x11
+            total_num_samples += len(gt)
+        # average of all baches
+        do_predict_avg = np.mean(np.array(do_predict_avg), axis=0) #4096x10
+        # insert neuron index
+        idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
+        do_predict_avg = np.c_[idx, do_predict_avg]
+        out = do_predict_avg[:, [0, (target_class + 1)]]
+    elif causal_type == 'act':
+        total_num_samples = 0
+        dense_avg = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
 
-    return do_predict_avg
+            # compute output
+            with torch.no_grad():
+                dense_output = model1(input)
+                pert_dense_output = model1(input + uap)
+                # ori_output = model2(dense_output)
+                dense_this = np.abs(dense_output.cpu().detach().numpy() - pert_dense_output.cpu().detach().numpy())# 4096
+
+            dense_avg.append(dense_this)  # batchx4096
+            total_num_samples += len(gt)
+        # average of all baches
+        dense_avg = np.mean(np.array(dense_avg), axis=0)  # 4096x10
+        # insert neuron index
+        idx = np.arange(0, len(dense_avg), 1, dtype=int)
+        dense_avg = np.c_[idx, dense_avg]
+        out = dense_avg
+    return out
 
 
 def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, num_sample, log=None, use_cuda=True):
@@ -296,7 +326,6 @@ def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, 
     model2.eval()
 
     total_num_samples = 0
-    out = []
     dense_avg = []
     for input, gt in data_loader:
         if total_num_samples >= num_sample:
@@ -309,7 +338,7 @@ def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, 
         # compute output
         with torch.no_grad():
             dense_output = model1(input + uap)
-            ori_output = model2(dense_output)
+            #ori_output = model2(dense_output)
             dense_this = np.mean(dense_output.cpu().detach().numpy(), axis=0) #4096
 
         dense_avg.append(dense_this) #batchx4096

@@ -21,6 +21,8 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act'],
+                        help='Causality analysis type (default: logit)')
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
@@ -184,11 +186,12 @@ def main():
     neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
                                     target_class=args.target_class,
                                     num_sample=args.num_iterations,
+                                    causal_type=args.causal_type,
                                     log=log,
                                     use_cuda=args.use_cuda)
 
-    # find outstanding neuron neuron_ranking shape: 4096x11
-    temp = neuron_ranking[:, [0, (args.target_class + 1)]]
+    # find outstanding neuron neuron_ranking shape: 4096x2
+    temp = neuron_ranking
     ind = np.argsort(temp[:, 1])[::-1]
     temp = temp[ind]
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
