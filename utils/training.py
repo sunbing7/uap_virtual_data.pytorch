@@ -258,6 +258,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
                     hidden_do = np.zeros(shape=dense_output[:, i].shape)
                     dense_output_ = torch.clone(dense_output)
                     dense_output_[:, i] = torch.from_numpy(hidden_do)
+                    if use_cuda:
+                        dense_output_ = dense_output_.cuda()
                     output_do = model2(dense_output_).cpu().detach().numpy()
                     do_predict_neu.append(output_do) # 4096x32x10
                 do_predict_neu = np.array(do_predict_neu)
@@ -327,6 +329,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
                     hidden_do = np.zeros(shape=dense_output[:, i].shape)
                     dense_output_ = torch.clone(dense_output)
                     dense_output_[:, i] = torch.from_numpy(hidden_do)
+                    if use_cuda:
+                        dense_output_ = dense_output_.cuda()
                     output_do = model2(dense_output_).cpu().detach().numpy()
                     do_predict_neu.append(output_do) # 4096x32x10
                 do_predict_neu = np.array(do_predict_neu)
@@ -368,7 +372,6 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
 
                 dense_this = np.abs(dense_output - pert_dense_output)# 4096
                 dense_this = np.mean(dense_this, axis=0)  # 4096
-
 
             dense_avg.append(dense_this)  # batchx4096
             total_num_samples += len(gt)
