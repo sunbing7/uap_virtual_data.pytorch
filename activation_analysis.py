@@ -203,7 +203,7 @@ def main():
                                 filter_arch=args.filter_arch,
                                 random_seed=args.pretrained_seed)
 
-    uap_fn = os.path.join(neuron_path, neuron_fn)
+    uap_fn = os.path.join(neuron_path, 'act' + neuron_fn)
     np.save(uap_fn, outstanding_neuron)
     log.close()
     return
