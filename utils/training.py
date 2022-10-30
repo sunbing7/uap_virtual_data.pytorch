@@ -381,6 +381,21 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         idx = np.arange(0, len(dense_avg), 1, dtype=int)
         dense_avg = np.c_[idx, dense_avg]
         out = dense_avg
+
+    elif causal_type == 'uap_act':
+        if use_cuda:
+            uap = uap.cuda()
+            # compute output
+        with torch.no_grad():
+            dense_output = model1(uap)
+            # ori_output = model2(dense_output)
+            dense_this = dense_output.cpu().detach().numpy()    #4096
+
+        # insert neuron index
+        idx = np.arange(0, len(dense_this), 1, dtype=int)
+        dense_this = np.c_[idx, dense_this]
+        out = dense_this
+
     return out
 
 

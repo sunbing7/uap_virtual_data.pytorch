@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
-    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact'],
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act'],
                         help='Causality analysis type (default: logit)')
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
@@ -196,7 +196,7 @@ def main():
     temp = temp[ind]
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
     print('top:{}'.format(len(top)))
-    outstanding_neuron = temp[0: int(len(top) * 0.5)][:, 0]
+    outstanding_neuron = temp[0: len(top)][:, 0]
 
     neuron_path = get_neuron_path()
 
