@@ -53,6 +53,9 @@ def parse_arguments():
 
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
+
+    parser.add_argument('--split_layer', type=int, default=43,
+                        help='causality analysis layer (default: 43)')
     # Parameters regarding UAP
     parser.add_argument('--num_iterations', type=int, default=32,
                         help='Number of iterations for causality analysis (default: 32)')
@@ -184,6 +187,7 @@ def main():
 
     # perform causality analysis
     neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
+                                  split_layer=args.split_layer,
                                     target_class=args.target_class,
                                     num_sample=args.num_iterations,
                                     causal_type=args.causal_type,

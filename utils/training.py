@@ -208,7 +208,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
-def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, causal_type='logit', log=None, use_cuda=True):
+def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, split_layer=43, causal_type='logit', log=None, use_cuda=True):
     '''
     perform causality analysis on the dense layer before logit layer
     Args:
@@ -228,7 +228,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
 
     '''
     #split the model
-    model1, model2 = split_model(filter_model, filter_arch)
+    model1, model2 = split_model(filter_model, filter_arch, split_layer=split_layer)
 
     # switch to evaluate mode
     model1.eval()
@@ -526,7 +526,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
     return test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr
 
 
-def split_model(ori_model, model_name):
+def split_model(ori_model, model_name, split_layer=43):
     '''
     split given model from the dense layer before logits
     Args:
@@ -539,8 +539,8 @@ def split_model(ori_model, model_name):
         modules = list(ori_model.children())
         layers = list(modules[0]) + [modules[1]] + list(modules[2])
         module1 = layers[:38]
-        moduel2 = layers[38:43]
-        module3 = layers[43:]
+        moduel2 = layers[38:split_layer]
+        module3 = layers[split_layer:]
         model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
         model_2nd = nn.Sequential(*module3)
     else:
@@ -549,7 +549,7 @@ def split_model(ori_model, model_name):
     return model_1st, model_2nd
 
 
-def reconstruct_model(ori_model, model_name, mask):
+def reconstruct_model(ori_model, model_name, mask, split_layer=43):
     '''
     reconstruct filter model for uap generation
     Args:
@@ -560,20 +560,12 @@ def reconstruct_model(ori_model, model_name, mask):
     Returns:
 
     '''
-    modules = list(ori_model.children())
-    layers = list(modules[0]) + [modules[1]] + list(modules[2])
-    module1 = layers[:38]
-    moduel2 = layers[38:43]
-    module3 = layers[43:]
-    model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-    model_2nd = nn.Sequential(*module3)
-
     if model_name == 'vgg19':
         modules = list(ori_model.children())
         layers = list(modules[0]) + [modules[1]] + list(modules[2])
         module1 = layers[:38]
-        moduel2 = layers[38:43]
-        module3 = layers[43:]
+        moduel2 = layers[38:split_layer]
+        module3 = layers[split_layer:]
         model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
         model_2nd = nn.Sequential(*module3)
 

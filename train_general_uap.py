@@ -37,7 +37,8 @@ def parse_arguments():
                         help='model name (default: alexnet_cifar10.pth)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
-
+    parser.add_argument('--split_layer', type=int, default=43,
+                        help='causality analysis layer (default: 43)')
     # Parameters regarding UAP
     parser.add_argument('--epsilon', type=float, default=0.03922,
                         help='Norm restriction of UAP (default: 10/255)')
@@ -170,7 +171,7 @@ def main():
     if args.use_cuda:
         neu_idx = neu_idx.cuda()
     #update the network
-    target_network = reconstruct_model(target_network, args.pretrained_arch, neu_idx)
+    target_network = reconstruct_model(target_network, args.pretrained_arch, neu_idx, split_layer=args.split_layer)
 
 
     #test
