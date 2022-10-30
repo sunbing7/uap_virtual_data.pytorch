@@ -217,28 +217,47 @@ def outlier_detection(cmp_list, max_val, verbose=False):
     cmp_list = list(np.array(cmp_list) / max_val)
     consistency_constant = 1.4826  # if normal distribution
     median = np.median(cmp_list)
-    mad = consistency_constant * np.median(np.abs(cmp_list - median))  # median of the deviation
-    min_mad = np.abs(np.min(cmp_list) - median) / mad
+    if median != 0:
+        mad = consistency_constant * np.median(np.abs(cmp_list - median))  # median of the deviation
+        #min_mad = np.abs(np.min(cmp_list) - median) / mad
 
-    # print('median: %f, MAD: %f' % (median, mad))
-    # print('anomaly index: %f' % min_mad)
+        # print('median: %f, MAD: %f' % (median, mad))
+        # print('anomaly index: %f' % min_mad)
 
-    flag_list = []
-    i = 0
-    for cmp in cmp_list:
-        if cmp_list[i] < median:
+        flag_list = []
+        i = 0
+        for cmp in cmp_list:
+            if cmp_list[i] < median:
+                i = i + 1
+                continue
+            if np.abs(cmp_list[i] - median) / mad > 2:
+                flag_list.append((i, cmp_list[i]))
             i = i + 1
-            continue
-        if np.abs(cmp_list[i] - median) / mad > 2:
-            flag_list.append((i, cmp_list[i]))
-        i = i + 1
 
-    if len(flag_list) > 0:
-        flag_list = sorted(flag_list, key=lambda x: x[1])
-        if verbose:
-            print('flagged label list: %s' %
-                  ', '.join(['%d: %2f' % (idx, val)
-                             for idx, val in flag_list]))
+        if len(flag_list) > 0:
+            flag_list = sorted(flag_list, key=lambda x: x[1])
+            if verbose:
+                print('flagged label list: %s' %
+                      ', '.join(['%d: %2f' % (idx, val)
+                                 for idx, val in flag_list]))
+    else:
+        mad = consistency_constant * np.median(np.abs(cmp_list - median))  # median of the deviation
+
+        flag_list = []
+        i = 0
+        for cmp in cmp_list:
+            if cmp_list[i] < median:
+                i = i + 1
+                continue
+            flag_list.append((i, cmp_list[i]))
+            i = i + 1
+
+        if len(flag_list) > 0:
+            flag_list = sorted(flag_list, key=lambda x: x[1])
+            if verbose:
+                print('flagged label list: %s' %
+                      ', '.join(['%d: %2f' % (idx, val)
+                                 for idx, val in flag_list]))
     return flag_list
 
 
