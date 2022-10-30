@@ -388,8 +388,9 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
             # compute output
         with torch.no_grad():
             dense_output = model1(uap)
-            # ori_output = model2(dense_output)
-            dense_this = dense_output.cpu().detach().numpy()    #4096
+            #uap_output = filter_model(uap)
+            #uap_output_class = torch.argmax(uap_output, dim=-1).cpu().numpy()
+            dense_this = dense_output.cpu().detach().numpy().transpose() #4096
 
         # insert neuron index
         idx = np.arange(0, len(dense_this), 1, dtype=int)
