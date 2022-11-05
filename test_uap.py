@@ -58,8 +58,8 @@ def parse_arguments():
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
-    parser.add_argument('--targeted',  action='store_true', default='True',
-                        help='Target a specific class (default: True)')
+    parser.add_argument('--targeted',  type=bool, default='',
+                        help='Target a specific class (default: False)')
     parser.add_argument('--target_class', type=int, default=1,
                         help='Target class (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -170,7 +170,7 @@ def main():
     tuap = torch.from_numpy(uap)
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(data_test_loader, target_network, tuap,
-                                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda)
+                                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda, targeted=args.targeted)
     print('All samples: UAP targeted attack testing set SR: %.2f' % (test_sr))
     print('All samples: UAP non-targeted attack testing set SR: %.2f' % (nt_sr))
     print('UAP targeted attack testing set SR: %.2f' % (_test_sr))

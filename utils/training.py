@@ -457,79 +457,112 @@ def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, 
     return dense_avg
 
 
-def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cuda=True):
+def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cuda=True, targeted=True):
 
 
     # switch to evaluate mode
     target_model.eval()
-
-    total_num_samples = 0
-    num_attack_success = 0
-    '''
-    for input, gt in train_data_loader:
-        if use_cuda:
-            gt = gt.cuda()
-            input = input.cuda()
-            uap = uap.cuda()
-
-        # compute output
-        with torch.no_grad():
-            attack_output = target_model(input + uap)
-            ori_output = target_model(input)
-
-        # Calculating Fooling Ratio params
-        #clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
-        pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
-
-        num_attack_success += np.sum(pert_out_class == target_class)
-
-        total_num_samples += len(gt)
-    train_sr = num_attack_success / total_num_samples * 100
-    '''
-    total_num_samples = 0
-    num_attack_success = 0
-    num_non_t_succ = 0
-    clean_correctly_classified = 0
-    #exclude samples from target class
-    _num_attack_success = 0
-    _num_non_t_succ = 0
-    _total_num_samples = 0
-    for input, gt in test_data_loader:
-        if use_cuda:
-            gt = gt.cuda()
-            input = input.cuda()
-            uap = uap.cuda()
-
-        # compute output
-        with torch.no_grad():
-            attack_output = target_model(input + uap)
-            ori_output = target_model(input)
-
-        # Calculating Fooling Ratio params
-        clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
-        pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
-
-        clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
-        num_attack_success += np.sum(pert_out_class == target_class)
-        num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
-
+    if targeted:
+        '''
+        total_num_samples = 0
+        num_attack_success = 0
+        for input, gt in train_data_loader:
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+    
+            # compute output
+            with torch.no_grad():
+                attack_output = target_model(input + uap)
+                ori_output = target_model(input)
+    
+            # Calculating Fooling Ratio params
+            #clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+    
+            num_attack_success += np.sum(pert_out_class == target_class)
+    
+            total_num_samples += len(gt)
+        train_sr = num_attack_success / total_num_samples * 100
+        '''
+        total_num_samples = 0
+        num_attack_success = 0
+        num_non_t_succ = 0
+        clean_correctly_classified = 0
         #exclude samples from target class
-        non_target_class_mask = [i != target_class for i in gt]
-        if len(non_target_class_mask) > 0:
-            gt_non_target_class = gt.cpu().numpy() * non_target_class_mask
-            pert_output_non_target_class = pert_out_class * non_target_class_mask
+        _num_attack_success = 0
+        _num_non_t_succ = 0
+        _total_num_samples = 0
+        for input, gt in test_data_loader:
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
 
-            _num_attack_success += np.sum(pert_output_non_target_class == target_class)
-            _num_non_t_succ += np.sum(pert_output_non_target_class != gt_non_target_class)
-            _total_num_samples += len(non_target_class_mask)
+            # compute output
+            with torch.no_grad():
+                attack_output = target_model(input + uap)
+                ori_output = target_model(input)
 
-        total_num_samples += len(gt)
-    test_sr = num_attack_success / total_num_samples * 100
-    clean_test_acc = clean_correctly_classified / total_num_samples * 100
-    nt_sr = num_non_t_succ / total_num_samples * 100
+            # Calculating Fooling Ratio params
+            clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
 
-    _test_sr = _num_attack_success / _total_num_samples * 100
-    _nt_sr = _num_non_t_succ / _total_num_samples * 100
+            clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
+            num_attack_success += np.sum(pert_out_class == target_class)
+            num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
+
+            #exclude samples from target class
+            non_target_class_mask = [i != target_class for i in gt]
+            if len(non_target_class_mask) > 0:
+                gt_non_target_class = gt.cpu().numpy() * non_target_class_mask
+                pert_output_non_target_class = pert_out_class * non_target_class_mask
+
+                _num_attack_success += np.sum(pert_output_non_target_class == target_class)
+                _num_non_t_succ += np.sum(pert_output_non_target_class != gt_non_target_class)
+                _total_num_samples += len(non_target_class_mask)
+
+            total_num_samples += len(gt)
+        test_sr = num_attack_success / total_num_samples * 100
+        clean_test_acc = clean_correctly_classified / total_num_samples * 100
+        nt_sr = num_non_t_succ / total_num_samples * 100
+
+        _test_sr = _num_attack_success / _total_num_samples * 100
+        _nt_sr = _num_non_t_succ / _total_num_samples * 100
+    else:
+        total_num_samples = 0
+        num_non_t_succ = 0
+        clean_correctly_classified = 0
+        # exclude samples from target class
+        _num_attack_success = 0
+        _num_non_t_succ = 0
+        _total_num_samples = 0
+        for input, gt in test_data_loader:
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            # compute output
+            with torch.no_grad():
+                attack_output = target_model(input + uap)
+                ori_output = target_model(input)
+
+            # Calculating Fooling Ratio params
+            clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+
+            clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
+            num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
+
+            total_num_samples += len(gt)
+        test_sr = 0
+        clean_test_acc = clean_correctly_classified / total_num_samples * 100
+        nt_sr = num_non_t_succ / total_num_samples * 100
+
+        _test_sr = 0
+        _nt_sr = nt_sr
     return test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr
 
 
