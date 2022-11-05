@@ -64,8 +64,8 @@ def parse_arguments():
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
 
-    parser.add_argument('--targeted',  action='store_true', default='True',
-                        help='Target a specific class (default: True)')
+    parser.add_argument('--targeted',  type=bool, default='',
+                        help='Target a specific class (default: False)')
     parser.add_argument('--target_class', type=int, default=1,
                         help='Target class (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32,
@@ -188,6 +188,7 @@ def main():
     # perform causality analysis
     neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
                                   split_layer=args.split_layer,
+                                  targeted=args.targeted,
                                     target_class=args.target_class,
                                     num_sample=args.num_iterations,
                                     causal_type=args.causal_type,
