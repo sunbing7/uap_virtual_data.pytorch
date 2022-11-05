@@ -208,7 +208,7 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
-def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_sample, split_layer=43, causal_type='logit', log=None, use_cuda=True):
+def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_class, num_sample, split_layer=43, causal_type='logit', log=None, use_cuda=True):
     '''
     perform causality analysis on the dense layer before logit layer
     Args:
@@ -235,6 +235,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
     model2.eval()
     out = []
     if causal_type == 'logit':
+        if not targeted:
+            return None
         total_num_samples = 0
         out = []
         do_predict_avg = []
@@ -265,7 +267,6 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
                 do_predict_neu = np.array(do_predict_neu)
                 do_predict_neu = np.abs(ori_output.cpu().detach().numpy() - do_predict_neu)
                 do_predict = np.mean(np.array(do_predict_neu), axis=1)  #4096x10
-                #do_predict = do_predict_neu[:,target_class]
 
             do_predict_avg.append(do_predict) #batchx4096x11
             total_num_samples += len(gt)
@@ -302,6 +303,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         dense_avg = np.c_[idx, dense_avg]
         out = dense_avg
     if causal_type == 'slogit':
+        if not targeted:
+            return None
         total_num_samples = 0
         do_predict_avg = []
         for input, gt in data_loader:
@@ -348,6 +351,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         out = do_predict_avg[:, [0, (target_class + 1)]]
 
     elif causal_type == 'sact':
+        if not targeted:
+            return None
         total_num_samples = 0
         dense_avg = []
         for input, gt in data_loader:
@@ -383,6 +388,8 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, target_class, num_
         out = dense_avg
 
     elif causal_type == 'uap_act':
+        if not targeted:
+            return None
         if use_cuda:
             uap = uap.cuda()
             # compute output
@@ -549,7 +556,7 @@ def split_model(ori_model, model_name, split_layer=43):
     return model_1st, model_2nd
 
 
-def reconstruct_model(ori_model, model_name, mask, split_layer=43):
+def reconstruct_model(ori_model, model_name, mask, split_layer=43, rec_type='mask'):
     '''
     reconstruct filter model for uap generation
     Args:
@@ -560,21 +567,35 @@ def reconstruct_model(ori_model, model_name, mask, split_layer=43):
     Returns:
 
     '''
-    if model_name == 'vgg19':
-        modules = list(ori_model.children())
-        layers = list(modules[0]) + [modules[1]] + list(modules[2])
-        module1 = layers[:38]
-        moduel2 = layers[38:split_layer]
-        module3 = layers[split_layer:]
-        model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-        model_2nd = nn.Sequential(*module3)
+    if rec_type == 'mask':
+        if model_name == 'vgg19':
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            moduel2 = layers[38:split_layer]
+            module3 = layers[split_layer:]
+            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+            model_2nd = nn.Sequential(*module3)
 
-        # add mask
-        model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
-    else:
-        return None
+            # add mask
+            model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
+            num_classes = 10
+        else:
+            return None, 0
+    elif rec_type == 'first':
+        if model_name == 'vgg19':
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            moduel2 = layers[38:split_layer]
+            module3 = layers[split_layer:]
+            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+            model = model_1st
+            num_classes = 4096
+        else:
+            return None
 
-    return model
+    return model, num_classes
 
 
 class AverageMeter(object):

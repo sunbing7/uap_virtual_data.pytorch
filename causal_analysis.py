@@ -189,11 +189,11 @@ def main():
     neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
                                   split_layer=args.split_layer,
                                   targeted=args.targeted,
-                                    target_class=args.target_class,
-                                    num_sample=args.num_iterations,
-                                    causal_type=args.causal_type,
-                                    log=log,
-                                    use_cuda=args.use_cuda)
+                                  target_class=args.target_class,
+                                  num_sample=args.num_iterations,
+                                  causal_type=args.causal_type,
+                                  log=log,
+                                  use_cuda=args.use_cuda)
 
     # find outstanding neuron neuron_ranking shape: 4096x2
     temp = neuron_ranking

@@ -39,6 +39,8 @@ def parse_arguments():
                         help='Seed used in the generation process (default: 123)')
     parser.add_argument('--split_layer', type=int, default=43,
                         help='causality analysis layer (default: 43)')
+    parser.add_argument('--rec_type', type=str, default='mask',
+                        help='reconstruct model type (default: mask)')
     # Parameters regarding UAP
     parser.add_argument('--epsilon', type=float, default=0.03922,
                         help='Norm restriction of UAP (default: 10/255)')
@@ -58,7 +60,7 @@ def parse_arguments():
                         help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
     parser.add_argument('--confidence', default=0., type=float,
                         help='Confidence value for C&W losses (default: 0.0)')
-    parser.add_argument('--targeted',  action='store_true', default='True',
+    parser.add_argument('--targeted',  default='True',
                         help='Target a specific class (default: True)')
     parser.add_argument('--target_class', type=int, default=7,
                         help='Target class (default: 7)')
@@ -171,7 +173,7 @@ def main():
     if args.use_cuda:
         neu_idx = neu_idx.cuda()
     #update the network
-    target_network = reconstruct_model(target_network, args.pretrained_arch, neu_idx, split_layer=args.split_layer)
+    target_network, num_classes = reconstruct_model(target_network, args.pretrained_arch, neu_idx, split_layer=args.split_layer, rec_type=args.rec_type)
 
 
     #test
