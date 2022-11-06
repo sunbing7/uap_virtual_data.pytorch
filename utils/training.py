@@ -427,12 +427,20 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
         # average of all baches
         dense_avg = np.mean(np.array(dense_avg), axis=0)  # 4096
         # invert for ranking later
-        dense_avg = 1 - dense_avg / np.max(dense_avg)
+        #dense_avg = 1 - dense_avg / np.max(dense_avg)
 
         # insert neuron index
         idx = np.arange(0, len(dense_avg), 1, dtype=int)
         dense_avg = np.c_[idx, dense_avg]
-        out = dense_avg
+
+        temp = dense_avg
+        ind = np.argsort(temp[:, 1])#[::-1]
+        dense_avg = temp[ind]
+        for i in range (len(dense_avg)):
+            if dense_avg[i][1] > 0.1 * np.max(temp):
+                break
+        out = dense_avg[:i]
+
     return out
 
 

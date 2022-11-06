@@ -187,17 +187,16 @@ def main():
                                   log=log,
                                   use_cuda=args.use_cuda)
 
-    # find outstanding neuron neuron_ranking shape: 4096x2
-    temp = neuron_ranking
-    ind = np.argsort(temp[:, 1])[::-1]
-    temp = temp[ind]
-    top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
-    print('top:{}'.format(len(top)))
-    wanted = len(top)
-    if args.causal_type == 'inact' and len(top) == 0:
-        wanted = 409
-
-    outstanding_neuron = temp[0: wanted][:, 0]
+    if args.causal_type == 'inact':
+        outstanding_neuron = neuron_ranking
+    else:
+        # find outstanding neuron neuron_ranking shape: 4096x2
+        temp = neuron_ranking
+        ind = np.argsort(temp[:, 1])[::-1]
+        temp = temp[ind]
+        top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
+        outstanding_neuron = temp[0: len(top)][:, 0]
+    print('top:{}'.format(len(outstanding_neuron)))
 
     neuron_path = get_neuron_path()
 
