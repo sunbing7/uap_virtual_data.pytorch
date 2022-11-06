@@ -39,6 +39,8 @@ def parse_arguments():
                         help='Seed used in the generation process (default: 123)')
     parser.add_argument('--split_layer', type=int, default=43,
                         help='causality analysis layer (default: 43)')
+    parser.add_argument('--split_num_n', type=int, default=4096,
+                        help='causality analysis layer number of neurons (default: 4096)')
     parser.add_argument('--rec_type', type=str, default='mask',
                         help='reconstruct model type (default: mask)')
     # Parameters regarding UAP
@@ -159,13 +161,13 @@ def main():
     neuron_path = get_neuron_path()
     neu_idx_list = []
     for fn in os.listdir(neuron_path):
-        neu_idx = np.zeros(4096)
+        neu_idx = np.zeros(args.split_num_n)
         each_neuron_path = os.path.join(neuron_path, fn)
         each_neuron = np.load(each_neuron_path)
         neu_idx[each_neuron.astype(int)] = 1
         neu_idx_list.append(neu_idx)
 
-    neu_idx = np.ones(4096)
+    neu_idx = np.ones(args.split_num_n)
     for idx in neu_idx_list:
         neu_idx = list_and(neu_idx, np.array(idx))
     print('Number of common outstanding neurons: {}'.format(np.sum(neu_idx == 1)))

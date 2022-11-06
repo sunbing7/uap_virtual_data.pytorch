@@ -614,13 +614,22 @@ def split_model(ori_model, model_name, split_layer=43):
         splitted models
     '''
     if model_name == 'vgg19':
-        modules = list(ori_model.children())
-        layers = list(modules[0]) + [modules[1]] + list(modules[2])
-        module1 = layers[:38]
-        moduel2 = layers[38:split_layer]
-        module3 = layers[split_layer:]
-        model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-        model_2nd = nn.Sequential(*module3)
+        if split_layer < 38:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:split_layer]
+            module2 = layers[split_layer:38]
+            module3 = layers[38:]
+            model_1st = nn.Sequential(*module1)
+            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+        else:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            moduel2 = layers[38:split_layer]
+            module3 = layers[split_layer:]
+            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+            model_2nd = nn.Sequential(*module3)
     else:
         return None, None
 
@@ -640,21 +649,36 @@ def reconstruct_model(ori_model, model_name, mask, split_layer=43, rec_type='mas
     '''
     if rec_type == 'mask':
         if model_name == 'vgg19':
-            modules = list(ori_model.children())
-            layers = list(modules[0]) + [modules[1]] + list(modules[2])
-            module1 = layers[:38]
-            moduel2 = layers[38:split_layer]
-            module3 = layers[split_layer:]
-            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-            model_2nd = nn.Sequential(*module3)
+            if split_layer < 38:
+                modules = list(ori_model.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:split_layer]
+                module2 = layers[split_layer:38]
+                module3 = layers[38:]
+                #model_1st = nn.Sequential(*module1)
+                #model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
 
-            # add mask
-            model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
-            num_classes = 10
+                # add mask
+                model = nn.Sequential(*[*module1, Mask(mask), *module2, Flatten(), *module3])
+                num_classes = 10
+            else:
+                modules = list(ori_model.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:38]
+                moduel2 = layers[38:split_layer]
+                module3 = layers[split_layer:]
+                model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+                model_2nd = nn.Sequential(*module3)
+
+                # add mask
+                model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
+                num_classes = 10
         else:
             return None, 0
     elif rec_type == 'first':
         if model_name == 'vgg19':
+            if split_layer < 38:
+                return None, 0
             modules = list(ori_model.children())
             layers = list(modules[0]) + [modules[1]] + list(modules[2])
             module1 = layers[:38]
@@ -664,7 +688,7 @@ def reconstruct_model(ori_model, model_name, mask, split_layer=43, rec_type='mas
             model = model_1st
             num_classes = 4096
         else:
-            return None
+            return None, 0
 
     return model, num_classes
 

@@ -196,7 +196,7 @@ def main():
         temp = temp[ind]
         top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
         outstanding_neuron = temp[0: len(top)][:, 0]
-    print('top:{}'.format(len(outstanding_neuron)))
+    print('total:{}, top:{}'.format(len(neuron_ranking), len(outstanding_neuron)))
 
     neuron_path = get_neuron_path()
 
