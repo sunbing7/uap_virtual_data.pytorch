@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
-    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act'],
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact'],
                         help='Causality analysis type (default: logit)')
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
@@ -123,13 +123,15 @@ def main():
                                                     pin_memory=True)
 
     ##### Dataloader for training: perturbed data ####    #load uap
-    uap_path = get_uap_path(uap_data=args.dataset,
-                            model_data=args.pretrained_dataset,
-                            network_arch=args.pretrained_arch,
-                            random_seed=args.pretrained_seed)
-    uap_fn = os.path.join(uap_path, 'uap.npy')
-    uap = np.load(uap_fn)
-    uap = torch.from_numpy(uap)
+    uap = None
+    if args.causal_type != 'inact':
+        uap_path = get_uap_path(uap_data=args.dataset,
+                                model_data=args.pretrained_dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed)
+        uap_fn = os.path.join(uap_path, 'uap.npy')
+        uap = np.load(uap_fn)
+        uap = torch.from_numpy(uap)
 
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
@@ -175,16 +177,6 @@ def main():
     if args.use_cuda:
         filter_network.cuda()
 
-    '''
-    metrics_evaluate(data_loader=pretrained_data_test_loader,
-                    target_model=filter_network,
-                    perturbed_model=filter_network,
-                    targeted=args.targeted,
-                    target_class=args.target_class,
-                    log=log,
-                    use_cuda=args.use_cuda)
-    '''
-
     # perform causality analysis
     neuron_ranking = solve_causal(data_train_loader, filter_network, uap, args.filter_arch,
                                   split_layer=args.split_layer,
@@ -201,7 +193,11 @@ def main():
     temp = temp[ind]
     top = outlier_detection(temp[:, 1], max(temp[:, 1]), verbose=False)
     print('top:{}'.format(len(top)))
-    outstanding_neuron = temp[0: len(top)][:, 0]
+    wanted = len(top)
+    if args.causal_type == 'inact' and len(top) == 0:
+        wanted = 409
+
+    outstanding_neuron = temp[0: wanted][:, 0]
 
     neuron_path = get_neuron_path()
 

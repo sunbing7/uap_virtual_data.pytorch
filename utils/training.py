@@ -404,6 +404,35 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
         dense_this = np.c_[idx, dense_this]
         out = dense_this
 
+    elif causal_type == 'inact':
+        # find inactive neurons; untargeted attack
+        total_num_samples = 0
+        dense_avg = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+
+            # compute output
+            with torch.no_grad():
+                dense_output = model1(input)
+                # ori_output = model2(dense_output)
+                dense_this = dense_output.cpu().detach().numpy() # 32x4096
+                dense_this = np.mean(dense_this, axis=0)  # 4096
+            dense_avg.append(dense_this)  # batchx4096
+            total_num_samples += len(gt)
+
+        # average of all baches
+        dense_avg = np.mean(np.array(dense_avg), axis=0)  # 4096
+        # invert for ranking later
+        dense_avg = 1 - dense_avg / np.max(dense_avg)
+
+        # insert neuron index
+        idx = np.arange(0, len(dense_avg), 1, dtype=int)
+        dense_avg = np.c_[idx, dense_avg]
+        out = dense_avg
     return out
 
 
