@@ -252,14 +252,17 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             with torch.no_grad():
                 dense_output = model1(input + uap)
                 ori_output = model2(dense_output)
+
+                dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
                 #ori_output = filter_model(input)
                 do_predict_neu = []
                 do_predict = []
                 #do convention for each neuron
-                for i in range(0, len(dense_output[0])):
-                    hidden_do = np.zeros(shape=dense_output[:, i].shape)
-                    dense_output_ = torch.clone(dense_output)
+                for i in range(0, len(dense_hidden_[0])):
+                    hidden_do = np.zeros(shape=dense_hidden_[:, i].shape)
+                    dense_output_ = torch.clone(dense_hidden_)
                     dense_output_[:, i] = torch.from_numpy(hidden_do)
+                    dense_output_ = torch.reshape(dense_output_, dense_output.shape)
                     if use_cuda:
                         dense_output_ = dense_output_.cuda()
                     output_do = model2(dense_output_).cpu().detach().numpy()
