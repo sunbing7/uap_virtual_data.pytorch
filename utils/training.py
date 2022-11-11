@@ -97,6 +97,89 @@ def train(data_loader,
                                                                                                     top5=top5,
                                                                                                     error1=100-top1.avg), log)
 
+
+def train_repair(data_loader, uap,
+          model,
+          criterion,
+          optimizer,
+          num_iterations,
+          log,
+          print_freq=200,
+          use_cuda=True):
+    # train function (forward, backward, update)
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+
+    data_iterator = iter(data_loader)
+
+    iteration = 0
+    while (iteration < num_iterations):
+        try:
+            input, target = next(data_iterator)
+        except StopIteration:
+            # StopIteration is thrown if dataset ends
+            # reinitialize data loader
+            data_iterator = iter(data_loader)
+            input, target = next(data_iterator)
+
+        #if targeted:
+        #    target = torch.ones(input.shape[0], dtype=torch.int64) * target_class
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            target = target.cuda()
+            input = input.cuda()
+            uap = uap.cuda()
+
+        # compute output
+        output = model(input)
+        per_output = model(input + uap)
+        loss1 = criterion(output, target)
+        loss2 = criterion(per_output, target)
+        loss = 0.1 * loss1 + 0.9 * loss2
+
+        # measure accuracy and record loss
+        if len(target.shape) > 1:
+            target = torch.argmax(target, dim=-1)
+        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        losses.update(loss.item(), input.size(0))
+        top1.update(prec1.item(), input.size(0))
+        top5.update(prec5.item(), input.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if iteration % print_freq == 0:
+            print_log('  Iteration: [{:03d}/{:03d}]   '
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                iteration, num_iterations, batch_time=batch_time,
+                data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string(), log)
+
+        iteration += 1
+    print_log('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                    top5=top5,
+                                                                                                    error1=100 - top1.avg),
+                                                                                                    log)
+
 def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, target_class, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
@@ -658,8 +741,7 @@ def reconstruct_model(ori_model, model_name, mask, split_layer=43, rec_type='mas
                 module1 = layers[:split_layer]
                 module2 = layers[split_layer:38]
                 module3 = layers[38:]
-                #model_1st = nn.Sequential(*module1)
-                #model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+                mask = torch.reshape(mask, (64,112,112))
 
                 # add mask
                 model = nn.Sequential(*[*module1, Mask(mask), *module2, Flatten(), *module3])
@@ -692,6 +774,46 @@ def reconstruct_model(ori_model, model_name, mask, split_layer=43, rec_type='mas
             num_classes = 4096
         else:
             return None, 0
+
+    return model, num_classes
+
+def reconstruct_model_repair(ori_model, model_name, mask, split_layer=43):
+    '''
+    reconstruct filter model for uap generation
+    Args:
+        ori_model:
+        model_name:
+        mask:
+
+    Returns:
+
+    '''
+    if model_name == 'vgg19':
+        if split_layer < 38:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:split_layer]
+            module2 = layers[split_layer:38]
+            module3 = layers[38:]
+            mask = torch.reshape(mask, (64,112,112))
+
+            # add mask
+            model = nn.Sequential(*[*module1, Mask(mask), *module2, Flatten(), *module3])
+            num_classes = 10
+        else:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            moduel2 = layers[38:split_layer]
+            module3 = layers[split_layer:]
+            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+            model_2nd = nn.Sequential(*module3)
+
+            # add mask
+            model = nn.Sequential(*[*module1, Flatten(), *moduel2, Mask(mask), *module3])
+            num_classes = 10
+    else:
+        return None, 0
 
     return model, num_classes
 

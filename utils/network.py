@@ -50,6 +50,14 @@ def set_parameter_requires_grad(model, requires_grad=False):
     for param in model.parameters():
         param.requires_grad = False
 
+def set_parameter_requires_grad_selected(model, set_layer, requires_grad=False):
+    for name, param in model.named_parameters():
+        #print(name)
+        if set_layer in name:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
+
 def get_num_parameters(model):
     return sum(p.numel() for p in model.parameters())
 
