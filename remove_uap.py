@@ -156,7 +156,7 @@ def main():
         #target_network.load_state_dict(network_data['state_dict'])
         #target_network.load_state_dict(network_data.state_dict())
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+    '''
     # add mask based on outstanding neuron
     neuron_path = get_neuron_path()
     neu_idx_list = []
@@ -174,7 +174,7 @@ def main():
     neu_idx = torch.from_numpy(neu_idx)
     if args.use_cuda:
         neu_idx = neu_idx.cuda()
-
+    '''
     # get UAP
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
