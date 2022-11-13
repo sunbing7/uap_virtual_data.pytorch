@@ -243,15 +243,8 @@ def main():
     model_path = get_model_path(dataset_name=args.pretrained_dataset,
                                 network_arch=args.pretrained_arch,
                                 random_seed=args.pretrained_seed)
-
-    save_checkpoint({
-      'arch'        : args.pretrained_arch,
-      # 'state_dict'  : perturbed_net.state_dict(),
-      'state_dict'  : target_network.state_dict(),
-      'optimizer'   : optimizer.state_dict(),
-      'args'        : copy.deepcopy(args),
-    }, model_path, args.rep_model)
-
+    rep_save_path = os.path.join(model_path, args.rep_model)
+    torch.save(target_network, rep_save_path)
     log.close()
 
 
