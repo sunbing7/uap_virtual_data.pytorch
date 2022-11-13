@@ -35,6 +35,8 @@ def parse_arguments():
                         help='Used model architecture: (default: alexnet)')
     parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
                         help='model name (default: alexnet_cifar10.pth)')
+    parser.add_argument('--rep_model', type=str, default='checkpoint_rep.pth.tar',
+                        help='repaired model name (default: checkpoint_rep.pth.tar)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     parser.add_argument('--split_layer', type=str, default='classifier.4',
@@ -73,9 +75,6 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-
-    parser.add_argument('--rep_model', type=str, default='checkpoint_rep.pth.tar',
-                        help='repaired model name (default: checkpoint_rep.pth.tar)')
 
     args = parser.parse_args()
 
@@ -241,13 +240,17 @@ def main():
     end = time.time()
     print_log("Time needed for UAP repair: {}".format(end - start), log)
 
+    model_path = get_model_path(dataset_name=args.pretrained_dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed)
+
     save_checkpoint({
       'arch'        : args.pretrained_arch,
       # 'state_dict'  : perturbed_net.state_dict(),
-      'state_dict'  : target_network.module.generator.state_dict(),
+      'state_dict'  : target_network.state_dict(),
       'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
-    }, result_path, args.rep_model)
+    }, model_path, args.rep_model)
 
     log.close()
 
