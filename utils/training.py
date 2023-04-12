@@ -98,6 +98,108 @@ def train(data_loader,
                                                                                                     error1=100-top1.avg), log)
 
 
+def train_hidden(data_loader,
+          model,
+          criterion,
+          optimizer,
+          epsilon,
+          num_iterations,
+          targeted,
+          target_class,
+          log,
+          arch,
+          mask,
+          split_layer,
+          do_val=1,
+          num_hidden_neu=4096,
+          print_freq=200,
+          use_cuda=True):
+    # train function (forward, backward, update)
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to train mode
+    model.module.generator.train()
+    model.module.target_model.eval()
+
+    end = time.time()
+
+    data_iterator = iter(data_loader)
+
+    iteration = 0
+    while (iteration < num_iterations):
+        try:
+            input, target = next(data_iterator)
+            target_ = np.ones((len(target), num_hidden_neu)) * do_val
+            masks = np.tile(mask, (len(target), 1))
+            target = torch.from_numpy(target_ * masks).float()
+
+        except StopIteration:
+            # StopIteration is thrown if dataset ends
+            # reinitialize data loader
+            data_iterator = iter(data_loader)
+            input, target = next(data_iterator)
+
+        if targeted:
+            target_ = torch.ones(input.shape[0], dtype=torch.int64) * target_class
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            target = target.cuda()
+            input = input.cuda()
+
+        # compute output
+        if model.module._get_name() == "Inception3":
+            output, aux_output = model(input)
+            loss1 = criterion(output, target)
+            loss2 = criterion(aux_output, target)
+            loss = loss1 + 0.4 * loss2
+        else:
+            output = model(input)
+            loss = criterion(output, target)
+
+        # measure accuracy and record loss
+        if len(target.shape) > 1:
+            target = torch.argmax(target, dim=-1)
+        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        losses.update(loss.item(), input.size(0))
+        top1.update(prec1.item(), input.size(0))
+        top5.update(prec5.item(), input.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        # Projection
+        model.module.generator.uap.data = torch.clamp(model.module.generator.uap.data, -epsilon, epsilon)
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if iteration % print_freq == 0:
+            print_log('  Iteration: [{:03d}/{:03d}]   '
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                iteration, num_iterations, batch_time=batch_time,
+                data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string(), log)
+
+        iteration += 1
+    print_log('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                    top5=top5,
+                                                                                                    error1=100 - top1.avg),
+              log)
+
+
+
+
 def train_repair(data_loader, uap,
           model,
           criterion,

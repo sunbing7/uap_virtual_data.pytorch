@@ -52,7 +52,7 @@ def set_parameter_requires_grad(model, requires_grad=False):
 
 def set_parameter_requires_grad_selected(model, set_layer, requires_grad=False):
     for name, param in model.named_parameters():
-        #print(name)
+        print(name)
         if set_layer in name:
             param.requires_grad = True
         else:
