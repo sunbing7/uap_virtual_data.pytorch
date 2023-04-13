@@ -161,6 +161,11 @@ def train_hidden(data_loader,
             loss = loss1 + 0.4 * loss2
         else:
             output = model(input)
+            if output.shape != target.shape:
+                print(iteration)
+                print(output.input)
+                print(output.shape)
+                print(target.shape)
             loss = criterion(output, target)
 
         # measure accuracy and record loss
