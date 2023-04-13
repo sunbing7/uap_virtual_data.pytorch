@@ -135,7 +135,7 @@ def train_hidden(data_loader,
             input, target = next(data_iterator)
             target_ = np.ones((len(target), num_hidden_neu)) * do_val
             masks = np.tile(mask, (len(target), 1))
-            target = torch.from_numpy(target_ * masks).Long()
+            target = torch.from_numpy(target_ * masks).long()
 
         except StopIteration:
             # StopIteration is thrown if dataset ends
