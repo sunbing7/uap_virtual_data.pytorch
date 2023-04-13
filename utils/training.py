@@ -750,6 +750,10 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
             num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
 
             #exclude samples from target class
+            _num_attack_success += np.sum(pert_out_class == target_class) - np.sum(gt.cpu().numpy() == target_class)
+            _num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
+            _total_num_samples += len(gt) - np.sum(gt.cpu().numpy() == target_class)
+            '''
             non_target_class_mask = [i != target_class for i in gt]
             if len(non_target_class_mask) > 0:
                 if use_cuda:
@@ -762,7 +766,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
                 _num_attack_success += np.sum(pert_output_non_target_class == target_class)
                 _num_non_t_succ += np.sum(pert_output_non_target_class != gt_non_target_class)
                 _total_num_samples += len(non_target_class_mask)
-
+            '''
             total_num_samples += len(gt)
         test_sr = num_attack_success / total_num_samples * 100
         clean_test_acc = clean_correctly_classified / total_num_samples * 100
