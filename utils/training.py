@@ -163,7 +163,7 @@ def train_hidden(data_loader,
             output = model(input)
             if output.shape != target.shape:
                 print(iteration)
-                print(output.input)
+                print(input.shape)
                 print(output.shape)
                 print(target.shape)
             loss = criterion(output, target)
