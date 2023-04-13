@@ -22,6 +22,23 @@ class LogitLoss(_WeightedLoss):
         # Increase the logit value
         return torch.mean(-logits)
 
+
+class HiddenMSELoss(_WeightedLoss):
+    def __init__(self, num_classes, use_cuda=False):
+        super(LogitLoss, self).__init__()
+        self.num_classes = num_classes
+        self.use_cuda = use_cuda
+
+    def forward(self, input, target_array):
+        one_hot_labels = target_array
+        if self.use_cuda:
+            one_hot_labels = one_hot_labels.cuda()
+
+        # Get the logit output value
+        mse = torch.square(one_hot_labels - input) / len(input)
+        # Increase the logit value
+        return (mse)
+
 class BoundedLogitLoss(_WeightedLoss):
     def __init__(self, num_classes, confidence, use_cuda=False):
         super(BoundedLogitLoss, self).__init__()

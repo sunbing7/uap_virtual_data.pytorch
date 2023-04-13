@@ -15,7 +15,7 @@ from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import train, save_checkpoint, metrics_evaluate, reconstruct_model, train_hidden, split_model
-from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
+from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg, HiddenMSELoss
 
 from matplotlib import pyplot as plt
 
@@ -58,7 +58,7 @@ def parse_arguments():
                         help='uap file name (default: uap_general.npy)')
     # Optimization options
     parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
-                                                                  'bounded_logit_fixed_ref', 'bounded_logit_neg'],
+                                                                  'bounded_logit_fixed_ref', 'bounded_logit_neg', 'mse'],
                         help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
     parser.add_argument('--confidence', default=0., type=float,
                         help='Confidence value for C&W losses (default: 0.0)')
@@ -459,6 +459,8 @@ def main_hidden():
         criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
     elif args.loss_function == "bounded_logit_neg":
         criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    elif args.loss_function == 'mse':
+        criterion = HiddenMSELoss(num_classes=num_classes, use_cuda=args.use_cuda)
     else:
         raise ValueError
 
