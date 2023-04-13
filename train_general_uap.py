@@ -466,6 +466,7 @@ def main_hidden():
 
     if args.use_cuda:
         target_network.cuda()
+        model2.cuda()
         generator.cuda()
         perturbed_net.cuda()
         criterion.cuda()
