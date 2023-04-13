@@ -495,7 +495,7 @@ def main_hidden():
     print_log("Time needed for UAP generation: {}".format(end - start), log)
     # evaluate
     print_log("Final evaluation:", log)
-    #'''
+    '''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
                     target_model=target_network,
                     perturbed_model=perturbed_net,
@@ -513,7 +513,7 @@ def main_hidden():
     }, result_path, args.uap_model)
 
     #export uap and save it
-    #'''
+    '''
     tuap = torch.unsqueeze(generator.uap, dim=0)
     plot_tuap = tuap[0].cpu().detach().numpy()
     plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
