@@ -396,8 +396,8 @@ def main_hidden():
         neu_idx = list_and(neu_idx, np.array(idx))
     print('Number of common outstanding neurons: {}'.format(np.sum(neu_idx == 1)))
     neu_idx = torch.from_numpy(neu_idx)
-    if args.use_cuda:
-        neu_idx = neu_idx.cuda()
+    #if args.use_cuda:
+    #    neu_idx = neu_idx.cuda()
     #update the network
     #target_network, num_classes = reconstruct_model(target_network, args.pretrained_arch, neu_idx, split_layer=args.split_layer, rec_type=args.rec_type)
 
