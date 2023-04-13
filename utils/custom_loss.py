@@ -35,6 +35,9 @@ class HiddenMSELoss(_WeightedLoss):
             one_hot_labels = one_hot_labels.cuda()
 
         # Get the logit output value
+        if one_hot_labels.shape != input.shape:
+            print(one_hot_labels.shape)
+            print(input.shape)
         mse = torch.square(one_hot_labels - input).sum() / len(input)
         # Increase the logit value
         return (mse)
