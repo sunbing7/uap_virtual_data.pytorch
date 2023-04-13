@@ -476,6 +476,7 @@ def main_hidden():
     start = time.time()
     train_hidden(data_loader=data_train_loader,
             model=perturbed_net,
+            model2=model2,
             criterion=criterion,
             optimizer=optimizer,
             epsilon=args.epsilon,

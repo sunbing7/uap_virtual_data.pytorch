@@ -100,6 +100,7 @@ def train(data_loader,
 
 def train_hidden(data_loader,
           model,
+          model2,
           criterion,
           optimizer,
           epsilon,
@@ -163,9 +164,10 @@ def train_hidden(data_loader,
             loss = criterion(output, target)
 
         # measure accuracy and record loss
-        if len(target.shape) > 1:
-            target = torch.argmax(target, dim=-1)
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        if len(target_.shape) > 1:
+            target_ = torch.argmax(target_, dim=-1)
+        final_output = model2(output)
+        prec1, prec5 = accuracy(final_output.data, target_, topk=(1, 5))
         losses.update(loss.item(), input.size(0))
         top1.update(prec1.item(), input.size(0))
         top5.update(prec5.item(), input.size(0))
