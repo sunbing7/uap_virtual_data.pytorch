@@ -166,6 +166,9 @@ def train_hidden(data_loader,
         # measure accuracy and record loss
         if len(target_.shape) > 1:
             target_ = torch.argmax(target_, dim=-1)
+        if use_cuda:
+            target_ = target_.cuda()
+
         final_output = model2(output)
         prec1, prec5 = accuracy(final_output.data, target_, topk=(1, 5))
         losses.update(loss.item(), input.size(0))
