@@ -428,6 +428,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
     # switch to evaluate mode
     model1.eval()
     model2.eval()
+    #filter_model.eval()
     out = []
     if causal_type == 'logit':
         if not targeted:
@@ -449,7 +450,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
                 ori_output = model2(dense_output)
 
                 dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
-                #ori_output = filter_model(input)
+                #ori_output_ = filter_model(input + uap)
                 do_predict_neu = []
                 do_predict = []
                 #do convention for each neuron
