@@ -137,7 +137,6 @@ def train_hidden(data_loader,
             target_ = np.ones((len(target), num_hidden_neu)) * do_val
             masks = np.tile(mask, (len(input), 1))
             target = torch.from_numpy(target_ * masks).long()
-
         except StopIteration:
             # StopIteration is thrown if dataset ends
             # reinitialize data loader
@@ -162,10 +161,11 @@ def train_hidden(data_loader,
         else:
             output = model(input)
             if output.shape != target.shape:
-                print(iteration)
-                print(input.shape)
-                print(output.shape)
-                print(target.shape)
+                #print(iteration)
+                #print(input.shape)
+                #print(output.shape)
+                #print(target.shape)
+                target = torch.reshape(target, output.shape)
             loss = criterion(output, target)
 
         # measure accuracy and record loss

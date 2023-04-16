@@ -489,6 +489,7 @@ def main_hidden():
             mask=neu_idx,
             split_layer=args.split_layer,
             do_val=2,
+            num_hidden_neu=args.split_num_n,
             print_freq=args.print_freq,
             use_cuda=args.use_cuda)
     end = time.time()
