@@ -41,6 +41,8 @@ def parse_arguments():
                         help='causality analysis layer (default: 43)')
     parser.add_argument('--split_num_n', type=int, default=4096,
                         help='causality analysis layer number of neurons (default: 4096)')
+    parser.add_argument('--do_val', type=int, default=1,
+                        help='hidden neuron intervention value')
     parser.add_argument('--rec_type', type=str, default='mask',
                         help='reconstruct model type (default: mask)')
     # Parameters regarding UAP
@@ -488,7 +490,7 @@ def main_hidden():
             arch=args.pretrained_arch,
             mask=neu_idx,
             split_layer=args.split_layer,
-            do_val=2,
+            do_val=args.do_val,
             num_hidden_neu=args.split_num_n,
             print_freq=args.print_freq,
             use_cuda=args.use_cuda)
