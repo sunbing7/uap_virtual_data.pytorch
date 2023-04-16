@@ -604,7 +604,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
                 dense_output = model1(input)
                 dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
                 dense_hidden_ = dense_hidden_.cpu().detach().numpy()
-                dense_hidden_ = dense_hidden_[(gt == target_class), :]
+                dense_hidden_ = dense_hidden_[(gt.cpu().detach().numpy() == target_class), :]
 
                 dense_this = np.mean(dense_hidden_, axis=0)  # 4096
 
