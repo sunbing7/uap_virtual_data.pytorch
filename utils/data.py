@@ -6,6 +6,7 @@ import torch
 import random
 # import cv2
 from torch.utils.data import Dataset
+import pandas as pd
 
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
@@ -107,8 +108,11 @@ def get_data(dataset, pretrained_dataset):
         test_data = dset.CIFAR100(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
     
     elif dataset == "imagenet":
-        traindir = os.path.join(IMAGENET_PATH, 'train')
-        valdir = os.path.join(IMAGENET_PATH, 'val')
+        #traindir = os.path.join(IMAGENET_PATH, 'train')
+        #valdir = os.path.join(IMAGENET_PATH, 'val')
+
+        traindir = IMAGENET_PATH
+        valdir = IMAGENET_PATH
 
         train_transform = transforms.Compose([
                 transforms.Resize(256),
@@ -309,3 +313,42 @@ class CustomCifarDataset(Dataset):
         """ 1-hot encodes a tensor """
         return np.eye(num_classes, dtype='uint8')[y]
 '''
+
+
+def normalize(t):
+    t[:, 0, :, :] = (t[:, 0, :, :] - mean[0]) / std[0]
+    t[:, 1, :, :] = (t[:, 1, :, :] - mean[1]) / std[1]
+    t[:, 2, :, :] = (t[:, 2, :, :] - mean[2]) / std[2]
+    return t
+
+
+#############################################################
+# This will fix labels for NIPS ImageNet
+def fix_labels_nips(test_set, pytorch=False, target_flag=False):
+    '''
+    :param pytorch: pytorch models have 1000 labels as compared to tensorflow models with 1001 labels
+    '''
+
+    filenames = [i.split('/')[-1] for i, j in test_set.samples]
+    # Load provided files and get image labels and names
+    image_classes = pd.read_csv(os.path.join(IMAGENET_PATH, "images.csv"))
+    image_metadata = pd.DataFrame({"ImageId": [f[:-4] for f in filenames]}).merge(image_classes, on="ImageId")
+    true_classes = image_metadata["TrueLabel"].tolist()
+    target_classes = image_metadata["TargetClass"].tolist()
+    val_dict = {}
+    for f, i in zip(filenames, range(len(filenames))):
+        val_dict[f] = [true_classes[i], target_classes[i]]
+
+    new_data_samples = []
+    for i, j in enumerate(test_set.samples):
+        if target_flag:
+            org_label = val_dict[test_set.samples[i][0].split('/')[-1]][1]
+        else:
+            org_label = val_dict[test_set.samples[i][0].split('/')[-1]][0]
+        if pytorch:
+            new_data_samples.append((test_set.samples[i][0], org_label - 1))
+        else:
+            new_data_samples.append((test_set.samples[i][0], org_label))
+
+    test_set.samples = new_data_samples
+    return test_set
