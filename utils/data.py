@@ -8,10 +8,10 @@ import random
 from torch.utils.data import Dataset
 import pandas as pd
 
-import torchvision.datasets as dset
+import torchvision.datasets as
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as tfunc
-
+dset
 from config.config import IMAGENET_PATH, DATASET_BASE_PATH
 from config.config import COCO_2017_TRAIN_IMGS, COCO_2017_VAL_IMGS, COCO_2017_TRAIN_ANN, COCO_2017_VAL_ANN, VOC_2012_ROOT, PLACES365_ROOT
 from dataset_utils.voc0712 import VOCDetection
@@ -110,8 +110,8 @@ def get_data(dataset, pretrained_dataset):
     elif dataset == "imagenet":
         #traindir = os.path.join(IMAGENET_PATH, 'train')
         #valdir = os.path.join(IMAGENET_PATH, 'val')
-
-        traindir = IMAGENET_PATH
+        traindir = os.path.join(IMAGENET_PATH, 'val')
+        #traindir = IMAGENET_PATH
         valdir = IMAGENET_PATH
 
         train_transform = transforms.Compose([
@@ -128,8 +128,11 @@ def get_data(dataset, pretrained_dataset):
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
 
-        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        #train_data = dset.ImageFolder(root=traindir, transform=train_transform)
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
+
+        train_data = dset.ImageNet(traindir, split='val', transform=train_transform,
+                                   target_transform=None, download=True)
     
     elif dataset == "coco":
         train_transform = transforms.Compose([
