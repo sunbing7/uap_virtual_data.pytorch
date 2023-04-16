@@ -591,6 +591,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             return None
         total_num_samples = 0
         dense_avg = []
+        num_target_sample = 0
         for input, gt in data_loader:
             if total_num_samples >= num_sample:
                 break
@@ -605,13 +606,13 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
                 dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
                 dense_hidden_ = dense_hidden_.cpu().detach().numpy()
                 dense_hidden_ = dense_hidden_[(gt.cpu().detach().numpy() == target_class), :]
-
-                dense_this = np.mean(dense_hidden_, axis=0)  # 4096
+                num_target_sample += len(dense_hidden_)
+                dense_this = np.sum(dense_hidden_, axis=0)  # 4096
 
             dense_avg.append(dense_this)  # batchx4096
             total_num_samples += len(gt)
         # average of all baches
-        dense_avg = np.mean(np.array(dense_avg), axis=0)  # 4096
+        dense_avg = np.sum(np.array(dense_avg), axis=0) / num_target_sample  # 4096
         # insert neuron index
         idx = np.arange(0, len(dense_avg), 1, dtype=int)
         dense_avg = np.c_[idx, dense_avg]
