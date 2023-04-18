@@ -108,11 +108,13 @@ def get_data(dataset, pretrained_dataset):
         test_data = dset.CIFAR100(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
     
     elif dataset == "imagenet":
+        #use imagenet 2012 validation set as uap training set
+        #use imagenet DEV 1000 sample dataset as the test set
         #traindir = os.path.join(IMAGENET_PATH, 'train')
         #valdir = os.path.join(IMAGENET_PATH, 'val')
-        traindir = os.path.join(IMAGENET_PATH, 'val')
+        traindir = os.path.join(IMAGENET_PATH, 'validation')
         #traindir = IMAGENET_PATH
-        valdir = IMAGENET_PATH
+        valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
                 transforms.Resize(256),
@@ -128,12 +130,9 @@ def get_data(dataset, pretrained_dataset):
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
 
-        #train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
 
-        train_data = dset.ImageNet(traindir, split='val', transform=train_transform,
-                                   target_transform=None, download=True)
-    
     elif dataset == "coco":
         train_transform = transforms.Compose([
                 transforms.Resize(int(input_size * 1.143)),
@@ -334,7 +333,7 @@ def fix_labels_nips(test_set, pytorch=False, target_flag=False):
 
     filenames = [i.split('/')[-1] for i, j in test_set.samples]
     # Load provided files and get image labels and names
-    image_classes = pd.read_csv(os.path.join(IMAGENET_PATH, "images.csv"))
+    image_classes = pd.read_csv(os.path.join(IMAGENET_PATH, "ImageNet1k/images.csv"))
     image_metadata = pd.DataFrame({"ImageId": [f[:-4] for f in filenames]}).merge(image_classes, on="ImageId")
     true_classes = image_metadata["TrueLabel"].tolist()
     target_classes = image_metadata["TargetClass"].tolist()
@@ -352,6 +351,49 @@ def fix_labels_nips(test_set, pytorch=False, target_flag=False):
             new_data_samples.append((test_set.samples[i][0], org_label - 1))
         else:
             new_data_samples.append((test_set.samples[i][0], org_label))
+
+    test_set.samples = new_data_samples
+    return test_set
+
+
+def fix_ground_truth(test_set):
+    filenames = [i.split('/')[-1] for i, j in test_set.samples]
+    val_dict = {}
+    val = []
+    groudtruth = os.path.join(IMAGENET_PATH, 'validation/ILSVRC2012_validation_ground_truth.txt')
+
+    with open(groudtruth) as file:
+        for line in file:
+            val.append(int(line))
+
+    for f, i in zip(filenames, range(len(filenames))):
+        val_dict[f] = val[i]
+
+    new_data_samples = []
+    for i, j in enumerate(test_set.samples):
+        org_label = val_dict[test_set.samples[i][0].split('/')[-1]]
+        new_data_samples.append((test_set.samples[i][0], org_label))
+
+    test_set.samples = new_data_samples
+    return test_set
+
+
+def fix_labels(test_set):
+    val_dict = {}
+    groudtruth = os.path.join(IMAGENET_PATH, 'validation/classes.txt')
+
+    i = 0
+    with open(groudtruth) as file:
+        for line in file:
+            (key, class_name) = line.split(':')
+            val_dict[key] = i
+            i = i + 1
+
+    new_data_samples = []
+    for i, j in enumerate(test_set.samples):
+        class_id = test_set.samples[i][0].split('/')[-1].split('.')[0].split('_')[-1]
+        org_label = val_dict[class_id]
+        new_data_samples.append((test_set.samples[i][0], org_label))
 
     test_set.samples = new_data_samples
     return test_set
