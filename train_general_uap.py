@@ -156,7 +156,7 @@ def main(args):
                                 finetune=False)
 
     print_log("=> Network :\n {}".format(target_network), log)
-    target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+    #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
     # Imagenet models use the pretrained pytorch weights
