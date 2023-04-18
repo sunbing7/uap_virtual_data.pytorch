@@ -70,6 +70,7 @@ def parse_arguments():
                         help='Target class (default: 7)')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
+    parser.add_argument('--is_nips', action='store_true', default=True, help='Evaluation on NIPS data')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='Learning Rate (default: 0.001)')
     parser.add_argument('--print_freq', default=200, type=int, metavar='N',
