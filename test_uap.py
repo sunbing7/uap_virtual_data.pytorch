@@ -9,7 +9,7 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data
+from utils.data import get_data_specs, get_data, fix_labels_nips, fix_labels
 from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
@@ -64,6 +64,7 @@ def parse_arguments():
                         help='Target class (default: 1)')
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
+    parser.add_argument('--is_nips', action='store_true', default=True, help='Evaluation on NIPS data')
     parser.add_argument('--ngpu', type=int, default=0,
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
@@ -107,6 +108,10 @@ def main():
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
     _, data_test = get_data(args.test_dataset, args.test_dataset)
+    # Fix labels if needed
+    if args.is_nips:
+        print('is_nips')
+        data_test = fix_labels_nips(data_test, pytorch=True)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
@@ -118,6 +123,8 @@ def main():
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
     #data_train, _ = get_data(args.dataset, args.pretrained_dataset)
+    #if args.dataset == "imagenet":
+    #    data_train = fix_labels(data_train)
     #data_train_loader = torch.utils.data.DataLoader(data_train,
     #                                                batch_size=args.batch_size,
     #                                                shuffle=True,
@@ -139,7 +146,7 @@ def main():
                                 finetune=False)
 
     print_log("=> Network :\n {}".format(target_network), log)
-    target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+    #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
 

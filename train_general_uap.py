@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
+    parser.add_argument('--option', type=str, default='class_embedding')
     # dataset used to train UAP
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
@@ -88,9 +89,7 @@ def parse_arguments():
     return args
 
 
-def main():
-    args = parse_arguments()
-
+def main(args):
     random.seed(args.pretrained_seed)
     torch.manual_seed(args.pretrained_seed)
     if args.use_cuda:
@@ -316,9 +315,7 @@ def main():
     log.close()
 
 
-def main_hidden():
-    args = parse_arguments()
-
+def main_hidden(args):
     random.seed(args.pretrained_seed)
     torch.manual_seed(args.pretrained_seed)
     if args.use_cuda:
@@ -566,5 +563,8 @@ def list_and(l1,l2):
 
 
 if __name__ == '__main__':
-    #main
-    main_hidden()
+    args = parse_arguments()
+    if args.option == 'class_embedding':
+        main(args)
+    elif args.option == 'hidden':
+        main_hidden(args)
