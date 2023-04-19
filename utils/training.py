@@ -344,7 +344,7 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
         # Calculate Absolute Accuracy Drop
         aad_source = clean_acc.avg - perturbed_acc.avg
         # Calculate Relative Accuracy Drop
-        if clean_acc.avg !=0:
+        if clean_acc.avg != 0:
             rad_source = (clean_acc.avg - perturbed_acc.avg)/clean_acc.avg * 100.
         else:
             rad_source = 0.

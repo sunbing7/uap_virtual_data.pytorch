@@ -202,5 +202,117 @@ def main():
     '''
     log.close()
 
+
+def main_net():
+    args = parse_arguments()
+
+    random.seed(args.pretrained_seed)
+    torch.manual_seed(args.pretrained_seed)
+    if args.use_cuda:
+        torch.cuda.manual_seed_all(args.pretrained_seed)
+    cudnn.benchmark = True
+
+    # get the result path to store the results
+    result_path = get_result_path(dataset_name=args.dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed,
+                                result_subfolder=args.result_subfolder,
+                                postfix=args.postfix)
+
+    # Init logger
+    log_file_name = os.path.join(result_path, 'log.txt')
+    print("Log file: {}".format(log_file_name))
+    log = open(log_file_name, 'w')
+    print_log('save path : {}'.format(result_path), log)
+    state = {k: v for k, v in args._get_kwargs()}
+    for key, value in state.items():
+        print_log("{} : {}".format(key, value), log)
+    print_log("Random Seed: {}".format(args.pretrained_seed), log)
+    print_log("Python version : {}".format(sys.version.replace('\n', ' ')), log)
+    print_log("Torch  version : {}".format(torch.__version__), log)
+    print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
+
+    _, data_test = get_data(args.test_dataset, args.test_dataset)
+    # Fix labels if needed
+    if args.is_nips:
+        print('is_nips')
+        data_test = fix_labels_nips(data_test, pytorch=True)
+
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=False,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+
+    ##### Dataloader for training ####
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
+
+    #data_train, _ = get_data(args.dataset, args.pretrained_dataset)
+    #if args.dataset == "imagenet":
+    #    data_train = fix_labels(data_train)
+    #data_train_loader = torch.utils.data.DataLoader(data_train,
+    #                                                batch_size=args.batch_size,
+    #                                                shuffle=True,
+    #                                                num_workers=args.workers,
+    #                                                pin_memory=True)
+
+    ####################################
+    # Init model, criterion, and optimizer
+    print_log("=> Creating model '{}'".format(args.test_arch), log)
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.test_dataset,
+                                network_arch=args.test_arch,
+                                random_seed=args.pretrained_seed)
+    model_weights_path = os.path.join(model_path, args.test_name)
+
+    target_network = get_network(args.test_arch,
+                                input_size=input_size,
+                                num_classes=num_classes,
+                                finetune=False)
+
+    print_log("=> Network :\n {}".format(target_network), log)
+    #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+    # Set the target model into evaluation mode
+    target_network.eval()
+    if args.test_dataset != "imagenet":
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    # Set all weights to not trainable
+    #set_parameter_requires_grad(target_network, requires_grad=False)
+
+    total_params = get_num_parameters(target_network)
+    print_log("Target Network Total # parameters: {}".format(total_params), log)
+
+    if args.use_cuda:
+        target_network.cuda()
+
+    #test
+    #for input, gt in pretrained_data_test_loader:
+    #    clean_output = target_network(input)
+    #    attack_output = target_network(input + tuap)
+
+    # evaluate uap
+    #load uap
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
+    uap_fn = os.path.join(uap_path, args.uap_name)
+
+    uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
+
+    #'''
+    metrics_evaluate(data_loader=data_test_loader,
+                    target_model=target_network,
+                    perturbed_model=uap_pert_model,
+                    targeted=args.targeted,
+                    target_class=args.target_class,
+                    log=log,
+                    use_cuda=args.use_cuda)
+
+    #'''
+    log.close()
+
 if __name__ == '__main__':
-    main()
+    #main()
+    main_net()
