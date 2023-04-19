@@ -149,8 +149,8 @@ def main():
     #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
-
-    target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+    if args.test_dataset != "imagenet":
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
     #set_parameter_requires_grad(target_network, requires_grad=False)
