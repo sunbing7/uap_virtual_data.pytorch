@@ -314,5 +314,5 @@ def main_net():
     log.close()
 
 if __name__ == '__main__':
-    main()
-    #main_net()
+    #main()
+    main_net()
