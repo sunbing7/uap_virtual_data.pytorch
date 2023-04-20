@@ -69,7 +69,7 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-    parser.add_argument('--is_nips', default='True', type=bool,
+    parser.add_argument('--is_nips', default=1, type=int,
                         help='Evaluation on NIPS data')
     args = parser.parse_args()
 
