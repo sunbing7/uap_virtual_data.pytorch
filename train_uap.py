@@ -290,6 +290,7 @@ def main():
     np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
     plt.savefig(model_path + '/uap.png')
     #plt.show()
+    torch.save(perturbed_net, uap_path + '/perturbed_net.pth')
     print('uap saved!')
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(pretrained_data_test_loader, target_network, tuap,
