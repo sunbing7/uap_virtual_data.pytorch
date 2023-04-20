@@ -284,7 +284,7 @@ def main_net():
     print_log("Target Network Total # parameters: {}".format(total_params), log)
 
     if args.use_cuda:
-        target_network.cuda()
+        target_network = target_network.cuda()
 
     #test
     #for input, gt in pretrained_data_test_loader:
@@ -301,7 +301,7 @@ def main_net():
 
     uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
     if args.use_cuda:
-        uap_pert_model.cuda()
+        uap_pert_model = uap_pert_model.cuda()
 
     #'''
     metrics_evaluate(data_loader=data_test_loader,
