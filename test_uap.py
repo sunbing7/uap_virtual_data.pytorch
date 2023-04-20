@@ -299,9 +299,11 @@ def main_net():
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, args.uap_name)
 
-    uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
     if args.use_cuda:
+        uap_pert_model = torch.load(uap_fn)
         uap_pert_model = uap_pert_model.cuda()
+    else:
+        uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
 
     #'''
     metrics_evaluate(data_loader=data_test_loader,
