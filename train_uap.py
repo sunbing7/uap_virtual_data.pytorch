@@ -69,7 +69,8 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 6)')
-    parser.add_argument('--is_nips', action='store_true', default=True, help='Evaluation on NIPS data')
+    parser.add_argument('--is_nips', default='True', type=bool,
+                        help='Evaluation on NIPS data')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
