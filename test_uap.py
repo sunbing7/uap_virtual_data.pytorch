@@ -14,7 +14,7 @@ from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import train, save_checkpoint, metrics_evaluate, eval_uap
+from utils.training import train, save_checkpoint, metrics_evaluate, eval_uap, metrics_evaluate_test
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 
 from matplotlib import pyplot as plt
@@ -305,7 +305,7 @@ def main_net():
     else:
         uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
 
-    #'''
+    '''
     metrics_evaluate(data_loader=data_test_loader,
                     target_model=target_network,
                     perturbed_model=uap_pert_model,
@@ -313,7 +313,25 @@ def main_net():
                     target_class=args.target_class,
                     log=log,
                     use_cuda=args.use_cuda)
-
+    '''
+    #load uap
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
+    uap_fn = os.path.join(uap_path, 'uap.npy')
+    uap = np.load(uap_fn)
+    tuap = torch.from_numpy(uap)
+    if args.use_cuda:
+        tuap = tuap.cuda()
+    metrics_evaluate_test(data_loader=data_test_loader,
+                    target_model=target_network,
+                    perturbed_model=uap_pert_model,
+                    uap=tuap,
+                    targeted=args.targeted,
+                    target_class=args.target_class,
+                    log=log,
+                    use_cuda=args.use_cuda)
     #'''
     log.close()
 

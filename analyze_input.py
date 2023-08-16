@@ -120,14 +120,14 @@ def main():
     '''
     ####################################
     # Init model, criterion, and optimizer
-    print("=> Creating model '{}'".format(args.filter_arch))
+    print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
                                 random_seed=args.seed)
     model_weights_path = os.path.join(model_path, args.model_name)
 
-    network = get_network(args.filter_arch,
+    network = get_network(args.arch,
                                 input_size=input_size,
                                 num_classes=num_classes,
                                 finetune=False)

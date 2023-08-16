@@ -84,3 +84,7 @@ python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg16 --pretrained_seed=123 --uap_name=checkpoint.pth.tar --test_dataset=imagenet --test_arch=vgg16 --result_subfolder=result --targeted=True --target_class=1 --ngpu=1 --workers=4
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --uap_name=checkpoint.pth.tar--test_dataset=imagenet --test_arch=vgg19 --result_subfolder=result --targeted=True --target_class=1 --ngpu=1 --workers=4
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=resnet152  --pretrained_seed=123 --uap_name=checkpoint.pth.tar --test_dataset=imagenet --test_arch=resnet152 --result_subfolder=result --targeted=True --target_class=1 --ngpu=1 --workers=4
+
+
+#input attribution
+python analyze_input.py --causal_type='logit' --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=256 --result_subfolder=result --target_class=1 --batch_size=32 --ngpu=1 --workers=4
