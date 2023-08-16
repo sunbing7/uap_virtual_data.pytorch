@@ -382,6 +382,98 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
 
 
 
+def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targeted, target_class, log=None, use_cuda=True):
+    # switch to evaluate mode
+    target_model.eval()
+    perturbed_model.eval()
+    perturbed_model.module.generator.eval()
+    perturbed_model.module.target_model.eval()
+
+    clean_acc = AverageMeter()
+    perturbed_acc = AverageMeter()
+    attack_success_rate = AverageMeter() # Among the correctly classified samples, the ratio of being different from clean prediction (same as gt)
+    if targeted:
+        all_to_target_success_rate = AverageMeter() # The ratio of samples going to the sink classes
+        all_to_target_success_rate_filtered = AverageMeter()
+
+    total_num_samples = 0
+    num_same_classified = 0
+    num_diff_classified = 0
+
+    for input, gt in data_loader:
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+
+        # compute output
+        with torch.no_grad():
+            clean_output = target_model(input)
+            pert_output = perturbed_model(input)
+            attack_output = target_model(input + uap)
+
+        correctly_classified_mask = torch.argmax(clean_output, dim=-1).cpu() == gt.cpu()
+        cl_acc = accuracy(clean_output.data, gt, topk=(1,))
+        clean_acc.update(cl_acc[0].item(), input.size(0))
+        pert_acc = accuracy(pert_output.data, gt, topk=(1,))
+        perturbed_acc.update(pert_acc[0].item(), input.size(0))
+
+        # Calculating Fooling Ratio params
+        clean_out_class = torch.argmax(clean_output, dim=-1)
+        pert_out_class = torch.argmax(pert_output, dim=-1)
+        uap_out_class = torch.argmax(attack_output, dim=-1)
+
+        total_num_samples += len(clean_out_class)
+        num_same_classified += torch.sum(clean_out_class == pert_out_class).cpu().numpy()
+        num_diff_classified += torch.sum(~(clean_out_class == pert_out_class)).cpu().numpy()
+
+        if torch.sum(correctly_classified_mask)>0:
+            with torch.no_grad():
+                pert_output_corr_cl = perturbed_model(input[correctly_classified_mask])
+            attack_succ_rate = accuracy(pert_output_corr_cl, gt[correctly_classified_mask], topk=(1,))
+            attack_success_rate.update(attack_succ_rate[0].item(), pert_output_corr_cl.size(0))
+
+
+        # Calculate Absolute Accuracy Drop
+        aad_source = clean_acc.avg - perturbed_acc.avg
+        # Calculate Relative Accuracy Drop
+        if clean_acc.avg != 0:
+            rad_source = (clean_acc.avg - perturbed_acc.avg)/clean_acc.avg * 100.
+        else:
+            rad_source = 0.
+        # Calculate fooling ratio
+        fooling_ratio = num_diff_classified/total_num_samples * 100.
+
+        if targeted:
+            # 2. How many of all samples go the sink class (Only relevant for others loader)
+            target_cl = torch.ones_like(gt) * target_class
+            all_to_target_succ_rate = accuracy(pert_output, target_cl, topk=(1,))
+            all_to_target_success_rate.update(all_to_target_succ_rate[0].item(), pert_output.size(0))
+
+            # 3. How many of all samples go the sink class, except gt sink class (Only relevant for others loader)
+            # Filter all idxs which are not belonging to sink class
+            non_target_class_idxs = [i != target_class for i in gt]
+            non_target_class_mask = torch.Tensor(non_target_class_idxs)==True
+            if torch.sum(non_target_class_mask)>0:
+                gt_non_target_class = gt[non_target_class_mask]
+                pert_output_non_target_class = pert_output[non_target_class_mask]
+
+                target_cl = torch.ones_like(gt_non_target_class) * target_class
+                all_to_target_succ_rate_filtered = accuracy(pert_output_non_target_class, target_cl, topk=(1,))
+                all_to_target_success_rate_filtered.update(all_to_target_succ_rate_filtered[0].item(), pert_output_non_target_class.size(0))
+    if log:
+        print_log('\n\t#######################', log)
+        print_log('\tClean model accuracy: {:.3f}'.format(clean_acc.avg), log)
+        print_log('\tPerturbed model accuracy: {:.3f}'.format(perturbed_acc.avg), log)
+        print_log('\tAbsolute Accuracy Drop: {:.3f}'.format(aad_source), log)
+        print_log('\tRelative Accuracy Drop: {:.3f}'.format(rad_source), log)
+        print_log('\tAttack Success Rate: {:.3f}'.format(100-attack_success_rate.avg), log)
+        print_log('\tFooling Ratio: {:.3f}'.format(fooling_ratio), log)
+        if targeted:
+            print_log('\tAll --> Target Class {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate.avg), log)
+            print_log('\tAll (w/o sink samples) --> Sink {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate_filtered.avg), log)
+
+
+
 def save_checkpoint(state, save_path, filename):
     filename = os.path.join(save_path, filename)
     torch.save(state, filename)
@@ -673,6 +765,63 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if dense_avg[i][1] > 0.1 * my_max:
                 break
         out = dense_avg[:i]
+
+    return out
+
+
+def solve_input_attribution(data_loader, model, uap, targeted, target_class, num_sample, causal_type='logit', use_cuda=True):
+    # switch to evaluate mode
+    model.eval()
+
+    out = []
+    if causal_type == 'logit':
+        if not targeted:
+            return None
+        total_num_samples = 0
+        do_predict_avg = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+            if uap != None:
+                test_input = input + uap
+            else:
+                test_input = input
+
+            # compute output
+            with torch.no_grad():
+                uap_output = model(test_input)
+
+                #intervention
+                uap_input_flat = torch.clone(torch.reshape(test_input, (test_input.shape[0], -1)))
+
+                do_predict = []
+                #do convention for each neuron
+                for i in range(0, len(uap_input_flat[0])):
+                    input_do = np.zeros(shape=uap_input_flat[:, i].shape)
+                    dense_output_ = torch.clone(uap_input_flat)
+                    dense_output_[:, i] = torch.from_numpy(input_do)
+                    dense_output_ = torch.reshape(dense_output_, input.shape)
+                    if use_cuda:
+                        dense_output_ = dense_output_.cuda()
+                    output_do = model(dense_output_).cpu().detach().numpy()
+                    do_predict.append(output_do)
+
+                do_predict_neu = np.array(do_predict)
+                do_predict_neu = np.abs(uap_output.cpu().detach().numpy() - do_predict_neu)
+                do_predict = np.mean(np.array(do_predict_neu), axis=1)
+
+            do_predict_avg.append(do_predict)
+            total_num_samples += len(gt)
+        # average of all baches
+        do_predict_avg = np.mean(np.array(do_predict_avg), axis=0)
+        # insert neuron index
+        idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
+        do_predict_avg = np.c_[idx, do_predict_avg]
+        out = do_predict_avg[:, [0, (target_class + 1)]]
 
     return out
 
