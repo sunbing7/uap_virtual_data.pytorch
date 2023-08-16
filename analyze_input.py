@@ -138,7 +138,7 @@ def main():
     network.eval()
 
     # Imagenet models use the pretrained pytorch weights
-    if args.pretrained_dataset != "imagenet":
+    if args.dataset != "imagenet":
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
