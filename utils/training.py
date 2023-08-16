@@ -785,7 +785,8 @@ def solve_input_attribution(data_loader, model, uap, targeted, target_class, num
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                if uap != None:
+                    uap = uap.cuda()
             if uap != None:
                 test_input = input + uap
             else:
