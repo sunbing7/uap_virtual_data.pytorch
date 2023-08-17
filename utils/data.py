@@ -7,6 +7,7 @@ import random
 # import cv2
 from torch.utils.data import Dataset
 import pandas as pd
+import h5py
 
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
@@ -231,9 +232,12 @@ def get_data_perturbed(pretrained_dataset, uap):
 
     return train_data, test_data
 '''
-'''
-def get_data_class(data_file, cur_class=3):
+
+def get_data_class(dataset, cur_class=1):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
+    if dataset != 'cifar10':
+        return None
+    data_file = DATASET_BASE_PATH + '/cifar.h5'
     train_transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize(size=(224, 224)),
@@ -252,69 +256,39 @@ def get_data_class(data_file, cur_class=3):
         )
     ])
 
-    train_data = CustomCifarDataset(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
-    test_data = CustomCifarDataset(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
+    train_data = CustomCifarClassDataSet(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
+    test_data = CustomCifarClassDataSet(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
 
     return train_data, test_data
 
-class CustomCifarDataset(Dataset):
-    def __init__(self, data_file, is_train=False, cur_class=3, transform=False):
-        self.is_train = is_train
-        self.cur_class = cur_class
-        self.data_file = data_file
+
+class CustomCifarClassDataSet(Dataset):
+    def __init__(self, data_file, cur_class, transform=False, is_train=False):
         self.transform = transform
-        dataset = utils_backdoor.load_dataset(data_file, keys=['X_train', 'Y_train', 'X_test', 'Y_test'])
-        #trig_mask = np.load(RESULT_DIR + "uap_trig_0.08.npy") * 255
-        x_train = dataset['X_train'].astype("float32")# / 255
-        y_train = dataset['Y_train'].T[0]#self.to_categorical(dataset['Y_train'], 10)
-        #y_train = self.to_categorical(dataset['Y_train'], 10)
-        x_test = dataset['X_test'].astype("float32") #/ 255
-        y_test = dataset['Y_test'].T[0]#self.to_categorical(dataset['Y_test'], 10)
-        #y_test = self.to_categorical(dataset['Y_test'], 10)
 
-        x_out = []
-        y_out = []
-        for i in range(0, len(x_test)):
-            #if np.argmax(y_test[i], axis=1) == cur_class:
-            if y_test[i] == cur_class:
-                x_out.append(x_test[i])# + trig_mask)
-                y_out.append(y_test[i])
-        self.X_test = np.uint8(np.array(x_out))
-        self.Y_test = np.uint8(np.squeeze(np.array(y_out)))
+        dataset = load_dataset_h5(data_file, keys=['X_train', 'Y_train', 'X_test', 'Y_test'])
+        if is_train:
+            xs = dataset['X_train'].astype("uint8")
+            ys = dataset['Y_train'].T[0]
+        else:
+            xs = dataset['X_test'].astype("uint8")
+            ys = dataset['Y_test'].T[0]
 
-        x_out = []
-        y_out = []
-        for i in range(0, len(x_train)):
-            #if np.argmax(y_train[i], axis=1) == cur_class:
-            if y_train[i] == cur_class:
-                x_out.append(x_train[i])# + trig_mask)
-                y_out.append(y_train[i])
-        self.X_train = np.uint8(np.array(x_out))
-        self.Y_train = np.uint8(np.squeeze(np.array(y_out)))
+        idxes = (ys == cur_class)
+        self.x = xs[idxes]
+        self.y = ys[idxes]
 
     def __len__(self):
-        if self.is_train:
-            return len(self.X_train)
-        else:
-            return len(self.X_test)
+        return len(self.x)
 
     def __getitem__(self, idx):
-        if self.is_train:
-            image = self.X_train[idx]
-            label = self.Y_train[idx]
-        else:
-            image = self.X_test[idx]
-            label = self.Y_test[idx]
+        image = self.x[idx]
+        label = self.y[idx]
 
         if self.transform is not None:
             image = self.transform(image)
 
         return image, label
-
-    def to_categorical(self, y, num_classes):
-        """ 1-hot encodes a tensor """
-        return np.eye(num_classes, dtype='uint8')[y]
-'''
 
 
 def normalize(t):
@@ -397,3 +371,17 @@ def fix_labels(test_set):
 
     test_set.samples = new_data_samples
     return test_set
+
+
+def load_dataset_h5(data_filename, keys=None):
+    ''' assume all datasets are numpy arrays '''
+    dataset = {}
+    with h5py.File(data_filename, 'r') as hf:
+        if keys is None:
+            for name in hf:
+                dataset[name] = np.array(hf.get(name))
+        else:
+            for name in keys:
+                dataset[name] = np.array(hf.get(name))
+
+    return dataset

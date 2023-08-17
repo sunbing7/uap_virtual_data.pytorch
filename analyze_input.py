@@ -6,7 +6,7 @@ import torch
 import argparse
 import torch.backends.cudnn as cudnn
 
-from utils.data import get_data_specs, get_data, fix_labels, fix_labels_nips
+from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -159,14 +159,17 @@ def main():
                                   use_cuda=args.use_cuda)
 
     attribution_path = get_attribution_path()
-    '''
-    fn = get_attribution_name(uap_data=args.dataset,
-                                uap_arch=args.arch,
-                                random_seed=args.seed)
-    '''
-
     uap_fn = os.path.join(attribution_path, "uap_attribution.npy")
     np.save(uap_fn, attribution_map)
+
+
+    _, data_test = get_data_class(args.dataset, 1)
+
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=False,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
 
     attribution_map = solve_input_attribution(data_test_loader, network, None,
                                   targeted=args.targeted,
