@@ -87,4 +87,6 @@ python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
 
 
 #input attribution
-python analyze_input.py --causal_type=logit --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=8 --result_subfolder=result --target_class=1 --batch_size=8 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_inputs --causal_type=logit --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=1 --result_subfolder=result --target_class=1 --batch_size=1 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_inputs --causal_type=logit --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=1 --result_subfolder=result --target_class=1 --batch_size=1 --ngpu=1 --workers=4
+python analyze_input.py --option=calc_entropy --causal_type=logit --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=1 --result_subfolder=result --target_class=1 --batch_size=1 --ngpu=1 --workers=4

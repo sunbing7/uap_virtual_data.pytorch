@@ -16,8 +16,12 @@ from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import train, save_checkpoint, metrics_evaluate, solve_causal
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
-
+import skimage.measure
+import scipy
 from matplotlib import pyplot as plt
+from skimage.metrics import structural_similarity
+import cv2
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
@@ -262,6 +266,37 @@ def outlier_detection(cmp_list, max_val, verbose=False):
                       ', '.join(['%d: %2f' % (idx, val)
                                  for idx, val in flag_list]))
     return flag_list
+
+
+def calculate_ssim(before, after):
+    before = np.array(before * 255).astype('uint8')
+    after = np.array(after * 255).astype('uint8')
+
+    before_gray = cv2.cvtColor(before, cv2.COLOR_BGR2GRAY)
+    after_gray = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
+    # Compute SSIM between two images
+    (score, diff) = structural_similarity(before_gray, after_gray, full=True)
+    print("Image similarity", score)
+    return score
+
+def calculate_shannon_entropy(x, size):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    p = np.histogram(x, bins=size, density=True)[0]
+    h = scipy.stats.entropy(p, base=2)
+
+    #h = skimage.measure.shannon_entropy(x)
+
+    '''
+    x = x.flatten(order='C')
+    _, counts = np.unique(x, return_counts=True)
+    probabilities = counts / len(x)
+    h = -np.sum(probabilities * np.log2(probabilities))
+    '''
+    return h
 
 
 if __name__ == '__main__':

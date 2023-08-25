@@ -12,11 +12,14 @@ from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
-
+from causal_analysis import calculate_shannon_entropy, calculate_ssim
 from matplotlib import pyplot as plt
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
+    parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy'],
+                        help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
 
@@ -63,8 +66,7 @@ def parse_arguments():
     return args
 
 
-def main():
-    args = parse_arguments()
+def analyze_inputs(args):
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -80,9 +82,6 @@ def main():
                                 postfix=args.postfix)
 
     print('save path : {}'.format(result_path))
-    state = {k: v for k, v in args._get_kwargs()}
-    for key, value in state.items():
-        print("{} : {}".format(key, value))
     print("Random Seed: {}".format(args.seed))
     print("Python version : {}".format(sys.version.replace('\n', ' ')))
     print("Torch  version : {}".format(torch.__version__))
@@ -182,5 +181,28 @@ def main():
     return
 
 
+def calc_entropy():
+    attribution_path = get_attribution_path()
+    uap_fn = os.path.join(attribution_path, "uap_attribution.npy")
+    uap_ca = np.transpose(np.load(uap_fn)[:, 1].reshape(3, 224, 224), (1, 2, 0))
+    uap_h = calculate_shannon_entropy(uap_ca, 224*224*3)
+    clean_fn = os.path.join(attribution_path, "clean_attribution.npy")
+    clean_ca = np.transpose(np.load(clean_fn)[:, 1].reshape(3, 224, 224), (1, 2, 0))
+    clean_h = calculate_shannon_entropy(clean_ca, 224*224*3)
+
+    print('uap_h: {}, clean_h: {}'.format(uap_h, clean_h))
+    ssim = calculate_ssim(uap_ca, clean_ca)
+
+    return uap_h, clean_h, ssim
+
+
 if __name__ == '__main__':
-    main()
+    args = parse_arguments()
+    state = {k: v for k, v in args._get_kwargs()}
+    for key, value in state.items():
+        print("{} : {}".format(key, value))
+    if args.option == 'analyze_inputs':
+        analyze_inputs(args)
+    elif args.option == 'calc_entropy':
+        calc_entropy()
+
