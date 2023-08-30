@@ -198,7 +198,7 @@ def analyze_inputs(args):
     return
 
 
-def calc_entropy():
+def calc_entropy_():
     attribution_path = get_attribution_path()
     uap_fn = os.path.join(attribution_path, "uap_attribution_1.npy")
     uap_ca = np.transpose(np.load(uap_fn)[:, -1].reshape(3, 224, 224), (1, 2, 0))
@@ -224,6 +224,35 @@ def calc_entropy():
     ssim = calculate_ssim(clean1_ca, clean_ca)
     print("Image similarity clean1 vs clean: {}".format(ssim))
     return uap_h, clean_h, ssim
+
+
+def calc_entropy():
+    attribution_path = get_attribution_path()
+    ca_map = []
+    for i in range(0, 224*224*3):
+        fn = os.path.join(attribution_path, "uap_attribution_single_" + str(i) + ".npy")
+        ca_map.append(np.load(fn))
+    ca_map = np.array(ca_map)
+    ca_map = np.transpose(ca_map, (1, 0, 2))
+
+    for i in range(0, len(ca_map)):
+        attribution_map_ = ca_map[i]
+        uap_fn = os.path.join(attribution_path, "uap_attribution_s_" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
+
+    ca_map = []
+    for i in range(0, 224*224*3):
+        fn = os.path.join(attribution_path, "clean_attribution_single_" + str(i) + ".npy")
+        ca_map.append(np.load(fn))
+    ca_map = np.array(ca_map)
+    ca_map = np.transpose(ca_map, (1, 0, 2))
+
+    for i in range(0, len(ca_map)):
+        attribution_map_ = ca_map[i]
+        uap_fn = os.path.join(attribution_path, "clean_attribution_s_" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
+
+    return
 
 
 if __name__ == '__main__':
