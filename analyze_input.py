@@ -229,10 +229,13 @@ def calc_entropy():
 if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
+    start = time.time()
     for key, value in state.items():
         print("{} : {}".format(key, value))
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
         calc_entropy()
+    end = time.time()
+    print('Process time: {}'.format(end - start))
 
