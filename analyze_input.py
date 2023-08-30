@@ -10,7 +10,7 @@ from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import solve_input_attribution
+from utils.training import solve_input_attribution, solve_input_attribution_single
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import calculate_shannon_entropy, calculate_ssim
 from matplotlib import pyplot as plt
@@ -91,7 +91,7 @@ def analyze_inputs(args):
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
-                                                    shuffle=False,
+                                                    shuffle=True,
                                                     num_workers=args.workers,
                                                     pin_memory=True)
 
@@ -150,23 +150,25 @@ def analyze_inputs(args):
         network.cuda()
 
     # perform causality analysis
-    attribution_map = solve_input_attribution(data_test_loader, network, uap,
+    attribution_map = solve_input_attribution_single(data_test_loader, network, uap,
                                   targeted=args.targeted,
                                   target_class=args.target_class,
                                   num_sample=args.num_iterations,
                                   causal_type=args.causal_type,
                                   use_cuda=args.use_cuda)
 
+    #save multiple maps
     attribution_path = get_attribution_path()
-    uap_fn = os.path.join(attribution_path, "uap_attribution.npy")
-    np.save(uap_fn, attribution_map)
-
+    for i in range (0, len(attribution_map)):
+        attribution_map_ = attribution_map[i]
+        uap_fn = os.path.join(attribution_path, "uap_attribution_single_" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
 
     _, data_test = get_data_class(args.dataset, 1)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
-                                                    shuffle=False,
+                                                    shuffle=True,
                                                     num_workers=args.workers,
                                                     pin_memory=True)
 
@@ -178,21 +180,49 @@ def analyze_inputs(args):
                                   use_cuda=args.use_cuda)
     uap_fn = os.path.join(attribution_path, "clean_attribution.npy")
     np.save(uap_fn, attribution_map)
+
+    # single attribution on clean samples
+    attribution_map = solve_input_attribution_single(data_test_loader, network, None,
+                                  targeted=args.targeted,
+                                  target_class=args.target_class,
+                                  num_sample=args.num_iterations,
+                                  causal_type=args.causal_type,
+                                  use_cuda=args.use_cuda)
+
+    #save multiple maps
+    attribution_path = get_attribution_path()
+    for i in range (0, len(attribution_map)):
+        attribution_map_ = attribution_map[i]
+        uap_fn = os.path.join(attribution_path, "clean_attribution_single_" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
     return
 
 
 def calc_entropy():
     attribution_path = get_attribution_path()
-    uap_fn = os.path.join(attribution_path, "uap_attribution.npy")
-    uap_ca = np.transpose(np.load(uap_fn)[:, 1].reshape(3, 224, 224), (1, 2, 0))
+    uap_fn = os.path.join(attribution_path, "uap_attribution_1.npy")
+    uap_ca = np.transpose(np.load(uap_fn)[:, -1].reshape(3, 224, 224), (1, 2, 0))
+    #uap_ca = uap_ca[:, :, 2]
     uap_h = calculate_shannon_entropy(uap_ca, 224*224*3)
-    clean_fn = os.path.join(attribution_path, "clean_attribution.npy")
-    clean_ca = np.transpose(np.load(clean_fn)[:, 1].reshape(3, 224, 224), (1, 2, 0))
+
+    clean1_fn = os.path.join(attribution_path, "clean_attribution_1.npy")
+    clean1_ca = np.transpose(np.load(clean1_fn)[:, -1].reshape(3, 224, 224), (1, 2, 0))
+    clean1_h = calculate_shannon_entropy(clean1_ca, 224*224*3)
+
+    clean_fn = os.path.join(attribution_path, "clean_attribution_8.npy")
+    clean_ca = np.transpose(np.load(clean_fn)[:, -1].reshape(3, 224, 224), (1, 2, 0))
+    #clean_ca = clean_ca[:, :, 2]
     clean_h = calculate_shannon_entropy(clean_ca, 224*224*3)
 
-    print('uap_h: {}, clean_h: {}'.format(uap_h, clean_h))
-    ssim = calculate_ssim(uap_ca, clean_ca)
+    print('uap_h: {}, clean1_h: {}, clean_h: {}'.format(uap_h, clean1_h, clean_h))
+    print('entropy difference uap vs clean: {}'.format((uap_h - clean_h) / (clean_h)))
+    print('entropy difference clean1 vs clean: {}'.format((clean1_h - clean_h) / (clean_h)))
 
+    ssim = calculate_ssim(uap_ca, clean_ca)
+    print("Image similarity uap vs clean: {}".format(ssim))
+
+    ssim = calculate_ssim(clean1_ca, clean_ca)
+    print("Image similarity clean1 vs clean: {}".format(ssim))
     return uap_h, clean_h, ssim
 
 

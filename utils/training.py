@@ -827,6 +827,65 @@ def solve_input_attribution(data_loader, model, uap, targeted, target_class, num
     return out
 
 
+def solve_input_attribution_single(data_loader, model, uap, targeted, target_class, num_sample, causal_type='logit', use_cuda=True):
+    # switch to evaluate mode
+    model.eval()
+
+    out = []
+    if causal_type == 'logit':
+        if not targeted:
+            return None
+        total_num_samples = 0
+        do_predict_avg = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                if uap != None:
+                    uap = uap.cuda()
+            if uap != None:
+                test_input = input + uap
+            else:
+                test_input = input
+
+            # compute output
+            with torch.no_grad():
+                uap_output = model(test_input)
+
+                #intervention
+                uap_input_flat = torch.clone(torch.reshape(test_input, (test_input.shape[0], -1)))
+
+                do_predict = []
+                #do convention for each neuron
+                for i in range(0, len(uap_input_flat[0])):
+                    input_do = np.zeros(shape=uap_input_flat[:, i].shape)
+                    dense_output_ = torch.clone(uap_input_flat)
+                    dense_output_[:, i] = torch.from_numpy(input_do)
+                    dense_output_ = torch.reshape(dense_output_, input.shape)
+                    if use_cuda:
+                        dense_output_ = dense_output_.cuda()
+                    output_do = model(dense_output_).cpu().detach().numpy()
+                    do_predict.append(output_do)
+
+                do_predict_neu = np.array(do_predict)
+                do_predict_neu = np.abs(uap_output.cpu().detach().numpy() - do_predict_neu)
+                do_predict = np.array(do_predict_neu)
+
+            do_predict_avg.append(do_predict)
+            total_num_samples += len(gt)
+        # average of all baches
+        do_predict_avg = np.mean(np.array(do_predict_avg), axis=0)
+        # insert neuron index
+        #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
+        #do_predict_avg = np.c_[idx, do_predict_avg]
+        out = do_predict_avg[:, :, :target_class]
+
+    return do_predict_avg
+
+
+
 def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, num_sample, log=None, use_cuda=True):
     '''
     find most active neurons

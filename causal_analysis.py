@@ -276,7 +276,7 @@ def calculate_ssim(before, after):
     after_gray = cv2.cvtColor(after, cv2.COLOR_BGR2GRAY)
     # Compute SSIM between two images
     (score, diff) = structural_similarity(before_gray, after_gray, full=True)
-    print("Image similarity", score)
+
     return score
 
 def calculate_shannon_entropy(x, size):
@@ -285,10 +285,13 @@ def calculate_shannon_entropy(x, size):
     Returns:
     H
     """
-    p = np.histogram(x, bins=size, density=True)[0]
-    h = scipy.stats.entropy(p, base=2)
+    x = np.array(x * 255).astype('uint8')
+    x = cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)
 
-    #h = skimage.measure.shannon_entropy(x)
+    #p = np.histogram(x, bins=size, density=True)[0]
+    #h = scipy.stats.entropy(p, base=2)
+
+    h = skimage.measure.shannon_entropy(x)
 
     '''
     x = x.flatten(order='C')
