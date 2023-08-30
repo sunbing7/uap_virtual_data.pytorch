@@ -232,6 +232,7 @@ def calc_entropy():
     for i in range(0, 224*224*3):
         fn = os.path.join(attribution_path, "uap_attribution_single_" + str(i) + ".npy")
         ca_map.append(np.load(fn))
+        os.rename(fn, os.path.join(attribution_path, "backup\uap_attribution_single_" + str(i) + ".npy"))
     ca_map = np.array(ca_map)
     ca_map = np.transpose(ca_map, (1, 0, 2))
 
@@ -244,6 +245,7 @@ def calc_entropy():
     for i in range(0, 224*224*3):
         fn = os.path.join(attribution_path, "clean_attribution_single_" + str(i) + ".npy")
         ca_map.append(np.load(fn))
+        os.rename(fn, os.path.join(attribution_path, "backup\clean_attribution_single_" + str(i) + ".npy"))
     ca_map = np.array(ca_map)
     ca_map = np.transpose(ca_map, (1, 0, 2))
 
