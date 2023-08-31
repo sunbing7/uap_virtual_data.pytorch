@@ -298,7 +298,7 @@ def analyze_layers(args):
         attribution_map_ = attribution_map[i]
         uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
         np.save(uap_fn, attribution_map_)
-
+    '''
     attribution_map = solve_causal(data_test_loader, network, None, args.arch,
                                   split_layer=args.split_layer,
                                   targeted=args.targeted,
@@ -308,6 +308,75 @@ def analyze_layers(args):
                                   log=None,
                                   use_cuda=args.use_cuda)
 
+    file_name = "clean_attribution_" + str(args.split_layer) + "_avg.npy"
+    uap_fn = os.path.join(attribution_path, file_name)
+    np.save(uap_fn, attribution_map)
+    '''
+    return
+
+
+def analyze_layers_clean(args):
+
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.use_cuda:
+        torch.cuda.manual_seed_all(args.seed)
+    cudnn.benchmark = True
+
+    #load uap
+    uap = None
+
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+
+    ####################################
+    # Init model, criterion, and optimizer
+    print("=> Creating model '{}'".format(args.arch))
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+    model_weights_path = os.path.join(model_path, args.model_name)
+
+    network = get_network(args.arch,
+                                input_size=input_size,
+                                num_classes=num_classes,
+                                finetune=False)
+
+    print("=> Network :\n {}".format(network))
+
+    # Set the target model into evaluation mode
+    network.eval()
+
+    # Imagenet models use the pretrained pytorch weights
+    if args.dataset != "imagenet":
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    # Set all weights to not trainable
+    set_parameter_requires_grad(network, requires_grad=False)
+    total_params = get_num_parameters(network)
+
+    print("Filter Network Total # parameters: {}".format(total_params))
+
+    if args.use_cuda:
+        network.cuda()
+
+    data_train, _ = get_data_class(args.dataset, 1)
+    data_train_loader = torch.utils.data.DataLoader(data_train,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=True,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+
+    attribution_map = solve_causal(data_train_loader, network, None, args.arch,
+                                  split_layer=args.split_layer,
+                                  targeted=args.targeted,
+                                  target_class=args.target_class,
+                                  num_sample=args.num_iterations,
+                                  causal_type=args.causal_type,
+                                  log=None,
+                                  use_cuda=args.use_cuda)
+
+    attribution_path = get_attribution_path()
     file_name = "clean_attribution_" + str(args.split_layer) + "_avg.npy"
     uap_fn = os.path.join(attribution_path, file_name)
     np.save(uap_fn, attribution_map)
@@ -456,6 +525,7 @@ if __name__ == '__main__':
             calc_entropy_pcc(i)
     elif args.option == 'analyze_layers':
         analyze_layers(args)
+        analyze_layers_clean(args)
     end = time.time()
     print('Process time: {}'.format(end - start))
 
