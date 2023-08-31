@@ -880,9 +880,10 @@ def solve_input_attribution_single(data_loader, model, uap, targeted, target_cla
         # insert neuron index
         #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
         #do_predict_avg = np.c_[idx, do_predict_avg]
-        out = do_predict_avg[:, :, :target_class]
+        #out = do_predict_avg[:, :, :target_class]
+        out = np.transpose(out, (1, 0, 2))
 
-    return do_predict_avg
+    return out
 
 
 
@@ -1069,6 +1070,17 @@ def split_model(ori_model, model_name, split_layer=43):
             module3 = layers[split_layer:]
             model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
             model_2nd = nn.Sequential(*module3)
+    elif model_name == 'alexnet':
+        if split_layer == 6:
+            modules = list(ori_model.children())
+            module1 = modules[0]
+            module2 = [modules[1]]
+            module_ = list(modules[2])
+            module3 = module_[:5]
+            module4 = module_[5:]
+
+            model_1st = nn.Sequential(*[*module1, Flatten(), *module2, *module3])
+            model_2nd = nn.Sequential(*module4)
     else:
         return None, None
 
