@@ -847,7 +847,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
         #do_predict_avg = np.c_[idx, do_predict_avg]
         #out = do_predict_avg[:, [0, (target_class + 1)]]
-        out = np.transpose(out, (1, 0, 2))
+        out = np.transpose(do_predict_avg, (1, 0, 2))
     elif causal_type == 'act':
         total_num_samples = 0
         dense_avg = []
