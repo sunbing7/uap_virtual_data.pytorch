@@ -308,7 +308,7 @@ def calculate_shannon_entropy_array(x):
     Returns:
     H
     """
-    x = np.array(x * 255).astype('uint8')
+    x = np.array(x * 255)#.astype('uint8')
 
     #'''
     x = x.flatten(order='C')

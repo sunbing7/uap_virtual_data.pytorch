@@ -306,9 +306,18 @@ def analyze_layers(args):
         uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
         np.save(uap_fn, attribution_map_)
 
-    #file_name = "clean_attribution_" + str(args.split_layer) + ".npy"
-    #uap_fn = os.path.join(attribution_path, file_name)
-    #np.save(uap_fn, attribution_map)
+    attribution_map = solve_causal(data_test_loader, network, None, args.arch,
+                                  split_layer=args.split_layer,
+                                  targeted=args.targeted,
+                                  target_class=args.target_class,
+                                  num_sample=args.num_iterations,
+                                  causal_type=args.causal_type,
+                                  log=None,
+                                  use_cuda=args.use_cuda)
+
+    file_name = "clean_attribution_" + str(args.split_layer) + "_avg.npy"
+    uap_fn = os.path.join(attribution_path, file_name)
+    np.save(uap_fn, attribution_map)
 
     return
 
@@ -346,13 +355,13 @@ def calc_entropy():
 
 def calc_entropy_layer():
     attribution_path = get_attribution_path()
-    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s2.npy")
+    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s7.npy")
     loaded = np.load(uap_fn)
     uap_ca = loaded[:, 1]
 
     uap_h = calculate_shannon_entropy_array(uap_ca)
 
-    clean1_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s2.npy")
+    clean1_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s7.npy")
     loaded = np.load(clean1_fn)
     clean1_ca = loaded[:, 1]
     clean1_h = calculate_shannon_entropy_array(clean1_ca)
@@ -368,6 +377,43 @@ def calc_entropy_layer():
     print('entropy difference clean1 vs clean: {}'.format((clean1_h - clean_h) / (clean_h)))
 
     return
+
+
+def calc_entropy_layer(i):
+    attribution_path = get_attribution_path()
+    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+    loaded = np.load(uap_fn)
+    uap_ca = loaded[:, 1]
+
+    uap_h = calculate_shannon_entropy_array(uap_ca)
+
+    clean1_fn = os.path.join(attribution_path,
+                             "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+    loaded = np.load(clean1_fn)
+    clean1_ca = loaded[:, 1]
+    clean1_h = calculate_shannon_entropy_array(clean1_ca)
+    print('uap_h: {}, clean1_h: {}'.format(uap_h, clean1_h))
+
+
+def calc_entropy_pcc(i):
+    attribution_path = get_attribution_path()
+
+    clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_avg.npy")
+    loaded = np.load(clean_fn)
+    clean_ca = loaded[:, -1]
+
+    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+    loaded = np.load(uap_fn)
+    uap_ca = loaded[:, 1]
+
+    uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
+
+    clean1_fn = os.path.join(attribution_path,
+                             "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+    loaded = np.load(clean1_fn)
+    clean1_ca = loaded[:, 1]
+    clean1_pcc = np.corrcoef(clean1_ca, clean1_ca)[0, 1]
+    print('uap_pcc: {}, clean1_pcc: {}'.format(uap_pcc, clean1_pcc))
 
 
 '''
@@ -412,7 +458,9 @@ if __name__ == '__main__':
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
-        calc_entropy_layer()
+        #calc_entropy_layer()
+        for i in range(0, 128):
+            calc_entropy_pcc(i)
     elif args.option == 'analyze_layers':
         analyze_layers(args)
     end = time.time()
