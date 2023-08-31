@@ -839,15 +839,16 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
                 do_predict_neu = np.abs(ori_output.cpu().detach().numpy() - do_predict_neu)
                 do_predict = np.array(do_predict_neu)
 
-            do_predict_avg.append(do_predict) #batchx4096x11
+            do_predict = list(np.transpose(do_predict, (1, 0, 2)))
+            do_predict_avg = do_predict_avg + do_predict
             total_num_samples += len(gt)
         # average of all baches
-        do_predict_avg = np.array(do_predict_avg) #4096x10
+        out = np.array(do_predict_avg) #4096x10
         # insert neuron index
         #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
         #do_predict_avg = np.c_[idx, do_predict_avg]
         #out = do_predict_avg[:, [0, (target_class + 1)]]
-        out = np.transpose(do_predict_avg, (1, 0, 2))
+
     elif causal_type == 'act':
         total_num_samples = 0
         dense_avg = []
