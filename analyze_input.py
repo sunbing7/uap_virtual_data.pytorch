@@ -206,13 +206,6 @@ def analyze_layers(args):
         torch.cuda.manual_seed_all(args.seed)
     cudnn.benchmark = True
 
-    # get the result path to store the results
-    result_path = get_result_path(dataset_name=args.dataset,
-                                network_arch=args.arch,
-                                random_seed=args.seed,
-                                result_subfolder=args.result_subfolder,
-                                postfix=args.postfix)
-
     _, data_test = get_data(args.dataset, args.dataset)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,

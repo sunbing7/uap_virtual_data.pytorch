@@ -842,7 +842,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
             do_predict_avg.append(do_predict) #batchx4096x11
             total_num_samples += len(gt)
         # average of all baches
-        do_predict_avg = np.mean(np.array(do_predict_avg), axis=0) #4096x10
+        do_predict_avg = np.array(do_predict_avg) #4096x10
         # insert neuron index
         #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
         #do_predict_avg = np.c_[idx, do_predict_avg]

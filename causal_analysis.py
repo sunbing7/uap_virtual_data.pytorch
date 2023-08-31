@@ -308,14 +308,13 @@ def calculate_shannon_entropy_array(x):
     Returns:
     H
     """
-    x = np.array(x * 255)#.astype('uint8')
+    x = np.array(x)
 
-    #'''
     x = x.flatten(order='C')
     _, counts = np.unique(x, return_counts=True)
     probabilities = counts / len(x)
     h = -np.sum(probabilities * np.log2(probabilities))
-    #'''
+
     return h
 
 
