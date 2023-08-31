@@ -534,11 +534,14 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                if uap != None:
+                    uap = uap.cuda()
+            if uap != None:
+                input = input + uap
 
             # compute output
             with torch.no_grad():
-                dense_output = model1(input + uap)
+                dense_output = model1(input)
                 ori_output = model2(dense_output)
 
                 dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
