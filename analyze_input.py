@@ -10,9 +10,9 @@ from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal
+from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
-from causal_analysis import calculate_shannon_entropy, calculate_ssim
+from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 
 
@@ -268,7 +268,7 @@ def analyze_layers(args):
         network.cuda()
 
     # perform causality analysis
-    attribution_map = solve_causal(data_test_loader, network, uap, args.arch,
+    attribution_map = solve_causal_single(data_test_loader, network, uap, args.arch,
                                   split_layer=args.split_layer,
                                   targeted=args.targeted,
                                   target_class=args.target_class,
@@ -279,9 +279,10 @@ def analyze_layers(args):
 
     #save multiple maps
     attribution_path = get_attribution_path()
-    file_name = "uap_attribution_" + str(args.split_layer) + ".npy"
-    uap_fn = os.path.join(attribution_path, file_name)
-    np.save(uap_fn, attribution_map)
+    for i in range(0, len(attribution_map)):
+        attribution_map_ = attribution_map[i]
+        uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
 
     _, data_test = get_data_class(args.dataset, 1)
 
@@ -291,7 +292,7 @@ def analyze_layers(args):
                                                     num_workers=args.workers,
                                                     pin_memory=True)
 
-    attribution_map = solve_causal(data_test_loader, network, None, args.arch,
+    attribution_map = solve_causal_single(data_test_loader, network, None, args.arch,
                                   split_layer=args.split_layer,
                                   targeted=args.targeted,
                                   target_class=args.target_class,
@@ -300,9 +301,14 @@ def analyze_layers(args):
                                   log=None,
                                   use_cuda=args.use_cuda)
 
-    file_name = "clean_attribution_" + str(args.split_layer) + ".npy"
-    uap_fn = os.path.join(attribution_path, file_name)
-    np.save(uap_fn, attribution_map)
+    for i in range(0, len(attribution_map)):
+        attribution_map_ = attribution_map[i]
+        uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
+        np.save(uap_fn, attribution_map_)
+
+    #file_name = "clean_attribution_" + str(args.split_layer) + ".npy"
+    #uap_fn = os.path.join(attribution_path, file_name)
+    #np.save(uap_fn, attribution_map)
 
     return
 
@@ -336,6 +342,32 @@ def calc_entropy():
     ssim = calculate_ssim(clean1_ca, clean_ca)
     print("Image similarity clean1 vs clean: {}".format(ssim))
     return uap_h, clean_h, ssim
+
+
+def calc_entropy_layer():
+    attribution_path = get_attribution_path()
+    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s2.npy")
+    loaded = np.load(uap_fn)
+    uap_ca = loaded[:, 1]
+
+    uap_h = calculate_shannon_entropy_array(uap_ca)
+
+    clean1_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s2.npy")
+    loaded = np.load(clean1_fn)
+    clean1_ca = loaded[:, 1]
+    clean1_h = calculate_shannon_entropy_array(clean1_ca)
+
+    clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_avg.npy")
+    loaded = np.load(clean_fn)
+    clean_ca = loaded[:, -1]
+
+    clean_h = calculate_shannon_entropy_array(clean_ca)
+
+    print('uap_h: {}, clean1_h: {}, clean_h: {}'.format(uap_h, clean1_h, clean_h))
+    print('entropy difference uap vs clean: {}'.format((uap_h - clean_h) / (clean_h)))
+    print('entropy difference clean1 vs clean: {}'.format((clean1_h - clean_h) / (clean_h)))
+
+    return
 
 
 '''
@@ -380,7 +412,7 @@ if __name__ == '__main__':
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
-        calc_entropy()
+        calc_entropy_layer()
     elif args.option == 'analyze_layers':
         analyze_layers(args)
     end = time.time()

@@ -302,5 +302,22 @@ def calculate_shannon_entropy(x, size):
     return h
 
 
+def calculate_shannon_entropy_array(x):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    x = np.array(x * 255).astype('uint8')
+
+    #'''
+    x = x.flatten(order='C')
+    _, counts = np.unique(x, return_counts=True)
+    probabilities = counts / len(x)
+    h = -np.sum(probabilities * np.log2(probabilities))
+    #'''
+    return h
+
+
 if __name__ == '__main__':
     main()
