@@ -288,7 +288,7 @@ def main():
                             random_seed=args.pretrained_seed)
 
     np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
-    plt.savefig(model_path + '/uap.png')
+    plt.savefig(model_path + '/uap_' + str(args.target_class) + '.png')
     #plt.show()
     torch.save(perturbed_net, uap_path + '/perturbed_net.pth')
     print('uap saved!')
