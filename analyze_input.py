@@ -475,7 +475,7 @@ def calc_entropy_pcc(i):
     loaded = np.load(clean1_fn)
     clean1_ca = loaded[:, 1]
     clean1_pcc = np.corrcoef(clean1_ca, clean1_ca)[0, 1]
-    print('uap_pcc: {}, clean1_pcc: {}'.format(uap_pcc, clean1_pcc))
+    print('{}: {}, {}'.format(i, uap_pcc, clean1_pcc))
 
 
 '''
@@ -521,7 +521,7 @@ if __name__ == '__main__':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
         #calc_entropy_layer()
-        for i in range(0, 128):
+        for i in range(0, 1024):
             calc_entropy_pcc(i)
     elif args.option == 'analyze_layers':
         analyze_layers(args)

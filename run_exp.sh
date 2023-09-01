@@ -94,5 +94,8 @@ python analyze_input.py --option=calc_entropy --causal_type=logit --targeted=Tru
 python analyze_input.py --option=analyze_layers --split_layer=6 --causal_type=logit --targeted=True --dataset=cifar10 --arch=alexnet --model_name=alexnet_cifar10.pth --seed=123 --num_iterations=8 --result_subfolder=result --target_class=1 --batch_size=8 --ngpu=1 --workers=4
 
 python analyze_input.py --option=analyze_layers --split_layer=43 --causal_type=logit --targeted=True --dataset=cifar10 --arch=vgg19 --model_name=vgg19_cifar10.pth --seed=123 --num_iterations=8 --result_subfolder=result --target_class=1 --batch_size=8 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_layers --split_layer=43 --causal_type=logit --targeted=True --dataset=cifar10 --arch=vgg19 --model_name=vgg19_cifar10.pth --seed=123 --num_iterations=128 --result_subfolder=result --target_class=1 --batch_size=64 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --split_layer=43 --causal_type=logit --targeted=True --dataset=cifar10 --arch=vgg19 --model_name=vgg19_cifar10.pth --seed=123 --num_iterations=1024 --result_subfolder=result --target_class=1 --batch_size=64 --ngpu=1 --workers=4
 python analyze_input.py --option=calc_entropy --causal_type=logit --targeted=True --dataset=cifar10 --arch=vgg19 --model_name=vgg19_cifar10.pth --seed=123 --num_iterations=1 --result_subfolder=result --target_class=1 --batch_size=1 --ngpu=1 --workers=4
+
+#image net
+python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --uap_model=checkpoint.pth.tar --uap_name=uap.npy --loss_function=bounded_logit_fixed_ref --confidence=0 --targeted=True --target_class=78 --ngpu=1 --workers=4 --batch_size=32
