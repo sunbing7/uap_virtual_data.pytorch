@@ -365,7 +365,7 @@ def fix_labels(test_set):
 
     new_data_samples = []
     for i, j in enumerate(test_set.samples):
-        class_id = test_set.samples[i][0].split('/')[-1].split('.')[0].split('_')[-2]
+        class_id = test_set.samples[i][0].split('/')[-1].split('.')[0].split('_')[-1]
         org_label = val_dict[class_id]
         new_data_samples.append((test_set.samples[i][0], org_label))
 
