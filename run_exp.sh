@@ -109,5 +109,8 @@ python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretraine
 
 python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=32 --result_subfolder=result --target_class=1 --batch_size=32 --ngpu=1 --workers=4
 python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=2 --result_subfolder=result --target_class=150 --batch_size=2 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=2 --result_subfolder=result --target_class=51 --batch_size=2 --ngpu=1 --workers=4
 
+
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_imagenet.pth --pretrained_seed=123 --uap_model=checkpoint.pth.tar --uap_name=perturbed_net.pth --test_dataset=imagenet --test_arch=vgg19 --test_name=vgg19_imagenet.pth --result_subfolder=result --target_class=214 --ngpu=1 --workers=4
