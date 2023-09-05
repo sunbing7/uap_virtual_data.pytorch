@@ -357,6 +357,8 @@ def analyze_layers_clean(args):
         network.cuda()
 
     data_train, _ = get_data_class(args.dataset, args.target_class)
+    print('Number of training samples in this class: {}'.format(args.target_class))
+
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
                                                     shuffle=True,

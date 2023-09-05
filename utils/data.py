@@ -245,7 +245,7 @@ def get_data_class(dataset, cur_class=1):
         num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
         #use imagenet 2012 validation set as uap training set
         #use imagenet DEV 1000 sample dataset as the test set
-        #traindir = os.path.join(IMAGENET_PATH, 'validation')
+        traindir = os.path.join(IMAGENET_PATH, 'validation')
         valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
@@ -262,12 +262,11 @@ def get_data_class(dataset, cur_class=1):
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
 
-        #train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
 
-        #train_data = fix_labels(train_data)
+        train_data = fix_labels_class(train_data, cur_class=cur_class)
         test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
-        train_data = None
 
     else:
         return None
@@ -412,6 +411,28 @@ def fix_labels(test_set):
         class_id = test_set.samples[i][0].split('/')[-1].split('.')[0].split('_')[-1]
         org_label = val_dict[class_id]
         new_data_samples.append((test_set.samples[i][0], org_label))
+
+    test_set.samples = new_data_samples
+    return test_set
+
+
+def fix_labels_class(test_set, cur_class=1):
+    val_dict = {}
+    groudtruth = os.path.join(IMAGENET_PATH, 'validation/classes.txt')
+
+    i = 0
+    with open(groudtruth) as file:
+        for line in file:
+            (key, class_name) = line.split(':')
+            val_dict[key] = i
+            i = i + 1
+
+    new_data_samples = []
+    for i, j in enumerate(test_set.samples):
+        class_id = test_set.samples[i][0].split('/')[-1].split('.')[0].split('_')[-1]
+        org_label = val_dict[class_id]
+        if org_label == cur_class:
+            new_data_samples.append((test_set.samples[i][0], org_label))
 
     test_set.samples = new_data_samples
     return test_set
