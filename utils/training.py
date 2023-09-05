@@ -422,6 +422,9 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
         pert_out_class = torch.argmax(pert_output, dim=-1)
         uap_out_class = torch.argmax(attack_output, dim=-1)
 
+        #test
+        pert_out_class = uap_out_class
+
         total_num_samples += len(clean_out_class)
         num_same_classified += torch.sum(clean_out_class == pert_out_class).cpu().numpy()
         num_diff_classified += torch.sum(~(clean_out_class == pert_out_class)).cpu().numpy()
