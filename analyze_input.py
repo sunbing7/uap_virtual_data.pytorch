@@ -18,7 +18,8 @@ from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
-    parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy', 'analyze_layers'],
+    parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
+                                                                       'analyze_layers', 'calc_pcc', 'analyze_clean'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -56,6 +57,8 @@ def parse_arguments():
                         help='Number of used GPUs (0 = CPU) (default: 1)')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of data loading workers (default: 4)')
+
+    parser.add_argument('--analyze_clean', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -206,28 +209,7 @@ def analyze_layers(args):
         torch.cuda.manual_seed_all(args.seed)
     cudnn.benchmark = True
 
-    _, data_test = get_data(args.dataset, args.dataset)
-
-    data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-
-    #load uap
-    uap = None
-    if args.causal_type != 'inact':
-        uap_path = get_uap_path(uap_data=args.dataset,
-                                model_data=args.dataset,
-                                network_arch=args.arch,
-                                random_seed=args.seed)
-        uap_fn = os.path.join(uap_path, 'uap.npy')
-        uap = np.load(uap_fn)
-        uap = torch.from_numpy(uap)
-
-
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
-
     ####################################
     # Init model, criterion, and optimizer
     print("=> Creating model '{}'".format(args.arch))
@@ -238,9 +220,9 @@ def analyze_layers(args):
     model_weights_path = os.path.join(model_path, args.model_name)
 
     network = get_network(args.arch,
-                                input_size=input_size,
-                                num_classes=num_classes,
-                                finetune=False)
+                          input_size=input_size,
+                          num_classes=num_classes,
+                          finetune=False)
 
     print("=> Network :\n {}".format(network))
 
@@ -260,58 +242,68 @@ def analyze_layers(args):
     if args.use_cuda:
         network.cuda()
 
-    # perform causality analysis
-    attribution_map = solve_causal_single(data_test_loader, network, uap, args.arch,
-                                  split_layer=args.split_layer,
-                                  targeted=args.targeted,
-                                  target_class=args.target_class,
-                                  num_sample=args.num_iterations,
-                                  causal_type=args.causal_type,
-                                  log=None,
-                                  use_cuda=args.use_cuda)
+    uap = None
+    if not args.analyze_clean:
+        _, data_test = get_data(args.dataset, args.dataset)
 
-    #save multiple maps
-    attribution_path = get_attribution_path()
-    for i in range(0, len(attribution_map)):
-        attribution_map_ = attribution_map[i]
-        uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
-        np.save(uap_fn, attribution_map_)
+        data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.workers,
+                                                       pin_memory=True)
+        #load uap
+        if args.causal_type != 'inact':
+            uap_path = get_uap_path(uap_data=args.dataset,
+                                    model_data=args.dataset,
+                                    network_arch=args.arch,
+                                    random_seed=args.seed)
+            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+            uap = np.load(uap_fn)
+            uap = torch.from_numpy(uap)
 
-    _, data_test = get_data_class(args.dataset, 1)
+        # perform causality analysis
+        attribution_map, outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
+                                      split_layer=args.split_layer,
+                                      targeted=args.targeted,
+                                      target_class=args.target_class,
+                                      num_sample=args.num_iterations,
+                                      causal_type=args.causal_type,
+                                      log=None,
+                                      use_cuda=args.use_cuda)
 
-    data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
+        #save multiple maps
+        attribution_path = get_attribution_path()
+        for i in range(0, len(attribution_map)):
+            attribution_map_ = attribution_map[i]
+            uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
+                                  + '_' + str(outputs[i]) + ".npy")
+            np.save(uap_fn, attribution_map_)
 
-    attribution_map = solve_causal_single(data_test_loader, network, None, args.arch,
-                                  split_layer=args.split_layer,
-                                  targeted=args.targeted,
-                                  target_class=args.target_class,
-                                  num_sample=args.num_iterations,
-                                  causal_type=args.causal_type,
-                                  log=None,
-                                  use_cuda=args.use_cuda)
+    else:
+        _, data_test = get_data_class(args.dataset, 1)
 
-    for i in range(0, len(attribution_map)):
-        attribution_map_ = attribution_map[i]
-        uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
-        np.save(uap_fn, attribution_map_)
-    '''
-    attribution_map = solve_causal(data_test_loader, network, None, args.arch,
-                                  split_layer=args.split_layer,
-                                  targeted=args.targeted,
-                                  target_class=args.target_class,
-                                  num_sample=args.num_iterations,
-                                  causal_type=args.causal_type,
-                                  log=None,
-                                  use_cuda=args.use_cuda)
+        data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                        batch_size=args.batch_size,
+                                                        shuffle=True,
+                                                        num_workers=args.workers,
+                                                        pin_memory=True)
 
-    file_name = "clean_attribution_" + str(args.split_layer) + "_avg.npy"
-    uap_fn = os.path.join(attribution_path, file_name)
-    np.save(uap_fn, attribution_map)
-    '''
+        attribution_map, outputs = solve_causal_single(data_test_loader, network, None, args.arch,
+                                      split_layer=args.split_layer,
+                                      targeted=args.targeted,
+                                      target_class=args.target_class,
+                                      num_sample=args.num_iterations,
+                                      causal_type=args.causal_type,
+                                      log=None,
+                                      use_cuda=args.use_cuda)
+
+        attribution_path = get_attribution_path()
+        for i in range(0, len(attribution_map)):
+            attribution_map_ = attribution_map[i]
+            uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i)
+                                  + '_' + str(outputs[i]) + ".npy")
+            np.save(uap_fn, attribution_map_)
+
     return
 
 
@@ -360,7 +352,7 @@ def analyze_layers_clean(args):
     if args.use_cuda:
         network.cuda()
 
-    data_train, _ = get_data_class(args.dataset, 1)
+    data_train, _ = get_data_class(args.dataset, args.target_class)
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
                                                     shuffle=True,
@@ -377,7 +369,7 @@ def analyze_layers_clean(args):
                                   use_cuda=args.use_cuda)
 
     attribution_path = get_attribution_path()
-    file_name = "clean_attribution_" + str(args.split_layer) + "_avg.npy"
+    file_name = "clean_attribution_" + str(args.target_class) + '_' + str(args.split_layer) + "_avg.npy"
     uap_fn = os.path.join(attribution_path, file_name)
     np.save(uap_fn, attribution_map)
 
@@ -457,7 +449,7 @@ def calc_entropy_layer(i):
     print('uap_h: {}, clean1_h: {}'.format(uap_h, clean1_h))
 
 
-def calc_entropy_pcc(i):
+def calc_entropy_pcc(i, args):
     attribution_path = get_attribution_path()
 
     clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_avg.npy")
@@ -520,11 +512,13 @@ if __name__ == '__main__':
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
-        #calc_entropy_layer()
-        for i in range(0, 1024):
-            calc_entropy_pcc(i)
+        calc_entropy_layer()
+    elif args.option == 'calc_pcc':
+        for i in range(0, args.num_iterations):
+            calc_entropy_pcc(i, args)
     elif args.option == 'analyze_layers':
         analyze_layers(args)
+    elif args.option == 'analyze_clean':
         analyze_layers_clean(args)
     end = time.time()
     print('Process time: {}'.format(end - start))

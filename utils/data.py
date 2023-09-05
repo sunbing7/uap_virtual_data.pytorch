@@ -52,23 +52,6 @@ def get_data(dataset, pretrained_dataset):
 
     if dataset == 'cifar10':
         #return get_data_class(data_file=('%s/%s' % (DATA_DIR, DATA_FILE)), cur_class=3)
-        '''
-        train_transform = transforms.Compose([
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-
-        test_transform = transforms.Compose([
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-        '''
         train_transform = transforms.Compose(
                 [transforms.RandomHorizontalFlip(),
                  transforms.Resize(size=(224, 224)),
@@ -235,30 +218,59 @@ def get_data_perturbed(pretrained_dataset, uap):
 
 def get_data_class(dataset, cur_class=1):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
-    if dataset != 'cifar10':
+    if dataset == 'cifar10':
+
+        data_file = DATASET_BASE_PATH + '/cifar.h5'
+        train_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+
+        test_transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(size=(224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+            )
+        ])
+
+        train_data = CustomCifarClassDataSet(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
+        test_data = CustomCifarClassDataSet(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
+    elif dataset == 'imagenet':
+        num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
+        #use imagenet 2012 validation set as uap training set
+        #use imagenet DEV 1000 sample dataset as the test set
+        #traindir = os.path.join(IMAGENET_PATH, 'validation')
+        valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
+
+        train_transform = transforms.Compose([
+                transforms.Resize(256),
+                # transforms.Resize(299), # inception_v3
+                transforms.RandomCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)])
+
+        test_transform = transforms.Compose([
+                transforms.Resize(256),
+                # transforms.Resize(299), # inception_v3
+                transforms.CenterCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)])
+
+        #train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        test_data = dset.ImageFolder(root=valdir, transform=test_transform)
+
+        #train_data = fix_labels(train_data)
+        test_data = fix_labels_nips_class(test_data, pytorch=True)
+        train_data = None
+
+    else:
         return None
-    data_file = DATASET_BASE_PATH + '/cifar.h5'
-    train_transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-        )
-    ])
-
-    test_transform = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(size=(224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-        )
-    ])
-
-    train_data = CustomCifarClassDataSet(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
-    test_data = CustomCifarClassDataSet(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
-
     return train_data, test_data
 
 
@@ -325,6 +337,38 @@ def fix_labels_nips(test_set, pytorch=False, target_flag=False):
             new_data_samples.append((test_set.samples[i][0], org_label - 1))
         else:
             new_data_samples.append((test_set.samples[i][0], org_label))
+
+    test_set.samples = new_data_samples
+    return test_set
+
+
+def fix_labels_nips_class(test_set, pytorch=False, target_flag=False, cur_class=1):
+    '''
+    :param pytorch: pytorch models have 1000 labels as compared to tensorflow models with 1001 labels
+    '''
+
+    filenames = [i.split('/')[-1] for i, j in test_set.samples]
+    # Load provided files and get image labels and names
+    image_classes = pd.read_csv(os.path.join(IMAGENET_PATH, "ImageNet1k/images.csv"))
+    image_metadata = pd.DataFrame({"ImageId": [f[:-4] for f in filenames]}).merge(image_classes, on="ImageId")
+    true_classes = image_metadata["TrueLabel"].tolist()
+    target_classes = image_metadata["TargetClass"].tolist()
+    val_dict = {}
+    for f, i in zip(filenames, range(len(filenames))):
+        val_dict[f] = [true_classes[i], target_classes[i]]
+
+    new_data_samples = []
+    for i, j in enumerate(test_set.samples):
+        if target_flag:
+            org_label = val_dict[test_set.samples[i][0].split('/')[-1]][1]
+        else:
+            org_label = val_dict[test_set.samples[i][0].split('/')[-1]][0]
+        if pytorch:
+            if (org_label - 1) == cur_class:
+                new_data_samples.append((test_set.samples[i][0], org_label - 1))
+        else:
+            if org_label == cur_class:
+                new_data_samples.append((test_set.samples[i][0], org_label))
 
     test_set.samples = new_data_samples
     return test_set
