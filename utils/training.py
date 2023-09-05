@@ -882,7 +882,7 @@ def my_test(data_loader, filter_model, uap, target_class, num_sample, split_laye
 
     out = num_correct / total_num_samples * 100.
 
-    return out
+    return num_correct, out
 
 
 

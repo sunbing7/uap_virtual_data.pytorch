@@ -6,7 +6,7 @@ import torch
 import argparse
 import torch.backends.cudnn as cudnn
 
-from utils.data import get_data_specs, get_data, get_data_class, fix_labels_nips
+from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -546,25 +546,19 @@ def test(args):
     if args.use_cuda:
         network.cuda()
 
-    data_train, data_test = get_data(args.dataset, args.target_class)
+    tot_correct = 0
+    for cur_class in range(0, 1000):
+        data_train, data_test = get_data_class(args.dataset, args.target_class)
+        data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                        batch_size=args.batch_size,
+                                                        shuffle=True,
+                                                        num_workers=args.workers,
+                                                        pin_memory=True)
 
-    if args.dataset == "imagenet":
-        data_test = fix_labels_nips(data_test, pytorch=True)
-
-    data_train_loader = torch.utils.data.DataLoader(data_train,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-    data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-
-
-    acc = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
-    print('Model accuracy: {}%'.format(acc))
+        corr, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
+        print('class {}, correct {}'.format(cur_class, corr))
+        tot_correct += corr
+    print('Model accuracy: {}%'.format(tot_correct / 1000 * 100))
     return
 
 
