@@ -556,11 +556,12 @@ def test(args):
                                                     shuffle=False,
                                                     num_workers=args.workers,
                                                     pin_memory=True)
-    _, acc = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+    _, acc, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
                       use_cuda=True)
     print('overall acc {}'.format(acc))
 
     tot_correct = 0
+    tot_num = 0
     for cur_class in range(0, 1000):
         data_train, data_test = get_data_class(args.dataset, args.target_class)
         data_test_loader = torch.utils.data.DataLoader(data_test,
@@ -569,10 +570,11 @@ def test(args):
                                                         num_workers=args.workers,
                                                         pin_memory=True)
 
-        corr, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
-        print('class {}, correct {}'.format(cur_class, corr))
+        corr, _, num = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
+        print('class {}, correct {}, num {}'.format(cur_class, corr, num))
         tot_correct += corr
-    print('Model accuracy: {}%'.format(tot_correct / 1000 * 100))
+        tot_num += num
+    print('Model accuracy: {}%'.format(tot_correct / tot_num * 100))
 
     return
 
