@@ -20,7 +20,8 @@ from matplotlib import pyplot as plt
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
-                                                                       'analyze_layers', 'calc_pcc', 'analyze_clean'],
+                                                                       'analyze_layers', 'calc_pcc', 'analyze_clean',
+                                                                       'test'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
