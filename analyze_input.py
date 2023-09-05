@@ -557,20 +557,21 @@ def test(args):
                                                     num_workers=args.workers,
                                                     pin_memory=True)
     _, acc, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
-                      use_cuda=True)
+                      use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
 
     tot_correct = 0
     tot_num = 0
     for cur_class in range(0, 1000):
-        data_train, data_test = get_data_class(args.dataset, args.target_class)
+        data_train, data_test = get_data_class(args.dataset, cur_class)
         data_test_loader = torch.utils.data.DataLoader(data_test,
                                                         batch_size=args.batch_size,
                                                         shuffle=True,
                                                         num_workers=args.workers,
                                                         pin_memory=True)
 
-        corr, _, num = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
+        corr, _, num = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+                               use_cuda=args.use_cuda)
         print('class {}, correct {}, num {}'.format(cur_class, corr, num))
         tot_correct += corr
         tot_num += num
