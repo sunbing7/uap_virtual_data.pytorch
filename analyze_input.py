@@ -375,7 +375,7 @@ def analyze_layers_clean(args):
                                   use_cuda=args.use_cuda)
 
     attribution_path = get_attribution_path()
-    file_name = "clean_attribution_" + str(args.target_class) + '_' + str(args.split_layer) + "_avg.npy"
+    file_name = "clean_attribution_" + str(args.split_layer) + str(args.target_class) + '_' + "_avg.npy"
     uap_fn = os.path.join(attribution_path, file_name)
     np.save(uap_fn, attribution_map)
 
