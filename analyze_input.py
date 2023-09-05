@@ -546,7 +546,7 @@ def test(args):
     if args.use_cuda:
         network.cuda()
 
-    _, data_test = get_data(args.pretrained_dataset, args.pretrained_dataset)
+    _, data_test = get_data(args.dataset, args.dataset)
 
     # Fix labels if needed
     data_test = fix_labels_nips(data_test, pytorch=True)
