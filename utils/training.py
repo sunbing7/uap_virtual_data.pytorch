@@ -422,9 +422,6 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
         pert_out_class = torch.argmax(pert_output, dim=-1)
         uap_out_class = torch.argmax(attack_output, dim=-1)
 
-        #test
-        pert_out_class = uap_out_class
-
         total_num_samples += len(clean_out_class)
         num_same_classified += torch.sum(clean_out_class == pert_out_class).cpu().numpy()
         num_diff_classified += torch.sum(~(clean_out_class == pert_out_class)).cpu().numpy()
@@ -856,6 +853,36 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         #out = do_predict_avg[:, [0, (target_class + 1)]]
 
     return out, outputs
+
+
+def my_test(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):
+    model = filter_model
+    # switch to evaluate mode
+    model.eval()
+
+    total_num_samples = 0
+    num_correct = 0
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            if uap != None:
+                uap = uap.cuda()
+        if uap != None:
+            input = input + uap
+
+        # compute output
+        with torch.no_grad():
+            ori_output_ = model(input)
+            ori_out_class = torch.argmax(ori_output_, dim=-1).cpu().numpy()
+            num_correct += np.sum(ori_out_class == gt.cpu().numpy())
+        total_num_samples += len(gt)
+
+    out = num_correct / total_num_samples * 100.
+
+    return out
 
 
 

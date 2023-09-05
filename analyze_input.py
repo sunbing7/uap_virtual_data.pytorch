@@ -10,7 +10,8 @@ from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single
+from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
+    my_test
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
@@ -503,6 +504,64 @@ def rearrange_outputfile():
 '''
 
 
+def test(args):
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.use_cuda:
+        torch.cuda.manual_seed_all(args.seed)
+    cudnn.benchmark = True
+
+    #load uap
+    uap = None
+
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+
+    ####################################
+    # Init model, criterion, and optimizer
+    print("=> Creating model '{}'".format(args.arch))
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+    model_weights_path = os.path.join(model_path, args.model_name)
+
+    network = get_network(args.arch,
+                                input_size=input_size,
+                                num_classes=num_classes,
+                                finetune=False)
+
+    print("=> Network :\n {}".format(network))
+
+    # Set the target model into evaluation mode
+    network.eval()
+
+    # Imagenet models use the pretrained pytorch weights
+    if args.dataset != "imagenet":
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    # Set all weights to not trainable
+    set_parameter_requires_grad(network, requires_grad=False)
+
+    if args.use_cuda:
+        network.cuda()
+
+    data_train, data_test = get_data_class(args.dataset, args.target_class)
+    data_train_loader = torch.utils.data.DataLoader(data_train,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=True,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=True,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+
+    acc = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43, use_cuda=True)
+    print('Model accuracy: {}%'.format(acc))
+    return
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
@@ -520,6 +579,8 @@ if __name__ == '__main__':
         analyze_layers(args)
     elif args.option == 'analyze_clean':
         analyze_layers_clean(args)
+    elif args.option == 'test':
+        test(args)
     end = time.time()
     print('Process time: {}'.format(end - start))
 
