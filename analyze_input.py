@@ -282,8 +282,10 @@ def analyze_layers(args):
             np.save(uap_fn, attribution_map_)
 
     else:
-        _, data_test = get_data_class(args.dataset, 1)
-
+        _, data_test = get_data_class(args.dataset, args.target_class)
+        if len(data_test) == 0:
+            print('No sample from class {}'.format(args.target_class))
+            return
         data_test_loader = torch.utils.data.DataLoader(data_test,
                                                         batch_size=args.batch_size,
                                                         shuffle=True,
@@ -545,7 +547,7 @@ def test(args):
 
     if args.use_cuda:
         network.cuda()
-    '''
+
     _, data_test = get_data(args.dataset, args.dataset)
 
     # Fix labels if needed
@@ -559,7 +561,7 @@ def test(args):
     _, acc, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
-    '''
+
     tot_correct = 0
     tot_num = 0
     for cur_class in range(0, 1000):
