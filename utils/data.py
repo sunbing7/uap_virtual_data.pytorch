@@ -266,7 +266,7 @@ def get_data_class(dataset, cur_class=1):
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
 
         #train_data = fix_labels(train_data)
-        test_data = fix_labels_nips_class(test_data, pytorch=True)
+        test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
         train_data = None
 
     else:
