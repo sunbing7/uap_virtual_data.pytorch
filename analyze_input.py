@@ -286,11 +286,11 @@ def analyze_layers(args):
             np.save(uap_fn, attribution_map_)
 
     else:
-        _, data_test = get_data_class(args.dataset, args.target_class)
+        data_train, data_test = get_data_class(args.dataset, args.target_class)
         if len(data_test) == 0:
             print('No sample from class {}'.format(args.target_class))
             return
-        data_test_loader = torch.utils.data.DataLoader(data_test,
+        data_test_loader = torch.utils.data.DataLoader(data_train,
                                                         batch_size=args.batch_size,
                                                         shuffle=True,
                                                         num_workers=args.workers,
