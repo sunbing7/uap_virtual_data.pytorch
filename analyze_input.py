@@ -488,7 +488,11 @@ def calc_entropy_pcc_i(i, args):
     else:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(i) + '_' + str(args.target_class) + ".npy")
-    loaded = np.load(fn)
+    if fn.exists():
+        loaded = np.load(fn)
+    else:
+        return
+
     ca = loaded[:, 1]
 
     uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
