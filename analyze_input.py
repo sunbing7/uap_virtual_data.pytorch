@@ -488,7 +488,7 @@ def calc_entropy_pcc_i(i, args):
     else:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(i) + '_' + str(args.target_class) + ".npy")
-    if fn.exists():
+    if os.path.exists(fn):
         loaded = np.load(fn)
     else:
         return
