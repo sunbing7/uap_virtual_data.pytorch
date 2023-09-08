@@ -114,9 +114,13 @@ python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=Tr
 python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=5 --result_subfolder=result --target_class=51 --batch_size=5 --ngpu=1 --workers=4
 
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=51 --batch_size=32 --ngpu=1 --workers=4
+
 python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=uap_attribution_43_s0_51.npy
 python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=clean_attribution_43_s0_51.npy
 python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=clean_attribution_43_s1_51.npy
+
+python analyze_input.py --option=calc_pcc --analyze_clean=1 --avg_ca_name=clean_attribution_43_51_avg.npy --num_iterations=50 --target_class=51
 
 
 python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4

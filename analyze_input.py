@@ -474,7 +474,28 @@ def calc_entropy_pcc(args):
 
     print('pcc: {}'.format(uap_pcc))
 
+
 def calc_entropy_pcc_i(i, args):
+    attribution_path = get_attribution_path()
+
+    clean_fn = os.path.join(attribution_path, args.avg_ca_name)
+    loaded = np.load(clean_fn)
+    clean_ca = loaded[:, -1]
+
+    if not args.analyze_clean:
+        fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
+                          str(i) + '_' + str(args.target_class) + ".npy")
+    else:
+        fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
+                          str(i) + '_' + str(args.target_class) + ".npy")
+    loaded = np.load(fn)
+    ca = loaded[:, 1]
+
+    uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
+
+    print('pcc {}: {}'.format(i, uap_pcc))
+
+def calc_entropy_pcc_i_old(i, args):
     attribution_path = get_attribution_path()
 
     clean_fn = os.path.join(attribution_path, args.avg_ca_name)
@@ -615,8 +636,11 @@ if __name__ == '__main__':
     elif args.option == 'calc_entropy':
         calc_entropy_layer()
     elif args.option == 'calc_pcc':
-        #for i in range(0, args.num_iterations):
-        calc_entropy_pcc(args)
+        if args.num_iterations != 0:
+            for i in range(0, args.num_iterations):
+                calc_entropy_pcc_i(i, args)
+        else:
+            calc_entropy_pcc(args)
     elif args.option == 'analyze_layers':
         analyze_layers(args)
     elif args.option == 'analyze_clean':
