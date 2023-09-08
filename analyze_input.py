@@ -228,7 +228,7 @@ def analyze_layers(args):
                           num_classes=num_classes,
                           finetune=False)
 
-    print("=> Network :\n {}".format(network))
+    #print("=> Network :\n {}".format(network))
 
     # Set the target model into evaluation mode
     network.eval()
@@ -241,7 +241,7 @@ def analyze_layers(args):
     set_parameter_requires_grad(network, requires_grad=False)
     total_params = get_num_parameters(network)
 
-    print("Filter Network Total # parameters: {}".format(total_params))
+    #print("Filter Network Total # parameters: {}".format(total_params))
 
     if args.use_cuda:
         network.cuda()
@@ -340,7 +340,7 @@ def analyze_layers_clean(args):
                                 num_classes=num_classes,
                                 finetune=False)
 
-    print("=> Network :\n {}".format(network))
+    #print("=> Network :\n {}".format(network))
 
     # Set the target model into evaluation mode
     network.eval()
@@ -353,13 +353,13 @@ def analyze_layers_clean(args):
     set_parameter_requires_grad(network, requires_grad=False)
     total_params = get_num_parameters(network)
 
-    print("Filter Network Total # parameters: {}".format(total_params))
+    #print("Filter Network Total # parameters: {}".format(total_params))
 
     if args.use_cuda:
         network.cuda()
 
     data_train, _ = get_data_class(args.dataset, args.target_class)
-    print('Number of training samples in this class: {}'.format(len(data_train)))
+    #print('Number of training samples in this class: {}'.format(len(data_train)))
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
@@ -458,6 +458,7 @@ def calc_entropy_layer(i):
 
 
 def calc_entropy_pcc(args):
+    print('idx is {}'.format(args.idx))
     attribution_path = get_attribution_path()
     clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer)
                             + '_' + str(args.target_class) + "_avg.npy")
@@ -637,8 +638,10 @@ if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
     start = time.time()
+    '''
     for key, value in state.items():
         print("{} : {}".format(key, value))
+    '''
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':

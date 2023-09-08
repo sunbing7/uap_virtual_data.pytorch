@@ -11,4 +11,6 @@ for tgt in ${TARGET_CLASSES[@]}; do
     python analyze_input.py --option=calc_pcc --idx=$IDX --target_class=$tgt --num_iterations=0 --split_layer=43
     python analyze_input.py --option=calc_pcc --analyze_clean=1 --num_iterations=50 --target_class=$tgt --split_layer=43
     ((IDX++))
+    #echo $IDX
+    #echo $tgt
 done
