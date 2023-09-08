@@ -116,7 +116,7 @@ python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=
 
 python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=51 --batch_size=32 --ngpu=1 --workers=4
 
-python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=uap_attribution_43_s0_51.npy
+python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=uap_attribution_43_s0_51.npy --num_iterations=0
 python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=clean_attribution_43_s0_51.npy
 python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_51_avg.npy --ca_name=clean_attribution_43_s1_51.npy
 
@@ -126,3 +126,26 @@ python analyze_input.py --option=calc_pcc --analyze_clean=1 --avg_ca_name=clean_
 python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_imagenet.pth --pretrained_seed=123 --uap_model=checkpoint.pth.tar --uap_name=perturbed_net.pth --test_dataset=imagenet --test_arch=vgg19 --test_name=vgg19_imagenet.pth --result_subfolder=result --target_class=214 --ngpu=1 --workers=4
+
+#class 582
+python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=582 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=582 --batch_size=32 --ngpu=1 --workers=4
+
+python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_582_avg.npy --ca_name=uap_attribution_43_s1_582.npy --num_iterations=0
+python analyze_input.py --option=calc_pcc --analyze_clean=1 --avg_ca_name=clean_attribution_43_582_avg.npy --num_iterations=50 --target_class=582
+
+#class 820
+python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=820 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=820 --batch_size=32 --ngpu=1 --workers=4
+
+python analyze_input.py --option=calc_pcc --avg_ca_name=clean_attribution_43_820_avg.npy --ca_name=uap_attribution_43_s2_820.npy --num_iterations=0
+python analyze_input.py --option=calc_pcc --analyze_clean=1 --avg_ca_name=clean_attribution_43_820_avg.npy --num_iterations=50 --target_class=820
+
+
+#class 214
+python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=214 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=214 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
+
+python analyze_input.py --option=calc_pcc --idx=13 --target_class=214 --num_iterations=0 --split_layer=43
+python analyze_input.py --option=calc_pcc --analyze_clean=1 --num_iterations=50 --target_class=214 --split_layer=43
+

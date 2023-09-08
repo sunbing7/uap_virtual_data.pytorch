@@ -48,9 +48,7 @@ def parse_arguments():
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
 
-    parser.add_argument('--avg_ca_name', type=str, default='clean_attribution_43_51_avg.npy')
-
-    parser.add_argument('--ca_name', type=str, default='uap_attribution_43_s0_51.npy')
+    parser.add_argument('--idx', type=int, default=0)
 
     parser.add_argument('--targeted',  type=bool, default='',
                         help='Target a specific class (default: False)')
@@ -461,13 +459,19 @@ def calc_entropy_layer(i):
 
 def calc_entropy_pcc(args):
     attribution_path = get_attribution_path()
-
-    clean_fn = os.path.join(attribution_path, args.avg_ca_name)
+    clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer)
+                            + '_' + str(args.target_class) + "_avg.npy")
     loaded = np.load(clean_fn)
     clean_ca = loaded[:, -1]
 
-    uap_fn = os.path.join(attribution_path, args.ca_name)
-    loaded = np.load(uap_fn)
+    if not args.analyze_clean:
+        fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
+                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+    else:
+        fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
+                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+
+    loaded = np.load(fn)
     uap_ca = loaded[:, 1]
 
     uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
@@ -477,8 +481,8 @@ def calc_entropy_pcc(args):
 
 def calc_entropy_pcc_i(i, args):
     attribution_path = get_attribution_path()
-
-    clean_fn = os.path.join(attribution_path, args.avg_ca_name)
+    clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer)
+                            + '_' + str(args.target_class) + "_avg.npy")
     loaded = np.load(clean_fn)
     clean_ca = loaded[:, -1]
 
