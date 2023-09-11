@@ -579,14 +579,16 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                if uap != None:
+                    uap = uap.cuda()
+            if uap != None:
+                input = input + uap
 
             # compute output
             with torch.no_grad():
                 dense_output = model1(input)
-                pert_dense_output = model1(input + uap)
                 # ori_output = model2(dense_output)
-                dense_this = np.abs(dense_output.cpu().detach().numpy() - pert_dense_output.cpu().detach().numpy())# 4096
+                dense_this = dense_output.cpu().detach().numpy()
                 dense_this = np.mean(dense_this, axis=0)  # 4096
             dense_avg.append(dense_this)  # batchx4096
             total_num_samples += len(gt)
