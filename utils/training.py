@@ -851,7 +851,34 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         #idx = np.arange(0, len(do_predict_avg), 1, dtype=int)
         #do_predict_avg = np.c_[idx, do_predict_avg]
         #out = do_predict_avg[:, [0, (target_class + 1)]]
+    elif causal_type == 'act':
+        total_num_samples = 0
+        dense_avg = []
+        outputs = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                if uap != None:
+                    uap = uap.cuda()
+            if uap != None:
+                input = input + uap
 
+            # compute output
+            with torch.no_grad():
+                dense_output = model1(input)
+                ori_output = model2(dense_output)
+                ori_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+                outputs = outputs + list(ori_out_class)
+                dense_this = dense_output.cpu().detach().numpy()# 4096
+            dense_avg = dense_avg + list(dense_this)  # batchx4096
+            total_num_samples += len(gt)
+        # average of all baches
+        dense_avg = np.array(dense_avg)# 4096
+        # insert neuron index
+        out = dense_avg
     return out, outputs
 
 
