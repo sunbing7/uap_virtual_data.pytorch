@@ -588,7 +588,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             with torch.no_grad():
                 dense_output = model1(input)
                 # ori_output = model2(dense_output)
-                dense_this = dense_output.cpu().detach().numpy()
+                dense_this = torch.reshape(dense_output, (dense_output.shape[0], -1)).cpu().detach().numpy()
                 dense_this = np.mean(dense_this, axis=0)  # 4096
             dense_avg.append(dense_this)  # batchx4096
             total_num_samples += len(gt)
@@ -875,7 +875,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
                 ori_output = model2(dense_output)
                 ori_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
                 outputs = outputs + list(ori_out_class)
-                dense_this = dense_output.cpu().detach().numpy()# 4096
+                dense_this = torch.reshape(dense_output, (dense_output.shape[0], -1)).cpu().detach().numpy()# 4096
             dense_avg = dense_avg + list(dense_this)  # batchx4096
             total_num_samples += len(gt)
         # average of all baches
