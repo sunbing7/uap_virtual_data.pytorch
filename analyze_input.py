@@ -473,7 +473,11 @@ def calc_entropy_pcc(args):
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
 
     loaded = np.load(fn)
-    uap_ca = loaded[:, 1]
+
+    if args.causal_type == 'logit':
+        uap_ca = loaded[:, 1]
+    elif args.causal_type == 'act':
+        uap_ca = loaded.transpose()
 
     uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
 
@@ -498,7 +502,10 @@ def calc_entropy_pcc_i(i, args):
     else:
         return
 
-    ca = loaded[:, 1]
+    if args.causal_type == 'logit':
+        ca = loaded[:, 1]
+    elif args.causal_type == 'act':
+        ca = loaded.transpose()
 
     uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
 
