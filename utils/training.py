@@ -598,6 +598,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
         idx = np.arange(0, len(dense_avg), 1, dtype=int)
         dense_avg = np.c_[idx, dense_avg]
         out = dense_avg
+        print('shape of dense_avg'.format(dense_avg))
     if causal_type == 'slogit':
         if not targeted:
             return None
@@ -879,6 +880,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
             total_num_samples += len(gt)
         # average of all baches
         dense_avg = np.array(dense_avg)# 4096
+        print('shape of dense_avg'.format(dense_avg))
         # insert neuron index
         out = dense_avg
     return out, outputs
