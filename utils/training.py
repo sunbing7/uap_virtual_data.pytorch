@@ -386,9 +386,6 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
 def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targeted, target_class, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
-    perturbed_model.eval()
-    perturbed_model.module.generator.eval()
-    perturbed_model.module.target_model.eval()
 
     clean_acc = AverageMeter()
     perturbed_acc = AverageMeter()
@@ -409,18 +406,14 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
         # compute output
         with torch.no_grad():
             clean_output = target_model(input)
-            pert_output = perturbed_model(input)
             attack_output = target_model(input + uap)
 
         correctly_classified_mask = torch.argmax(clean_output, dim=-1).cpu() == gt.cpu()
         cl_acc = accuracy(clean_output.data, gt, topk=(1,))
         clean_acc.update(cl_acc[0].item(), input.size(0))
-        pert_acc = accuracy(pert_output.data, gt, topk=(1,))
-        perturbed_acc.update(pert_acc[0].item(), input.size(0))
 
         # Calculating Fooling Ratio params
         clean_out_class = torch.argmax(clean_output, dim=-1)
-        pert_out_class = torch.argmax(pert_output, dim=-1)
         uap_out_class = torch.argmax(attack_output, dim=-1)
 
         total_num_samples += len(clean_out_class)
@@ -447,8 +440,8 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
         if targeted:
             # 2. How many of all samples go the sink class (Only relevant for others loader)
             target_cl = torch.ones_like(gt) * target_class
-            all_to_target_succ_rate = accuracy(pert_output, target_cl, topk=(1,))
-            all_to_target_success_rate.update(all_to_target_succ_rate[0].item(), pert_output.size(0))
+            all_to_target_succ_rate = accuracy(attack_output, target_cl, topk=(1,))
+            all_to_target_success_rate.update(all_to_target_succ_rate[0].item(), attack_output.size(0))
 
             # 3. How many of all samples go the sink class, except gt sink class (Only relevant for others loader)
             # Filter all idxs which are not belonging to sink class
@@ -456,7 +449,7 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
             non_target_class_mask = torch.Tensor(non_target_class_idxs)==True
             if torch.sum(non_target_class_mask)>0:
                 gt_non_target_class = gt[non_target_class_mask]
-                pert_output_non_target_class = pert_output[non_target_class_mask]
+                pert_output_non_target_class = attack_output[non_target_class_mask]
 
                 target_cl = torch.ones_like(gt_non_target_class) * target_class
                 all_to_target_succ_rate_filtered = accuracy(pert_output_non_target_class, target_cl, topk=(1,))
