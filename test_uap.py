@@ -322,13 +322,12 @@ def main_net():
                             network_arch=args.pretrained_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = np.load(uap_fn)
+    uap = np.load(uap_fn) / std
     tuap = torch.from_numpy(uap)
     if args.use_cuda:
         tuap = tuap.cuda()
     metrics_evaluate_test(data_loader=data_test_loader,
                     target_model=target_network,
-                    std=std,
                     uap=tuap,
                     targeted=args.targeted,
                     target_class=args.target_class,

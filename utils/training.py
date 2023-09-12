@@ -383,11 +383,9 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
 
 
 
-def metrics_evaluate_test(data_loader, target_model, std, uap, targeted, target_class, log=None, use_cuda=True):
+def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
-
-    uap = uap / std
 
     clean_acc = AverageMeter()
     perturbed_acc = AverageMeter()
