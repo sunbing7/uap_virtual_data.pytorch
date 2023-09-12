@@ -406,7 +406,7 @@ def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class
         # compute output
         with torch.no_grad():
             clean_output = target_model(input)
-            attack_output = target_model(input + uap)
+            attack_output = target_model((input + uap).float())
 
         correctly_classified_mask = torch.argmax(clean_output, dim=-1).cpu() == gt.cpu()
         cl_acc = accuracy(clean_output.data, gt, topk=(1,))
