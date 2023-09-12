@@ -262,7 +262,7 @@ def analyze_layers(args):
                                     network_arch=args.arch,
                                     random_seed=args.seed)
             uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-            uap = np.load(uap_fn)
+            uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
             uap = torch.from_numpy(uap)
 
         # perform causality analysis

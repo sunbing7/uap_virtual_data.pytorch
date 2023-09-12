@@ -250,7 +250,7 @@ def train_repair(data_loader, uap,
         if use_cuda:
             target = target.cuda()
             input = input.cuda()
-            uap = uap.cuda()
+            uap = uap.cuda().float()
 
         # compute output
         output = model(input)
@@ -529,7 +529,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
                 gt = gt.cuda()
                 input = input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
             if uap != None:
                 input = input + uap
 
@@ -574,7 +574,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
                 gt = gt.cuda()
                 input = input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
             if uap != None:
                 input = input + uap
 
@@ -604,7 +604,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -652,7 +652,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -690,7 +690,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -714,7 +714,7 @@ def solve_causal(data_loader, filter_model, uap, filter_arch, targeted, target_c
         if not targeted:
             return None
         if use_cuda:
-            uap = uap.cuda()
+            uap = uap.cuda().float()
             # compute output
         with torch.no_grad():
             dense_output = model1(uap)
@@ -814,7 +814,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
                 input = input.cuda()
                 ori_input = ori_input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
 
             if uap != None:
                 input = input + uap
@@ -869,7 +869,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
                 input = input.cuda()
                 ori_input = ori_input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
             if uap != None:
                 input = input + uap
 
@@ -907,7 +907,7 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_
             gt = gt.cuda()
             input = input.cuda()
             if uap != None:
-                uap = uap.cuda()
+                uap = uap.cuda().float()
         if uap != None:
             pertub_input = input + uap
 
@@ -942,7 +942,7 @@ def my_test(data_loader, filter_model, uap, target_class, num_sample, split_laye
             gt = gt.cuda()
             input = input.cuda()
             if uap != None:
-                uap = uap.cuda()
+                uap = uap.cuda().float()
         if uap != None:
             input = input + uap
 
@@ -975,7 +975,7 @@ def solve_input_attribution(data_loader, model, uap, targeted, target_class, num
                 gt = gt.cuda()
                 input = input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
             if uap != None:
                 test_input = input + uap
             else:
@@ -1033,7 +1033,7 @@ def solve_input_attribution_single(data_loader, model, uap, targeted, target_cla
                 gt = gt.cuda()
                 input = input.cuda()
                 if uap != None:
-                    uap = uap.cuda()
+                    uap = uap.cuda().float()
             if uap != None:
                 test_input = input + uap
             else:
@@ -1107,7 +1107,7 @@ def solve_activation(data_loader, filter_model, uap, filter_arch, target_class, 
         if use_cuda:
             gt = gt.cuda()
             input = input.cuda()
-            uap = uap.cuda()
+            uap = uap.cuda().float()
 
         # compute output
         with torch.no_grad():
@@ -1167,7 +1167,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -1209,7 +1209,7 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -1250,7 +1250,7 @@ def eval_uap_model(test_data_loader, target_model, pert_model, target_class, log
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
@@ -1292,7 +1292,7 @@ def eval_uap_model(test_data_loader, target_model, pert_model, target_class, log
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
-                uap = uap.cuda()
+                uap = uap.cuda().float()
 
             # compute output
             with torch.no_grad():
