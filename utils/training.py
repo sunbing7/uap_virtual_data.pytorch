@@ -292,6 +292,7 @@ def train_repair(data_loader, uap,
                                                                                                     error1=100 - top1.avg),
                                                                                                     log)
 
+
 def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, target_class, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
@@ -423,8 +424,8 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
         uap_out_class = torch.argmax(attack_output, dim=-1)
 
         total_num_samples += len(clean_out_class)
-        num_same_classified += torch.sum(clean_out_class == pert_out_class).cpu().numpy()
-        num_diff_classified += torch.sum(~(clean_out_class == pert_out_class)).cpu().numpy()
+        num_same_classified += torch.sum(clean_out_class == uap_out_class).cpu().numpy()
+        num_diff_classified += torch.sum(~(clean_out_class == uap_out_class)).cpu().numpy()
 
         if torch.sum(correctly_classified_mask)>0:
             with torch.no_grad():

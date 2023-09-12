@@ -305,7 +305,8 @@ def main_net():
     else:
         uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
 
-    '''
+
+    print('Evaluate perterbued model')
     metrics_evaluate(data_loader=data_test_loader,
                     target_model=target_network,
                     perturbed_model=uap_pert_model,
@@ -313,8 +314,9 @@ def main_net():
                     target_class=args.target_class,
                     log=log,
                     use_cuda=args.use_cuda)
-    '''
+
     #load uap
+    print('Evaluate uap stamp')
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
                             network_arch=args.pretrained_arch,
@@ -332,7 +334,7 @@ def main_net():
                     target_class=args.target_class,
                     log=log,
                     use_cuda=args.use_cuda)
-    #'''
+
     log.close()
 
 if __name__ == '__main__':
