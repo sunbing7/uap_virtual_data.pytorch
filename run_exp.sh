@@ -173,5 +173,5 @@ python analyze_input.py --option=calc_entropy --causal_type=act --idx=0 --target
 
 python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 
-python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --uap_name=perturbed_net.pth --test_dataset=imagenet --test_arch=vgg19 --result_subfolder=result --targeted=True --target_class=1 --ngpu=1 --workers=4
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --uap_name=checkpoint_526.pth.tar --test_dataset=imagenet --test_arch=vgg19 --result_subfolder=result --targeted=True --target_class=947 --ngpu=1 --workers=4
 python export_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --uap_model=perturbed_net.pth --pretrained_seed=123 --result_subfolder=result --uap_name=uap_214.npy --target_class=214 --ngpu=1 --workers=4
