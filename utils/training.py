@@ -429,7 +429,7 @@ def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targe
 
         if torch.sum(correctly_classified_mask)>0:
             with torch.no_grad():
-                pert_output_corr_cl = perturbed_model(input[correctly_classified_mask])
+                pert_output_corr_cl = target_model((input + uap)[correctly_classified_mask])
             attack_succ_rate = accuracy(pert_output_corr_cl, gt[correctly_classified_mask], topk=(1,))
             attack_success_rate.update(attack_succ_rate[0].item(), pert_output_corr_cl.size(0))
 
