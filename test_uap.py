@@ -322,7 +322,7 @@ def main_net():
                             network_arch=args.pretrained_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = np.load(uap_fn) / std
+    uap = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     tuap = torch.from_numpy(uap)
     if args.use_cuda:
         tuap = tuap.cuda()
