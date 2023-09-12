@@ -45,10 +45,7 @@ def parse_arguments():
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
                         help='Postfix to attach to result folder')
-    parser.add_argument('--uap_model', type=str, default='checkpoint.pth.tar',
-                        help='uap model name (default: checkpoint.pth.tar)')
-    parser.add_argument('--uap_name', type=str, default='uap.npy',
-                        help='uap file name (default: uap.npy)')
+
     # Optimization options
     parser.add_argument('--loss_function', default='bounded_logit_fixed_ref', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
                                                                   'bounded_logit_fixed_ref', 'bounded_logit_neg'],
@@ -286,7 +283,7 @@ def main():
 
     imgplot = plt.imshow(plot_tuap_amp)
 
-    np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
+    np.save(uap_path + '/uap_' + str(args.target_class) + '.npy', tuap.cpu().detach().numpy())
     plt.savefig(model_path + '/uap_' + str(args.target_class) + '.png')
     plt.show()
     torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + '.pth')
