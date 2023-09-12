@@ -260,13 +260,18 @@ def main():
                     log=log,
                     use_cuda=args.use_cuda)
 
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.pretrained_dataset,
+                            network_arch=args.pretrained_arch,
+                            random_seed=args.pretrained_seed)
+
     save_checkpoint({
       'arch'        : args.pretrained_arch,
       # 'state_dict'  : perturbed_net.state_dict(),
       'state_dict'  : perturbed_net.module.generator.state_dict(),
       'optimizer'   : optimizer.state_dict(),
       'args'        : copy.deepcopy(args),
-    }, result_path, args.uap_model)
+    }, uap_path, 'perturbed_checkpoint_' + str(args.target_class) + '.pth')
 
     #export uap and save it
     #'''
@@ -281,16 +286,10 @@ def main():
 
     imgplot = plt.imshow(plot_tuap_amp)
 
-
-    uap_path = get_uap_path(uap_data=args.dataset,
-                            model_data=args.pretrained_dataset,
-                            network_arch=args.pretrained_arch,
-                            random_seed=args.pretrained_seed)
-
     np.save(uap_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
     plt.savefig(model_path + '/uap_' + str(args.target_class) + '.png')
-    #plt.show()
-    torch.save(perturbed_net, uap_path + '/perturbed_net.pth')
+    plt.show()
+    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + '.pth')
     print('uap saved!')
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(pretrained_data_test_loader, target_network, tuap,
