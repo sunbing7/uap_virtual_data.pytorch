@@ -21,7 +21,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test'],
+                                                                       'test', 'all'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -537,7 +537,9 @@ def calc_pcc(args):
 
     uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
 
-    print('pcc: {}'.format(uap_pcc))
+    #print('pcc: {}'.format(uap_pcc))
+
+    return uap_pcc
 
 
 def calc_pcc_i(i, args):
@@ -565,7 +567,9 @@ def calc_pcc_i(i, args):
 
     uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
 
-    print('pcc {}: {}'.format(i, uap_pcc))
+    #print('pcc {}: {}'.format(i, uap_pcc))
+    return uap_pcc
+
 
 def calc_pcc_i_old(i, args):
     attribution_path = get_attribution_path()
@@ -697,6 +701,16 @@ def test(args):
     return
 
 
+def process_pcc(args):
+    args.analyze_clean = 0
+    uap_pcc = calc_pcc(args)
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_pacc = calc_pcc_i(i, args)
+        print('process_pcc: {} {}'.format(clean_pacc, uap_pcc))
+    return
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
@@ -725,6 +739,8 @@ if __name__ == '__main__':
         analyze_layers_clean(args)
     elif args.option == 'test':
         test(args)
+    elif args.option == 'all':
+        process_pcc(args)
     end = time.time()
     print('Process time: {}'.format(end - start))
 
