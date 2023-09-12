@@ -6,12 +6,12 @@ import torch
 import argparse
 import torch.backends.cudnn as cudnn
 
-from utils.data import get_data_specs, get_data, get_data_class, fix_labels_nips
+from utils.data import get_data_specs, get_data, get_data_class, fix_labels_nips, fix_labels
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
-    my_test
+    my_test, my_test_uap
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
@@ -28,7 +28,7 @@ def parse_arguments():
 
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
                         help='Used dataset to generate UAP (default: cifar10)')
-
+    parser.add_argument('--is_train', type=int, default=0)
     parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                        'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
@@ -634,7 +634,13 @@ def test(args):
     cudnn.benchmark = True
 
     #load uap
-    uap = None
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.dataset,
+                            network_arch=args.arch,
+                            random_seed=args.seed)
+    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+    uap = np.load(uap_fn)
+    uap = torch.from_numpy(uap)
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
 
@@ -667,19 +673,29 @@ def test(args):
     if args.use_cuda:
         network.cuda()
 
-    _, data_test = get_data(args.dataset, args.dataset)
+    data_train, data_test = get_data(args.dataset, args.dataset)
 
-    # Fix labels if needed
-    data_test = fix_labels_nips(data_test, pytorch=True)
+    if args.is_train:
+        if args.dataset == "imagenet":
+            data_train = fix_labels(data_train)
+        dataset = data_train
+    else:
+        # Fix labels if needed
+        if args.dataset == "imagenet":
+            data_test = fix_labels_nips(data_test, pytorch=True)
+        dataset = data_test
 
-    data_test_loader = torch.utils.data.DataLoader(data_test,
+
+    data_test_loader = torch.utils.data.DataLoader(dataset,
                                                     batch_size=args.batch_size,
                                                     shuffle=False,
                                                     num_workers=args.workers,
                                                     pin_memory=True)
-    _, acc, _ = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+
+    _, acc, _, fr, _ = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
+    print('overall fooling ratio {}'.format(acc))
 
     tot_correct = 0
     tot_num = 0
@@ -693,9 +709,9 @@ def test(args):
                                                         num_workers=args.workers,
                                                         pin_memory=True)
 
-        corr, _, num = my_test(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+        corr, _, fool, _, num = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
                                use_cuda=args.use_cuda)
-        print('class {}, correct {}, num {}'.format(cur_class, corr, num))
+        print('class {}, correct {}, fool {}, num {}'.format(cur_class, corr, fool, num))
         tot_correct += corr
         tot_num += num
     print('Model accuracy: {}%'.format(tot_correct / tot_num * 100))
@@ -719,6 +735,12 @@ if __name__ == '__main__':
     state = {k: v for k, v in args._get_kwargs()}
     start = time.time()
     '''
+    attribution_path = get_attribution_path()
+    output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
+    clean_outputs = np.load(output_fn)
+    print(clean_outputs)
+
+
     for key, value in state.items():
         print("{} : {}".format(key, value))
     '''

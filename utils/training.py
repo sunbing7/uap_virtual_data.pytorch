@@ -898,6 +898,40 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
     return out, outputs, clean_outputs
 
 
+def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):
+    model = filter_model
+    # switch to evaluate mode
+    model.eval()
+
+    total_num_samples = 0
+    num_correct = 0
+    num_fool = 0
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            if uap != None:
+                uap = uap.cuda()
+        if uap != None:
+            pertub_input = input + uap
+
+        # compute output
+        with torch.no_grad():
+            ori_output_ = model(input)
+            ori_out_class = torch.argmax(ori_output_, dim=-1).cpu().numpy()
+            pert_output = model(pertub_input)
+            pert_out_class = torch.argmax(pert_output, dim=-1).cpu().numpy()
+            num_correct += np.sum(ori_out_class == gt.cpu().numpy())
+            num_fool += np.sum((pert_out_class != gt.cpu().numpy()) and (ori_out_class == gt.cpu().numpy()))
+        total_num_samples += len(gt)
+
+    out = num_correct / total_num_samples * 100.
+    fr = num_fool / total_num_samples * 100.
+    return num_correct, out, num_fool, fr, total_num_samples
+
+
 def my_test(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):
     model = filter_model
     # switch to evaluate mode
@@ -926,7 +960,6 @@ def my_test(data_loader, filter_model, uap, target_class, num_sample, split_laye
     out = num_correct / total_num_samples * 100.
 
     return num_correct, out, total_num_samples
-
 
 
 def solve_input_attribution(data_loader, model, uap, targeted, target_class, num_sample, causal_type='logit', use_cuda=True):

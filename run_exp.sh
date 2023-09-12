@@ -171,3 +171,5 @@ python analyze_input.py --option=calc_pcc --causal_type=act --idx=0 --target_cla
 python analyze_input.py --option=calc_entropy --causal_type=act --analyze_clean=1 --num_iterations=50 --target_class=51 --split_layer=43
 python analyze_input.py --option=calc_entropy --causal_type=act --idx=0 --target_class=51 --num_iterations=0 --split_layer=43
 
+python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
+
