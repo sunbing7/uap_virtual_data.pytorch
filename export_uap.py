@@ -69,12 +69,6 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    random.seed(args.pretrained_seed)
-    torch.manual_seed(args.pretrained_seed)
-    if args.use_cuda:
-        torch.cuda.manual_seed_all(args.pretrained_seed)
-    cudnn.benchmark = True
-
     # print_log("=> Inserting Generator", log)
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
     generator = UAP(shape=(input_size, input_size),
@@ -106,7 +100,7 @@ def main():
     plot_tuap_amp -= np.min(plot_tuap_amp)
 
     imgplot = plt.imshow(plot_tuap_amp)
-    plt.savefig(model_path + '/uap.png')
+    plt.savefig(model_path + '/uap_' + str(args.target_class) + '.png')
     plt.show()
     np.save(model_path + '/' + args.uap_name, tuap.cpu().detach().numpy())
 
