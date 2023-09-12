@@ -924,7 +924,9 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_
             pert_output = model(pertub_input)
             pert_out_class = torch.argmax(pert_output, dim=-1).cpu().numpy()
             num_correct += np.sum(ori_out_class == gt.cpu().numpy())
-            num_fool += np.sum((pert_out_class != gt.cpu().numpy()) and (ori_out_class == gt.cpu().numpy()))
+            num_fool += np.sum(
+                            np.logical_and((pert_out_class != gt.cpu().numpy()), (ori_out_class == gt.cpu().numpy()))
+                        )
         total_num_samples += len(gt)
 
     out = num_correct / total_num_samples * 100.
