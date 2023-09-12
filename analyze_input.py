@@ -126,7 +126,7 @@ def analyze_inputs(args):
     '''
     ####################################
     # Init model, criterion, and optimizer
-    print("=> Creating model '{}'".format(args.arch))
+    #print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
@@ -216,7 +216,7 @@ def analyze_layers(args):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     ####################################
     # Init model, criterion, and optimizer
-    print("=> Creating model '{}'".format(args.arch))
+    #print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
@@ -328,7 +328,7 @@ def analyze_layers_clean(args):
 
     ####################################
     # Init model, criterion, and optimizer
-    print("=> Creating model '{}'".format(args.arch))
+    #print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
@@ -638,7 +638,7 @@ def test(args):
 
     ####################################
     # Init model, criterion, and optimizer
-    print("=> Creating model '{}'".format(args.arch))
+    #print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
@@ -743,5 +743,5 @@ if __name__ == '__main__':
     elif args.option == 'all':
         process_pcc(args)
     end = time.time()
-    print('Process time: {}'.format(end - start))
+    #print('Process time: {}'.format(end - start))
 

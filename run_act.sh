@@ -2,7 +2,7 @@
 
 TARGET_CLASSES=(51 582 820 637 49 560 703 160 259 755 945 498 480 214 609 212 471 805 415 692 988 754 560 557 705 973 94 321 304 825 498 402)
 IDX=0
-LAYER=28
+LAYER=19
 
 #python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=$LAYER --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 #python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=28 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
