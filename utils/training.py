@@ -809,14 +809,19 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         out = []
         do_predict_avg = []
         outputs = []
+        clean_outputs = []
         for input, gt in data_loader:
             if total_num_samples >= num_sample:
                 break
+
+            ori_input = input
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
+                ori_input = ori_input.cuda()
                 if uap != None:
                     uap = uap.cuda()
+
             if uap != None:
                 input = input + uap
 
@@ -824,11 +829,12 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
             with torch.no_grad():
                 dense_output = model1(input)
                 ori_output = model2(dense_output)
-
+                clean_output = torch.argmax(filter_model(ori_input), dim=-1).cpu().numpy()
                 dense_hidden_ = torch.clone(torch.reshape(dense_output, (dense_output.shape[0], -1)))
                 ori_output_ = filter_model(input)
                 ori_out_class = torch.argmax(ori_output_, dim=-1).cpu().numpy()
                 outputs = outputs + list(ori_out_class)
+                clean_outputs = clean_outputs + list(clean_output)
                 do_predict_neu = []
                 do_predict = []
                 #do convention for each neuron
@@ -858,12 +864,16 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         total_num_samples = 0
         dense_avg = []
         outputs = []
+        clean_outputs = []
         for input, gt in data_loader:
             if total_num_samples >= num_sample:
                 break
+
+            ori_input = input
             if use_cuda:
                 gt = gt.cuda()
                 input = input.cuda()
+                ori_input = ori_input.cuda()
                 if uap != None:
                     uap = uap.cuda()
             if uap != None:
@@ -873,8 +883,10 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
             with torch.no_grad():
                 dense_output = model1(input)
                 ori_output = model2(dense_output)
+                clean_output = torch.argmax(filter_model(ori_input), dim=-1).cpu().numpy()
                 ori_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
                 outputs = outputs + list(ori_out_class)
+                clean_outputs = clean_outputs + list(clean_output)
                 dense_this = torch.reshape(dense_output, (dense_output.shape[0], -1)).cpu().detach().numpy()# 4096
             dense_avg = dense_avg + list(dense_this)  # batchx4096
             total_num_samples += len(gt)
@@ -883,7 +895,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         #print('shape of dense_avg {}'.format(dense_avg.shape))
         # insert neuron index
         out = dense_avg
-    return out, outputs
+    return out, outputs, clean_outputs
 
 
 def my_test(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):

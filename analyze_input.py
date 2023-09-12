@@ -266,7 +266,7 @@ def analyze_layers(args):
             uap = torch.from_numpy(uap)
 
         # perform causality analysis
-        attribution_map, outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
+        attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
                                       split_layer=args.split_layer,
                                       targeted=args.targeted,
                                       target_class=args.target_class,
@@ -282,7 +282,8 @@ def analyze_layers(args):
             uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
                                   + '_' + str(outputs[i]) + ".npy")
             np.save(uap_fn, attribution_map_)
-
+        output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
+        np.save(output_fn, clean_outputs)
     else:
         data_train, data_test = get_data_class(args.dataset, args.target_class)
         if len(data_test) == 0:
@@ -294,7 +295,7 @@ def analyze_layers(args):
                                                         num_workers=args.workers,
                                                         pin_memory=True)
 
-        attribution_map, outputs = solve_causal_single(data_test_loader, network, None, args.arch,
+        attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, None, args.arch,
                                       split_layer=args.split_layer,
                                       targeted=args.targeted,
                                       target_class=args.target_class,
@@ -309,7 +310,8 @@ def analyze_layers(args):
             uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i)
                                   + '_' + str(outputs[i]) + ".npy")
             np.save(uap_fn, attribution_map_)
-
+        output_fn = os.path.join(attribution_path, "clean_outputs_" + str(args.split_layer) + ".npy")
+        np.save(output_fn, clean_outputs)
     return
 
 
