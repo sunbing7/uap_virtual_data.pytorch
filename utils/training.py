@@ -930,7 +930,7 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_
         total_num_samples += len(gt)
 
     out = num_correct / total_num_samples * 100.
-    fr = num_fool / total_num_samples * 100.
+    fr = num_fool / num_correct * 100.
     return num_correct, out, num_fool, fr, total_num_samples
 
 

@@ -695,7 +695,7 @@ def test(args):
     _, acc, _, fr, _ = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
-    print('overall fooling ratio {}'.format(acc))
+    print('overall fooling ratio {}'.format(fr))
 
     tot_correct = 0
     tot_num = 0
