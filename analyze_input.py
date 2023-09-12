@@ -706,8 +706,9 @@ def process_pcc(args):
     uap_pcc = calc_pcc(args)
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
-        clean_pacc = calc_pcc_i(i, args)
-        print('process_pcc: {} {}'.format(clean_pacc, uap_pcc))
+        clean_pcc = calc_pcc_i(i, args)
+        if clean_pcc is not None:
+            print('process_pcc: {} {}'.format(clean_pcc, uap_pcc))
     return
 
 
