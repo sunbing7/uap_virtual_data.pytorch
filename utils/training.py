@@ -383,9 +383,11 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
 
 
 
-def metrics_evaluate_test(data_loader, target_model, perturbed_model, uap, targeted, target_class, log=None, use_cuda=True):
+def metrics_evaluate_test(data_loader, target_model, std, uap, targeted, target_class, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
+
+    uap = uap / std
 
     clean_acc = AverageMeter()
     perturbed_acc = AverageMeter()
@@ -1231,6 +1233,90 @@ def eval_uap(test_data_loader, target_model, uap, target_class, log=None, use_cu
         _test_sr = 0
         _nt_sr = nt_sr
     return test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr
+
+
+def eval_uap_model(test_data_loader, target_model, pert_model, target_class, log=None, use_cuda=True, targeted=True):
+    # switch to evaluate mode
+    pert_model.eval()
+    target_model.eval()
+    if targeted:
+        total_num_samples = 0
+        num_attack_success = 0
+        num_non_t_succ = 0
+        clean_correctly_classified = 0
+        # exclude samples from target class
+        _num_attack_success = 0
+        _num_non_t_succ = 0
+        _total_num_samples = 0
+        for input, gt in test_data_loader:
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            # compute output
+            with torch.no_grad():
+                attack_output = pert_model(input)
+                ori_output = target_model(input)
+
+            # Calculating Fooling Ratio params
+            clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+
+            clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
+            num_attack_success += np.sum(pert_out_class == target_class)
+            num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
+
+            # exclude samples from target class
+            # '''
+            non_target_class_mask = (gt.cpu().numpy() != target_class)
+            if np.sum(non_target_class_mask) > 0:
+                _num_attack_success += np.sum((pert_out_class == target_class) * non_target_class_mask)
+                _num_non_t_succ += np.sum((pert_out_class != gt.cpu().numpy()) * non_target_class_mask)
+                _total_num_samples += np.sum(gt.cpu().numpy() != target_class)
+            # '''
+            total_num_samples += len(gt)
+        test_sr = num_attack_success / total_num_samples * 100
+        clean_test_acc = clean_correctly_classified / total_num_samples * 100
+        nt_sr = num_non_t_succ / total_num_samples * 100
+
+        _test_sr = _num_attack_success / _total_num_samples * 100
+        _nt_sr = _num_non_t_succ / _total_num_samples * 100
+    else:
+        total_num_samples = 0
+        num_non_t_succ = 0
+        clean_correctly_classified = 0
+        # exclude samples from target class
+        _num_attack_success = 0
+        _num_non_t_succ = 0
+        _total_num_samples = 0
+        for input, gt in test_data_loader:
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            # compute output
+            with torch.no_grad():
+                attack_output = target_model(input + uap)
+                ori_output = target_model(input)
+
+            # Calculating Fooling Ratio params
+            clean_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            pert_out_class = torch.argmax(attack_output, dim=-1).cpu().numpy()
+
+            clean_correctly_classified += np.sum(clean_out_class == gt.cpu().numpy())
+            num_non_t_succ += np.sum(pert_out_class != gt.cpu().numpy())
+
+            total_num_samples += len(gt)
+        test_sr = 0
+        clean_test_acc = clean_correctly_classified / total_num_samples * 100
+        nt_sr = num_non_t_succ / total_num_samples * 100
+
+        _test_sr = 0
+        _nt_sr = nt_sr
+    return test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr
+
 
 
 def split_model(ori_model, model_name, split_layer=43):

@@ -328,7 +328,7 @@ def main_net():
         tuap = tuap.cuda()
     metrics_evaluate_test(data_loader=data_test_loader,
                     target_model=target_network,
-                    perturbed_model=uap_pert_model,
+                    std=std,
                     uap=tuap,
                     targeted=args.targeted,
                     target_class=args.target_class,
