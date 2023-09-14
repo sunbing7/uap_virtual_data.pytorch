@@ -286,7 +286,7 @@ def analyze_layers(args):
         np.save(output_fn, clean_outputs)
     else:
         data_train, data_test = get_data_class(args.dataset, args.target_class)
-        if len(data_test) == 0:
+        if len(data_train) == 0:
             print('No sample from class {}'.format(args.target_class))
             return
         data_test_loader = torch.utils.data.DataLoader(data_train,
