@@ -436,7 +436,7 @@ def calc_entropy_i(i, args):
     #clean_h = calculate_shannon_entropy_array(clean_ca)
     uap_h = calculate_shannon_entropy_array(ca)
 
-    print('entropy {}: {}'.format(i, uap_h))
+    #print('entropy {}: {}'.format(i, uap_h))
     return uap_h
 
 def calc_entropy_old():
