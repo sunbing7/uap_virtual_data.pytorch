@@ -516,7 +516,7 @@ def calc_entropy_layer(i):
 
 
 def calc_pcc(args):
-    print('idx is {}'.format(args.idx))
+    #print('idx is {}'.format(args.idx))
     attribution_path = get_attribution_path()
     clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer)
                             + '_' + str(args.target_class) + "_avg.npy")
