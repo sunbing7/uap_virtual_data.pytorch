@@ -574,7 +574,7 @@ def calc_pcc_i(i, args):
 
     uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
 
-    print('pcc {}: {}'.format(i, uap_pcc))
+    #print('pcc {}: {}'.format(i, uap_pcc))
     return uap_pcc
 
 
@@ -732,14 +732,14 @@ def process_pcc(args):
         uap_pcc = calc_pcc_i(i, args)
         if uap_pcc is not None:
             uap_pccs.append(uap_pcc)
-            print('uap_pcc: {}'.format( uap_pcc))
+            print('uap_pcc: {}'.format(uap_pcc))
 
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
         clean_pcc = calc_pcc_i(i, args)
         if clean_pcc is not None:
             clean_pccs.append(clean_pcc)
-            print('clean_pcc: {} {}'.format(clean_pcc))
+            print('clean_pcc: {}'.format(clean_pcc))
     return
 
 
