@@ -725,6 +725,8 @@ def test(args):
 def process_pcc(args):
     args.analyze_clean = 0
     uap_pcc = calc_pcc(args)
+    if uap_pcc is None:
+        return
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
         clean_pcc = calc_pcc_i(i, args)
