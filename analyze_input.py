@@ -526,9 +526,11 @@ def calc_pcc(args):
     if not args.analyze_clean:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
+        prefix = 'uap'
     else:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
+        prefix = 'clean'
 
     if os.path.exists(fn):
         loaded = np.load(fn)
@@ -542,7 +544,7 @@ def calc_pcc(args):
 
     uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
 
-    #print('pcc: {}'.format(uap_pcc))
+    print('{} pcc: {}'.format(prefix, uap_pcc))
 
     return uap_pcc
 
