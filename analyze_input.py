@@ -572,7 +572,7 @@ def calc_pcc_i(i, args):
 
     uap_pcc = np.corrcoef(ca, clean_ca)[0, 1]
 
-    #print('pcc {}: {}'.format(i, uap_pcc))
+    print('pcc {}: {}'.format(i, uap_pcc))
     return uap_pcc
 
 
