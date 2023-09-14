@@ -21,7 +21,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test', 'all'],
+                                                                       'test', 'all', 'entropy'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -416,10 +416,6 @@ def calc_entropy(args):
 
 def calc_entropy_i(i, args):
     attribution_path = get_attribution_path()
-    #clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer)
-    #                        + '_' + str(args.target_class) + "_avg.npy")
-    #loaded = np.load(clean_fn)
-    #clean_ca = loaded[:, -1]
 
     if not args.analyze_clean:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
@@ -441,6 +437,7 @@ def calc_entropy_i(i, args):
     uap_h = calculate_shannon_entropy_array(ca)
 
     print('entropy {}: {}'.format(i, uap_h))
+    return uap_h
 
 def calc_entropy_old():
     attribution_path = get_attribution_path()
@@ -743,6 +740,25 @@ def process_pcc(args):
     return
 
 
+def process_entropy(args):
+    uap_hs = []
+    clean_hs = []
+    args.analyze_clean = 0
+    for i in range(0, args.num_iterations):
+        uap_h = calc_entropy_i(i, args)
+        if uap_h is not None:
+            uap_hs.append(uap_h)
+            print('uap_h: {}'.format(uap_h))
+
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_h = calc_entropy_i(i, args)
+        if clean_h is not None:
+            clean_hs.append(clean_h)
+            print('clean_h: {}'.format(clean_h))
+    return
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
@@ -779,6 +795,8 @@ if __name__ == '__main__':
         test(args)
     elif args.option == 'all':
         process_pcc(args)
+    elif args.option == 'entropy':
+        process_entropy(args)
     end = time.time()
-    #print('Process time: {}'.format(end - start))
+    print('Process time: {}'.format(end - start))
 
