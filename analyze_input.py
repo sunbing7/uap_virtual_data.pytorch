@@ -732,18 +732,14 @@ def process_pcc(args):
         uap_pcc = calc_pcc_i(i, args)
         if uap_pcc is not None:
             uap_pccs.append(uap_pcc)
-            #print('uap_pcc: {}'.format(uap_pcc))
+            print('uap_pcc: {}'.format(uap_pcc))
 
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
         clean_pcc = calc_pcc_i(i, args)
         if clean_pcc is not None:
             clean_pccs.append(clean_pcc)
-            #print('clean_pcc: {}'.format(clean_pcc))
-
-    for i in range(0, max(len(uap_pccs), len(clean_pccs))):
-        print('pccs: {} {}'.format(uap_pccs, clean_pcc))
-
+            print('clean_pcc: {}'.format(clean_pcc))
     return
 
 
