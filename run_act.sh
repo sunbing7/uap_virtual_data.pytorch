@@ -11,12 +11,12 @@ LAYER=43
 for IDX in {0..31}
 do
     #echo $IDX
-    python analyze_input.py --option=calc_pcc --analyze_clean=1 --causal_type=act --idx=$IDX --target_class=$TARGET_CLASS --num_iterations=50 --split_layer=$LAYER
+    python analyze_input.py --option=calc_pcc --analyze_clean=1 --causal_type=act --idx=$IDX --target_class=$TARGET_CLASS --num_iterations=0 --split_layer=$LAYER
 
 done
 
 for IDX in {0..31}
 do
     #echo $IDX
-    python analyze_input.py --option=calc_pcc --analyze_clean=0 --causal_type=act --idx=$IDX --target_class=$TARGET_CLASS --num_iterations=50 --split_layer=$LAYER
+    python analyze_input.py --option=calc_pcc --analyze_clean=0 --causal_type=act --idx=$IDX --target_class=$TARGET_CLASS --num_iterations=0 --split_layer=$LAYER
 done
