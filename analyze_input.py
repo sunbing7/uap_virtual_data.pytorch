@@ -530,7 +530,10 @@ def calc_pcc(args):
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
 
-    loaded = np.load(fn)
+    if os.path.exists(fn):
+        loaded = np.load(fn)
+    else:
+        return
 
     if args.causal_type == 'logit':
         uap_ca = loaded[:, 1]
