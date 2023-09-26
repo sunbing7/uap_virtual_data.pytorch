@@ -112,13 +112,17 @@ python analyze_input.py --option=calc_entropy --causal_type=act --idx=0 --target
 python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 
 #test
-python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=43 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=28 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=19 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=19 --batch_size=32 --ngpu=1 --workers=4
 #python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=19 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
 for IDX in {0..49} do
-    python analyze_input.py --option=all --causal_type=act --idx=0 --target_class=150 --num_iterations=50 --split_layer=43
-    python analyze_input.py --option=all --causal_type=act --idx=1 --target_class=150 --num_iterations=50 --split_layer=43
+    python analyze_input.py --option=pcc --causal_type=act --idx=0 --target_class=150 --num_iterations=50 --split_layer=28
+    python analyze_input.py --option=pcc --causal_type=act --idx=1 --target_class=150 --num_iterations=50 --split_layer=28
+    python analyze_input.py --option=entropy --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
+    python analyze_input.py --option=pcc --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
+
+    python analyze_input.py --option=classify --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
 done
 
 

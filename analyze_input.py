@@ -16,12 +16,15 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test', 'all', 'entropy'],
+                                                                       'test', 'pcc', 'entropy', 'classify'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -759,6 +762,97 @@ def process_entropy(args):
     return
 
 
+def uap_classification(args):
+    #get average entropy of clean data
+    clean_hs = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_h = calc_entropy_i(i, args)
+        if clean_h is not None:
+            clean_hs.append(clean_h)
+            #print('clean_h: {}'.format(clean_h))
+    clean_hs_avg = np.mean(np.array(clean_hs))
+
+    #get entropy of the test sample
+    h_result = []
+    uap_hs = []
+    args.analyze_clean = 0
+    for i in range(0, args.num_iterations):
+        uap_h = calc_entropy_i(i, args)
+        if uap_h is not None:
+            uap_hs.append(uap_h)
+            h_result.append(int(uap_h > clean_hs_avg))
+            #print('uap_h: {}'.format(uap_h))
+    print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
+
+    #get average pcc of clean data
+    clean_pccs = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_pcc = calc_pcc_i(i, args)
+        if clean_pcc is not None:
+            clean_pccs.append(clean_pcc)
+            #print('clean_pcc: {}'.format(clean_pcc))
+    clean_pcc_avg = np.mean(np.array(clean_pccs))
+
+    #get pcc of the test sample
+    pcc_result = []
+    uap_pccs = []
+    args.analyze_clean = 0
+    for i in range(0, args.num_iterations):
+        uap_pcc = calc_pcc_i(i, args)
+        if uap_pcc is not None:
+            uap_pccs.append(uap_pcc)
+            pcc_result.append(int(uap_pcc < clean_pcc_avg))
+            #print('uap_pcc: {}'.format(uap_pcc))
+    print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
+    return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
+
+
+def clean_classification(args):
+    #get average entropy of clean data
+    clean_hs = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_h = calc_entropy_i(i, args)
+        if clean_h is not None:
+            clean_hs.append(clean_h)
+            #print('clean_h: {}'.format(clean_h))
+    clean_hs_avg = np.mean(np.array(clean_hs))
+
+    #get entropy of the test sample
+    h_result = []
+    uap_hs = []
+    for i in range(0, args.num_iterations):
+        uap_h = calc_entropy_i(i, args)
+        if uap_h is not None:
+            uap_hs.append(uap_h)
+            h_result.append(int(uap_h > clean_hs_avg))
+            #print('uap_h: {}'.format(uap_h))
+    print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
+
+    #get average pcc of clean data
+    clean_pccs = []
+    for i in range(0, args.num_iterations):
+        clean_pcc = calc_pcc_i(i, args)
+        if clean_pcc is not None:
+            clean_pccs.append(clean_pcc)
+            #print('clean_pcc: {}'.format(clean_pcc))
+    clean_pcc_avg = np.mean(np.array(clean_pccs))
+
+    #get pcc of the test sample
+    pcc_result = []
+    uap_pccs = []
+    for i in range(0, args.num_iterations):
+        uap_pcc = calc_pcc_i(i, args)
+        if uap_pcc is not None:
+            uap_pccs.append(uap_pcc)
+            pcc_result.append(int(uap_pcc < clean_pcc_avg))
+            #print('uap_pcc: {}'.format(uap_pcc))
+    print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
+    return (1 - np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result)) * 100
+
+
 if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
@@ -793,10 +887,14 @@ if __name__ == '__main__':
         analyze_layers_clean(args)
     elif args.option == 'test':
         test(args)
-    elif args.option == 'all':
+    elif args.option == 'pcc':
         process_pcc(args)
     elif args.option == 'entropy':
         process_entropy(args)
+    elif args.option == 'classify':
+        tpr = uap_classification(args)
+        fpr = clean_classification(args)
+        print('TPR: {}, FPR: {}'.format(tpr, fpr))
     end = time.time()
-    print('Process time: {}'.format(end - start))
+    #print('Process time: {}'.format(end - start))
 

@@ -1,19 +1,19 @@
 #!/bin/bash
 
-TARGET_CLASSES=(51 582 820 637 49 560 703 160 259 755 945 498 480 214 609 212 471 805 415 692 988 754 560 557 705 973 94 321 304 825 498 402)
-IDX=0
-LAYER=43
+#TARGET_CLASS=214
+#LAYER=43
+for TARGET_CLASS in {214,39,527,65,639,771,150}
+do
+  echo "Analyzing target class:" $TARGET_CLASS
+  #python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 
-python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=$LAYER --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=28 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=214 --batch_size=32 --ngpu=1 --workers=4
-for tgt in ${TARGET_CLASSES[@]}; do
+  for LAYER in {43,28,19,10}
+  do
+    #echo $LAYER
+    python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=$LAYER --seed=123 --num_iterations=32 --result_subfolder=result --target_class=$TARGET_CLASS --batch_size=32 --ngpu=1 --workers=4
+    python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$TARGET_CLASS --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
+    python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$TARGET_CLASS --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
 
-    python analyze_input.py --option=analyze_clean --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$tgt --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
-    python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=logit --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$tgt --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
-
-    python analyze_input.py --option=calc_entropy --causal_type=logit --idx=$IDX --target_class=$tgt --num_iterations=0 --split_layer=$LAYER
-    python analyze_input.py --option=calc_entropy --causal_type=logit --analyze_clean=1 --num_iterations=50 --target_class=$tgt --split_layer=$LAYER
-    ((IDX++))
-    #echo $IDX
-    #echo $tgt
+    python analyze_input.py --option=classify --causal_type=act --target_class=$TARGET_CLASS --num_iterations=32 --split_layer=$LAYER
+  done
 done
