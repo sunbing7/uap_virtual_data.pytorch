@@ -220,7 +220,7 @@ def main():
     log.close()
     return
 
-def outlier_detection(cmp_list, max_val, verbose=False):
+def outlier_detection(cmp_list, max_val, verbose=False, th=2):
     cmp_list = list(np.array(cmp_list) / max_val)
     consistency_constant = 1.4826  # if normal distribution
     median = np.median(cmp_list)
@@ -238,7 +238,7 @@ def outlier_detection(cmp_list, max_val, verbose=False):
             if cmp_list[i] < median:
                 i = i + 1
                 continue
-            if np.abs(cmp_list[i] - median) / mad > 2:
+            if np.abs(cmp_list[i] - median) / mad > th:
                 flag_list.append((i, cmp_list[i]))
             i = i + 1
 

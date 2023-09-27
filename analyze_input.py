@@ -66,7 +66,7 @@ def parse_arguments():
                         help='Number of data loading workers (default: 4)')
 
     parser.add_argument('--analyze_clean', type=int, default=0)
-
+    parser.add_argument('--th', type=float, default=2)
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -830,8 +830,8 @@ def uap_classification(args):
             uap_hs.append(uap_h)
             h_result.append(int(uap_h > clean_hs_avg))
             #print('uap_h: {}'.format(uap_h))
-            top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False)
-            print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h])))
+            top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False, th=args.th)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
 
     print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
@@ -855,8 +855,8 @@ def uap_classification(args):
             uap_pccs.append(uap_pcc)
             pcc_result.append(int(uap_pcc < clean_pcc_avg))
             #print('uap_pcc: {}'.format(uap_pcc))
-            top = outlier_detection((clean_pccs + [uap_pcc]), max(clean_pccs + [uap_pcc]), verbose=False)
-            print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc])))
+            top = outlier_detection((clean_pccs + [uap_pcc]), max(clean_pccs + [uap_pcc]), verbose=False, th=args.th)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
 
@@ -881,6 +881,8 @@ def clean_classification(args):
             uap_hs.append(uap_h)
             h_result.append(int(uap_h > clean_hs_avg))
             #print('uap_h: {}'.format(uap_h))
+            top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False, th=args.th)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
     print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
     #get average pcc of clean data
@@ -901,6 +903,8 @@ def clean_classification(args):
             uap_pccs.append(uap_pcc)
             pcc_result.append(int(uap_pcc < clean_pcc_avg))
             #print('uap_pcc: {}'.format(uap_pcc))
+            top = outlier_detection((clean_pccs + [uap_pcc]), max(clean_pccs + [uap_pcc]), verbose=False, th=args.th)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1) / len(pcc_result)) * 100
 
