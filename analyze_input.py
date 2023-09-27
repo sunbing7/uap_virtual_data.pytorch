@@ -907,7 +907,7 @@ def clean_classification(args):
             top = outlier_detection((clean_pccs + [uap_pcc]), max(clean_pccs + [uap_pcc]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
             pcc_result.append((len(clean_pccs + [uap_pcc]) - 1) in outliers)
-            print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
+            #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1) / len(pcc_result)) * 100
 
