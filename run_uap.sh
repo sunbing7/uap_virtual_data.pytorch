@@ -1,6 +1,13 @@
 #!/bin/bash
 
-for TARGET_CLASS in {150,214,39,527,65,639,771}
+for TARGET_CLASS in {835,954,890,798,111,26,731,444,368,491}
+#{150,214,39,527,65,639,771,412}
+do
+    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+done
+
+for TARGET_CLASS in {835,954,890,798,111,26,731,444,368,491}
+#{150,214,39,527,65,639,771,412}
 do
   echo "Analyzing target class:" $TARGET_CLASS
   #python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
