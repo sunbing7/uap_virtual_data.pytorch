@@ -125,4 +125,5 @@ for IDX in {0..49} do
     python analyze_input.py --option=classify --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
 done
 
+python analyze_input.py --option=classify --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
 

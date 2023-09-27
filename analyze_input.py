@@ -15,7 +15,7 @@ from utils.training import solve_input_attribution, solve_input_attribution_sing
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
-
+from activation_analysis import outlier_detection
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -762,7 +762,7 @@ def process_entropy(args):
     return
 
 
-def uap_classification(args):
+def uap_classification_avg(args):
     #get average entropy of clean data
     clean_hs = []
     args.analyze_clean = 1
@@ -809,6 +809,58 @@ def uap_classification(args):
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
 
 
+def uap_classification(args):
+    #get average entropy of clean data
+    clean_hs = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_h = calc_entropy_i(i, args)
+        if clean_h is not None:
+            clean_hs.append(clean_h)
+            #print('clean_h: {}'.format(clean_h))
+    clean_hs_avg = np.mean(np.array(clean_hs))
+
+    #get entropy of the test sample
+    h_result = []
+    uap_hs = []
+    args.analyze_clean = 0
+    for i in range(0, args.num_iterations):
+        uap_h = calc_entropy_i(i, args)
+        if uap_h is not None:
+            uap_hs.append(uap_h)
+            h_result.append(int(uap_h > clean_hs_avg))
+            #print('uap_h: {}'.format(uap_h))
+            top = outlier_detection((clean_hs + uap_h), max(clean_hs + uap_h), verbose=False)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + uap_h)))
+
+    print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
+
+    #get average pcc of clean data
+    clean_pccs = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        clean_pcc = calc_pcc_i(i, args)
+        if clean_pcc is not None:
+            clean_pccs.append(clean_pcc)
+            #print('clean_pcc: {}'.format(clean_pcc))
+    clean_pcc_avg = np.mean(np.array(clean_pccs))
+
+    #get pcc of the test sample
+    pcc_result = []
+    uap_pccs = []
+    args.analyze_clean = 0
+    for i in range(0, args.num_iterations):
+        uap_pcc = calc_pcc_i(i, args)
+        if uap_pcc is not None:
+            uap_pccs.append(uap_pcc)
+            pcc_result.append(int(uap_pcc < clean_pcc_avg))
+            #print('uap_pcc: {}'.format(uap_pcc))
+            top = outlier_detection((clean_pccs + uap_pcc), max(clean_pccs + uap_pcc), verbose=False)
+            print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + uap_h)))
+    print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
+    return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
+
+
 def clean_classification(args):
     #get average entropy of clean data
     clean_hs = []
@@ -850,7 +902,7 @@ def clean_classification(args):
             pcc_result.append(int(uap_pcc < clean_pcc_avg))
             #print('uap_pcc: {}'.format(uap_pcc))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
-    return (1 - np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result)) * 100
+    return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1) / len(pcc_result)) * 100
 
 
 if __name__ == '__main__':
