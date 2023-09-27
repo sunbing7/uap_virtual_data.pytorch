@@ -832,7 +832,7 @@ def uap_classification(args):
             uap_hs.append(uap_h)
             top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
-            h_result.append((len(clean_hs + [uap_h]) - 1) in outliers)
+            h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
     print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
@@ -857,7 +857,7 @@ def uap_classification(args):
             reversed_list = max(clean_pccs + [uap_pcc]) - np.array(clean_pccs + [uap_pcc])
             top = outlier_detection(reversed_list, max(clean_pccs + [uap_pcc]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
-            pcc_result.append((len(clean_pccs + [uap_pcc]) - 1) in outliers)
+            pcc_result.append(int((len(clean_pccs + [uap_pcc]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
@@ -884,7 +884,7 @@ def clean_classification(args):
             reversed_list = max(clean_hs + [uap_h]) - np.array(clean_hs + [uap_h])
             top = outlier_detection(reversed_list, max(clean_hs + [uap_h]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
-            h_result.append((len(clean_hs + [uap_h]) - 1) in outliers)
+            h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
     print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
@@ -906,7 +906,7 @@ def clean_classification(args):
             uap_pccs.append(uap_pcc)
             top = outlier_detection((clean_pccs + [uap_pcc]), max(clean_pccs + [uap_pcc]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
-            pcc_result.append((len(clean_pccs + [uap_pcc]) - 1) in outliers)
+            pcc_result.append(int((len(clean_pccs + [uap_pcc]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1) / len(pcc_result)) * 100
