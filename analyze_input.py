@@ -66,7 +66,9 @@ def parse_arguments():
                         help='Number of data loading workers (default: 4)')
 
     parser.add_argument('--analyze_clean', type=int, default=0)
+
     parser.add_argument('--th', type=float, default=2)
+
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
