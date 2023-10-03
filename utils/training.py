@@ -297,17 +297,16 @@ def train_repair(data_loader,
             batch_time.update(time.time() - end)
             end = time.time()
 
-            if iteration % print_freq == 0:
-                print('  Iteration: [{:03d}/{:03d}]   '
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
-                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
-                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
-                       iteration, num_iterations, batch_time=batch_time,
-                       data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+        print('  Iteration: [{:03d}/{:03d}]   '
+              'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+              'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+              'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+              'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+               iteration, num_iterations, batch_time=batch_time,
+               data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
 
-            iteration += 1
+        iteration += 1
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
                                                                                                 top5=top5,
                                                                                                 error1=100 - top1.avg))
