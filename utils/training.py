@@ -6,6 +6,17 @@ import torch
 import torch.nn as nn
 import copy
 from utils.utils import time_string, print_log
+from torch.distributions import Categorical
+
+
+def calculate_entropy_tensor(x):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    entropy = Categorical(probs=x).entropy()
+    return entropy
 
 
 def train(data_loader,
@@ -99,23 +110,23 @@ def train(data_loader,
 
 
 def train_hidden(data_loader,
-          model,
-          model2,
-          criterion,
-          optimizer,
-          epsilon,
-          num_iterations,
-          targeted,
-          target_class,
-          log,
-          arch,
-          mask,
-          split_layer,
-          do_val=1,
-          num_hidden_neu=4096,
-          print_freq=200,
-          use_cuda=True):
-    # train function (forward, backward, update)
+                  model,
+                  model2,
+                  criterion,
+                  optimizer,
+                  epsilon,
+                  num_iterations,
+                  targeted,
+                  target_class,
+                  log,
+                  arch,
+                  mask,
+                  split_layer,
+                  do_val=1,
+                  num_hidden_neu=4096,
+                  print_freq=200,
+                  use_cuda=True):
+
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -208,17 +219,17 @@ def train_hidden(data_loader,
               log)
 
 
+def train_repair(data_loader,
+                 model,
+                 arch,
+                 criterion,
+                 optimizer,
+                 num_iterations,
+                 split_layers,
+                 alpha=0.1,
+                 print_freq=200,
+                 use_cuda=True):
 
-
-def train_repair(data_loader, uap,
-          model,
-          criterion,
-          optimizer,
-          num_iterations,
-          log,
-          print_freq=200,
-          use_cuda=True):
-    # train function (forward, backward, update)
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -230,67 +241,76 @@ def train_repair(data_loader, uap,
 
     end = time.time()
 
-    data_iterator = iter(data_loader)
-
     iteration = 0
     while (iteration < num_iterations):
-        try:
-            input, target = next(data_iterator)
-        except StopIteration:
-            # StopIteration is thrown if dataset ends
-            # reinitialize data loader
-            data_iterator = iter(data_loader)
-            input, target = next(data_iterator)
+        for input, target in data_loader:
+            p_models = []
+            for split_layer in split_layers:
+                pmodel, _ = split_model(model, arch, split_layer=split_layer)
+                p_models = p_models + [pmodel]
 
-        #if targeted:
-        #    target = torch.ones(input.shape[0], dtype=torch.int64) * target_class
-        # measure data loading time
-        data_time.update(time.time() - end)
+            # measure data loading time
+            data_time.update(time.time() - end)
 
-        if use_cuda:
-            target = target.cuda()
-            input = input.cuda()
-            uap = uap.cuda().float()
+            if use_cuda:
+                target = target.cuda()
+                input = input.cuda()
 
-        # compute output
-        output = model(input)
-        per_output = model(input + uap)
-        loss1 = criterion(output, target)
-        loss2 = criterion(per_output, target)
-        loss = 0.1 * loss1 + 0.9 * loss2
+            # compute output
+            if model._get_name() == "Inception3":
+                output, aux_output = model(input)
+                loss1 = criterion(output, target)
+                loss2 = criterion(aux_output, target)
+                loss = loss1 + 0.4 * loss2
+            else:
+                output = model(input)
+                plosses = 0
+                for pmodel in p_models:
+                    poutput = pmodel(input).view(len(input), -1)
+                    plosses = plosses + calculate_entropy_tensor(poutput)
 
-        # measure accuracy and record loss
-        if len(target.shape) > 1:
-            target = torch.argmax(target, dim=-1)
-        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.item(), input.size(0))
-        top1.update(prec1.item(), input.size(0))
-        top5.update(prec5.item(), input.size(0))
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * plosses.mean() * 0.01
 
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # measure accuracy and record loss
+            if len(target.shape) > 1:
+                target_ = torch.argmax(target, dim=-1)
+            if use_cuda:
+                target_ = target_.cuda()
 
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
+            prec1, prec5 = accuracy(output.data, target_, topk=(1, 5))
+            losses.update(loss.item(), input.size(0))
+            top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
 
-        if iteration % print_freq == 0:
-            print_log('  Iteration: [{:03d}/{:03d}]   '
+            for pmodel in p_models:
+                del pmodel
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            if iteration % print_freq == 0:
+                print('  Iteration: [{:03d}/{:03d}]   '
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
                       'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
                       'Loss {loss.val:.4f} ({loss.avg:.4f})   '
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
                       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
-                iteration, num_iterations, batch_time=batch_time,
-                data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string(), log)
+                       iteration, num_iterations, batch_time=batch_time,
+                       data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
 
-        iteration += 1
-    print_log('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
-                                                                                                    top5=top5,
-                                                                                                    error1=100 - top1.avg),
-                                                                                                    log)
+            iteration += 1
+    print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                top5=top5,
+                                                                                                error1=100 - top1.avg))
 
 
 def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, target_class, log=None, use_cuda=True):

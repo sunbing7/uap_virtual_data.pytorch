@@ -16,6 +16,8 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 from activation_analysis import outlier_detection
+from utils.training import train_repair, metrics_evaluate_test
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -24,7 +26,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test', 'pcc', 'entropy', 'classify'],
+                                                                       'test', 'pcc', 'entropy', 'classify', 'repair'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -43,6 +45,7 @@ def parse_arguments():
 
     parser.add_argument('--split_layer', type=int, default=43,
                         help='causality analysis layer (default: 43)')
+    parser.add_argument('--split_layers', type=int, nargs="*", default=[43])
     # Parameters regarding UAP
     parser.add_argument('--num_iterations', type=int, default=32,
                         help='Number of iterations for causality analysis (default: 32)')
@@ -69,6 +72,18 @@ def parse_arguments():
 
     parser.add_argument('--th', type=float, default=2)
 
+    parser.add_argument('--alpha', type=float, default=0.1)
+
+    parser.add_argument('--is_nips', default=1, type=int,
+                        help='Evaluation on NIPS data')
+
+    parser.add_argument('--loss_function', default='ce', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
+                                                                  'bounded_logit_fixed_ref', 'bounded_logit_neg'],
+                        help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
+    parser.add_argument('--learning_rate', type=float, default=0.001,
+                        help='Learning Rate (default: 0.001)')
+    parser.add_argument('--print_freq', default=200, type=int, metavar='N',
+                        help='print frequency (default: 200)')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -863,6 +878,113 @@ def uap_classification(args):
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
 
 
+def uap_repair(args):
+    _, data_test = get_data(args.dataset, args.dataset)
+    # Fix labels if needed
+    if args.is_nips:
+        print('is_nips')
+        data_test = fix_labels_nips(data_test, pytorch=True)
+
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=True,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
+
+    ##### Dataloader for training ####
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+
+    data_train, _ = get_data(args.dataset, args.dataset)
+
+    if args.dataset == "imagenet":
+        data_train = fix_labels(data_train)
+
+    data_train_loader = torch.utils.data.DataLoader(data_train,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=True,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.dataset,
+                            network_arch=args.arch,
+                            random_seed=args.seed)
+    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+    uap = torch.from_numpy(uap)
+
+    ####################################
+    # Init model, criterion, and optimizer
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+    model_weights_path = os.path.join(model_path, args.model_name)
+
+    target_network = get_network(args.arch,
+                                 input_size=input_size,
+                                 num_classes=num_classes,
+                                 finetune=False)
+
+    # Imagenet models use the pretrained pytorch weights
+    if args.dataset != "imagenet":
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    #non_trainale_params = get_num_non_trainable_parameters(target_network)
+    #trainale_params = get_num_trainable_parameters(target_network)
+    #total_params = get_num_parameters(target_network)
+
+    target_network.train()
+
+    if args.loss_function == "ce":
+        criterion = torch.nn.CrossEntropyLoss()
+    elif args.loss_function == "neg_ce":
+        criterion = NegativeCrossEntropy()
+    elif args.loss_function == "logit":
+        criterion = LogitLoss(num_classes=num_classes, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit":
+        criterion = BoundedLogitLoss(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit_fixed_ref":
+        criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit_neg":
+        criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    else:
+        raise ValueError
+
+    if args.use_cuda:
+        target_network.cuda()
+        criterion.cuda()
+
+    optimizer = torch.optim.Adam(target_network.parameters(), lr=args.learning_rate)
+    #'''
+    # Measure the time needed for the UAP generation
+    start = time.time()
+
+    train_repair(data_loader=data_train_loader,
+                 model=target_network,
+                 arch=args.arch,
+                 criterion=criterion,
+                 optimizer=optimizer,
+                 num_iterations=args.num_iterations,
+                 split_layers=args.split_layers,
+                 alpha=args.alpha,
+                 print_freq=args.print_freq,
+                 use_cuda=args.use_cuda)
+    end = time.time()
+    print("Time needed for UAP repair: {}".format(end - start))
+
+    #eval
+    if args.use_cuda:
+        uap = uap.cuda()
+    metrics_evaluate_test(data_loader=data_test_loader,
+                          target_model=target_network,
+                          uap=uap,
+                          targeted=args.targeted,
+                          target_class=args.target_class,
+                          log=None,
+                          use_cuda=args.use_cuda)
+
+
 def clean_classification(args):
     #get average entropy of clean data
     clean_hs = []
@@ -954,6 +1076,8 @@ if __name__ == '__main__':
         tpr = uap_classification(args)
         fpr = clean_classification(args)
         print('TPR: {}, FPR: {}'.format(tpr, fpr))
+    elif args.option == 'repair':
+        uap_repair(args)
     end = time.time()
     #print('Process time: {}'.format(end - start))
 
