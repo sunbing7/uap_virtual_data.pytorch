@@ -274,7 +274,7 @@ def train_repair(data_loader,
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses.mean() * 0.01
+                loss = (1 - alpha) * ce_loss + alpha * plosses.mean() * 0.001
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -293,6 +293,7 @@ def train_repair(data_loader,
             # compute gradient and do SGD step
             optimizer.zero_grad()
             loss.backward()
+
             optimizer.step()
 
             # measure elapsed time
