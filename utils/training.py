@@ -241,6 +241,8 @@ def train_repair(data_loader,
 
     end = time.time()
 
+    print('[DEBUG] dataloader length: {}'.format(len(data_loader)))
+
     iteration = 0
     while (iteration < num_iterations):
         for input, target in data_loader:
