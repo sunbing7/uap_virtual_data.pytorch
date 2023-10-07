@@ -960,7 +960,7 @@ def uap_repair(args):
     # Measure the time needed for the UAP generation
     start = time.time()
 
-    train_repair(data_loader=data_train_loader,
+    train_repair(data_loader=data_test_loader,
                  model=target_network,
                  arch=args.arch,
                  criterion=criterion,
