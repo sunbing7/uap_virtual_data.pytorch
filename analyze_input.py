@@ -87,7 +87,7 @@ def parse_arguments():
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
-
+    print('use_cuda: {}'.forat(args.use_cuda))
     if args.seed is None:
         args.seed = random.randint(1, 10000)
     return args
