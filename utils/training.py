@@ -300,7 +300,7 @@ def train_repair(data_loader,
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
-            if num_batch % 100 == 0:
+            if num_batch % 10 == 0:
                 print('  Iteration: [{:03d}/{:03d}]   '
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
                       'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
