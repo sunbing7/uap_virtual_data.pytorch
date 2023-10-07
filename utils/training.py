@@ -245,6 +245,7 @@ def train_repair(data_loader,
 
     iteration = 0
     while (iteration < num_iterations):
+        num_batch = 0
         for input, target in data_loader:
             p_models = []
             for split_layer in split_layers:
@@ -274,7 +275,7 @@ def train_repair(data_loader,
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses.mean() * 0.001
+                loss = (1 - alpha) * ce_loss #+ alpha * plosses.mean() * 0.001
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -299,6 +300,16 @@ def train_repair(data_loader,
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
+            if num_batch % 100 == 0:
+                print('  Iteration: [{:03d}/{:03d}]   '
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                    iteration, num_iterations, batch_time=batch_time,
+                    data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+            num_batch = num_batch + 1
 
         print('  Iteration: [{:03d}/{:03d}]   '
               'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
