@@ -275,7 +275,7 @@ def train_repair(data_loader,
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss#(1 - alpha) * ce_loss + alpha * plosses.mean() * 0.001
+                loss = (1 - alpha) * ce_loss# + alpha * plosses.mean() * 0.001
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -487,17 +487,16 @@ def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class
                 target_cl = torch.ones_like(gt_non_target_class) * target_class
                 all_to_target_succ_rate_filtered = accuracy(pert_output_non_target_class, target_cl, topk=(1,))
                 all_to_target_success_rate_filtered.update(all_to_target_succ_rate_filtered[0].item(), pert_output_non_target_class.size(0))
-    if log:
-        print_log('\n\t#######################', log)
-        print_log('\tClean model accuracy: {:.3f}'.format(clean_acc.avg), log)
-        print_log('\tPerturbed model accuracy: {:.3f}'.format(perturbed_acc.avg), log)
-        print_log('\tAbsolute Accuracy Drop: {:.3f}'.format(aad_source), log)
-        print_log('\tRelative Accuracy Drop: {:.3f}'.format(rad_source), log)
-        print_log('\tAttack Success Rate: {:.3f}'.format(100-attack_success_rate.avg), log)
-        print_log('\tFooling Ratio: {:.3f}'.format(fooling_ratio), log)
-        if targeted:
-            print_log('\tAll --> Target Class {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate.avg), log)
-            print_log('\tAll (w/o sink samples) --> Sink {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate_filtered.avg), log)
+    print('\n\t#######################')
+    print('\tClean model accuracy: {:.3f}'.format(clean_acc.avg))
+    print('\tPerturbed model accuracy: {:.3f}'.format(perturbed_acc.avg))
+    print('\tAbsolute Accuracy Drop: {:.3f}'.format(aad_source))
+    print('\tRelative Accuracy Drop: {:.3f}'.format(rad_source))
+    print('\tAttack Success Rate: {:.3f}'.format(100-attack_success_rate.avg))
+    print('\tFooling Ratio: {:.3f}'.format(fooling_ratio))
+    if targeted:
+        print('\tAll --> Target Class {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate.avg))
+        print('\tAll (w/o sink samples) --> Sink {} Prec@1 {:.3f}'.format(target_class, all_to_target_success_rate_filtered.avg))
 
 
 
