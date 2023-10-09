@@ -937,7 +937,7 @@ def uap_repair(args):
     print("Target Network Total # parameters: {}".format(total_params))
 
     target_network.train()
-    '''
+    #'''
     if args.loss_function == "ce":
         criterion = torch.nn.CrossEntropyLoss()
     elif args.loss_function == "neg_ce":
@@ -952,8 +952,8 @@ def uap_repair(args):
         criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
     else:
         raise ValueError
-    '''
-    criterion = torch.nn.CrossEntropyLoss()
+    #'''
+    #criterion = torch.nn.CrossEntropyLoss()
 
     if args.use_cuda:
         target_network.cuda()
