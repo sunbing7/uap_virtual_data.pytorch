@@ -931,11 +931,13 @@ def uap_repair(args):
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
-    #trainale_params = get_num_trainable_parameters(target_network)
-    #total_params = get_num_parameters(target_network)
+    trainale_params = get_num_trainable_parameters(target_network)
+    total_params = get_num_parameters(target_network)
+    print("Target Network Trainable parameters: {}".format(trainale_params))
+    print("Target Network Total # parameters: {}".format(total_params))
 
     target_network.train()
-
+    '''
     if args.loss_function == "ce":
         criterion = torch.nn.CrossEntropyLoss()
     elif args.loss_function == "neg_ce":
@@ -950,12 +952,14 @@ def uap_repair(args):
         criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
     else:
         raise ValueError
+    '''
+    criterion = torch.nn.CrossEntropyLoss()
 
     if args.use_cuda:
         target_network.cuda()
         criterion.cuda()
 
-    optimizer = torch.optim.Adam(target_network.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.SGD(target_network.parameters(), lr=args.learning_rate, momentum=0.9)
     #'''
     # Measure the time needed for the UAP generation
     start = time.time()
