@@ -289,12 +289,7 @@ def main():
     torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + '.pth')
     print('uap saved!')
 
-    std_tensor = np.array(std).reshape(1, 3, 1, 1)
-
-    if args.use_cuda:
-        std_tensor.cuda()
-
-    tuap = tuap / std_tensor
+    tuap = tuap.cpu().detach().numpy() / np.array(std).reshape(1, 3, 1, 1)
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(pretrained_data_test_loader, target_network, tuap,
                                                                  target_class=args.target_class, log=log, use_cuda=args.use_cuda, targeted=args.targeted)
