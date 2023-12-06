@@ -88,6 +88,8 @@ def parse_arguments():
                         help='Learning Rate (default: 0.001)')
     parser.add_argument('--print_freq', default=200, type=int, metavar='N',
                         help='print frequency (default: 200)')
+    parser.add_argument('--epsilon', type=float, default=0.03922,
+                        help='Norm restriction of UAP (default: 10/255)')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()

@@ -370,7 +370,7 @@ def adv_train(data_loader,
                 input = input.cuda()
 
             # generate AEs
-            delta = ae_training(model, p_models, input, target, adv_itr, eps, ae_alpha, True)
+            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
 
              # compute output
             if model._get_name() == "Inception3":
@@ -439,7 +439,7 @@ def adv_train(data_loader,
                                                                                                 error1=100 - top1.avg))
 
 
-def ae_training(model, pmodels, x, y, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
+def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
     delta = torch.zeros_like(x).cuda()
     if rs:
         delta.uniform_(-eps, eps)
@@ -451,9 +451,9 @@ def ae_training(model, pmodels, x, y, attack_iters=10, eps=0.0392, alpha=0.5, rs
         en_loss = 0
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss = en_loss - calculate_entropy_tensor(poutput)
-        acc_loss = F.cross_entropy(output, y)
-        loss = (1 - alpha) * acc_loss + alpha * en_loss
+            en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+        acc_loss = criterion(output, y)
+        loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss.backward()
         grad = delta.grad.detach()
 
