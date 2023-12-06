@@ -16,7 +16,7 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 from activation_analysis import outlier_detection
-from utils.training import train_repair, metrics_evaluate_test
+from utils.training import train_repair, metrics_evaluate_test, adv_train
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -26,7 +26,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test', 'pcc', 'entropy', 'classify', 'repair'],
+                                                                       'test', 'pcc', 'entropy', 'classify', 'repair_ae',
+                                                                       'repair'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -73,6 +74,9 @@ def parse_arguments():
     parser.add_argument('--th', type=float, default=2)
 
     parser.add_argument('--alpha', type=float, default=0.1)
+
+    parser.add_argument('--ae_alpha', type=float, default=0.5)
+    parser.add_argument('--ae_iter', type=int, default=10)
 
     parser.add_argument('--is_nips', default=1, type=int,
                         help='Evaluation on NIPS data')
@@ -964,16 +968,32 @@ def uap_repair(args):
     # Measure the time needed for the UAP generation
     start = time.time()
 
-    train_repair(data_loader=data_train_loader,
-                 model=target_network,
-                 arch=args.arch,
-                 criterion=criterion,
-                 optimizer=optimizer,
-                 num_iterations=args.num_iterations,
-                 split_layers=args.split_layers,
-                 alpha=args.alpha,
-                 print_freq=args.print_freq,
-                 use_cuda=args.use_cuda)
+    if 'ae' in args.option:
+        adv_train(data_train_loader,
+                  target_network,
+                  args.arch,
+                  criterion,
+                  optimizer,
+                  args.num_iterations,
+                  args.split_layers,
+                  alpha=args.alpha,
+                  ae_alpha=args.ae_alpha,
+                  print_freq=args.print_freq,
+                  use_cuda=args.use_cuda,
+                  adv_itr=args.ae_iter,
+                  eps=args.epsilon)
+    else:
+        train_repair(data_loader=data_train_loader,
+                         model=target_network,
+                         arch=args.arch,
+                         criterion=criterion,
+                         optimizer=optimizer,
+                         num_iterations=args.num_iterations,
+                         split_layers=args.split_layers,
+                         alpha=args.alpha,
+                         print_freq=args.print_freq,
+                         use_cuda=args.use_cuda)
+
     end = time.time()
     print("Time needed for UAP repair: {}".format(end - start))
 
@@ -1080,7 +1100,7 @@ if __name__ == '__main__':
         tpr = uap_classification(args)
         fpr = clean_classification(args)
         print('TPR: {}, FPR: {}'.format(tpr, fpr))
-    elif args.option == 'repair':
+    elif 'repair' in args.option:
         uap_repair(args)
     end = time.time()
     #print('Process time: {}'.format(end - start))
