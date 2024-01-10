@@ -467,6 +467,117 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     return delta.detach()
 
 
+def known_uap_train(data_loader,
+                    model,
+                    arch,
+                    criterion,
+                    optimizer,
+                    num_iterations,
+                    split_layers,
+                    uap,
+                    alpha=0.1,
+                    use_cuda=True):
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+
+    print('[DEBUG] dataloader length: {}'.format(len(data_loader)))
+
+    iteration = 0
+    while (iteration < num_iterations):
+        num_batch = 0
+        for input, target in data_loader:
+            p_models = []
+            for split_layer in split_layers:
+                pmodel, _ = split_model(model, arch, split_layer=split_layer)
+                p_models = p_models + [pmodel]
+
+            # measure data loading time
+            data_time.update(time.time() - end)
+
+            if use_cuda:
+                target = target.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            # generate AEs
+            delta = uap
+
+             # compute output
+            if model._get_name() == "Inception3":
+                output, aux_output = model(input)
+                loss1 = criterion(output, target)
+                loss2 = criterion(aux_output, target)
+                loss = loss1 + 0.4 * loss2
+            else:
+                output = model(input)
+                plosses = 0
+                for pmodel in p_models:
+                    poutput = pmodel(input + delta).view(len(input), -1)
+                    plosses = plosses + calculate_entropy_tensor(poutput)
+
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * plosses.mean()
+
+            # measure accuracy and record loss
+            if len(target.shape) > 1:
+                target_ = torch.argmax(target, dim=-1)
+            if use_cuda:
+                target_ = target_.cuda()
+
+            prec1, prec5 = accuracy(output.data, target_, topk=(1, 5))
+            losses.update(loss.item(), input.size(0))
+            top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
+
+            for pmodel in p_models:
+                del pmodel
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+            if num_batch % 100 == 0:
+                print('  Batch: [{:03d}/1563]   '
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                    num_batch, batch_time=batch_time,
+                    data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+            num_batch = num_batch + 1
+
+        print('  Iteration: [{:03d}/{:03d}]   '
+              'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+              'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+              'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+              'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+               iteration, num_iterations, batch_time=batch_time,
+               data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+
+        iteration += 1
+    print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                top5=top5,
+                                                                                                error1=100 - top1.avg))
+
+
 def sign(grad):
     grad_sign = torch.sign(grad)
     return grad_sign

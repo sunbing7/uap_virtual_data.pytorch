@@ -16,7 +16,7 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 from activation_analysis import outlier_detection
-from utils.training import train_repair, metrics_evaluate_test, adv_train
+from utils.training import train_repair, metrics_evaluate_test, adv_train, known_uap_train
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -27,7 +27,7 @@ def parse_arguments():
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
                                                                        'test', 'pcc', 'entropy', 'classify', 'repair_ae',
-                                                                       'repair'],
+                                                                       'repair', 'repair_uap'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -984,6 +984,21 @@ def uap_repair(args):
                   use_cuda=args.use_cuda,
                   adv_itr=args.ae_iter,
                   eps=args.epsilon)
+    elif 'uap' in args.option:
+        uap_path = get_uap_path(uap_data=args.dataset,
+                                model_data=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+        known_uap_train(data_train_loader,
+                  target_network,
+                  args.arch,
+                  criterion,
+                  optimizer,
+                  args.num_iterations,
+                  args.split_layers,
+
+                  alpha=args.alpha,
+                  use_cuda=args.use_cuda)
     else:
         train_repair(data_loader=data_train_loader,
                          model=target_network,
