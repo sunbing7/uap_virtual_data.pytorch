@@ -16,7 +16,7 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
 from matplotlib import pyplot as plt
 from activation_analysis import outlier_detection
-from utils.training import train_repair, metrics_evaluate_test, adv_train, known_uap_train
+from utils.training import train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -985,10 +985,6 @@ def uap_repair(args):
                   adv_itr=args.ae_iter,
                   eps=args.epsilon)
     elif 'uap' in args.option:
-        uap_path = get_uap_path(uap_data=args.dataset,
-                                model_data=args.dataset,
-                                network_arch=args.arch,
-                                random_seed=args.seed)
         known_uap_train(data_train_loader,
                         target_network,
                         args.arch,
@@ -1024,6 +1020,10 @@ def uap_repair(args):
                           target_class=args.target_class,
                           log=None,
                           use_cuda=args.use_cuda)
+
+    model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_repaired.pth')
+
+    torch.save(target_network, model_repaired_path)
 
 
 def clean_classification(args):

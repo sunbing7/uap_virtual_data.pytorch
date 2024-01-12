@@ -724,6 +724,8 @@ def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class
         correctly_classified_mask = torch.argmax(clean_output, dim=-1).cpu() == gt.cpu()
         cl_acc = accuracy(clean_output.data, gt, topk=(1,))
         clean_acc.update(cl_acc[0].item(), input.size(0))
+        pert_acc = accuracy(attack_output.data, gt, topk=(1,))
+        perturbed_acc.update(pert_acc[0].item(), input.size(0))
 
         # Calculating Fooling Ratio params
         clean_out_class = torch.argmax(clean_output, dim=-1)
