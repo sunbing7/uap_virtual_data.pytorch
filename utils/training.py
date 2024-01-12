@@ -380,15 +380,20 @@ def adv_train(data_loader,
                 loss = loss1 + 0.4 * loss2
             else:
                 output = model(input)
+
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+
                 plosses = 0
                 for pmodel in p_models:
                     poutput = pmodel(input + delta).view(len(input), -1)
                     plosses = plosses + calculate_entropy_tensor(poutput)
 
-                if output.shape != target.shape:
-                    target = nn.functional.one_hot(target, len(output[0])).float()
+                poutput = model(input + delta)
+                pce_loss = criterion(poutput, target)
+
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses.mean()
+                loss = (1 - alpha) * ce_loss + alpha * 0.5 * plosses.mean() + alpha * 0.5 * pce_loss
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
