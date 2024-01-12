@@ -521,15 +521,22 @@ def known_uap_train(data_loader,
                 output = model(input)
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-
+                '''
+                # entropy loss
                 plosses = 0
                 for pmodel in p_models:
                     poutput = pmodel((input + delta).float()).view(len(input), -1)
-                    #en_loss = calculate_entropy_tensor(poutput)
-                    plosses = plosses + criterion(poutput, target)
-
+                    en_loss = calculate_entropy_tensor(poutput)
+                    plosses = plosses + en_loss
                 ce_loss = criterion(output, target)
                 loss = (1 - alpha) * ce_loss + alpha * plosses.mean()
+                '''
+                # cce loss only
+                poutput = model((input + delta).float())
+                plosses = criterion(poutput, target)
+
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * plosses
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
