@@ -990,15 +990,15 @@ def uap_repair(args):
                                 network_arch=args.arch,
                                 random_seed=args.seed)
         known_uap_train(data_train_loader,
-                  target_network,
-                  args.arch,
-                  criterion,
-                  optimizer,
-                  args.num_iterations,
-                  args.split_layers,
-                  uap,
-                  alpha=args.alpha,
-                  use_cuda=args.use_cuda)
+                        target_network,
+                        args.arch,
+                        criterion,
+                        optimizer,
+                        args.num_iterations,
+                        args.split_layers,
+                        uap,
+                        alpha=args.alpha,
+                        use_cuda=args.use_cuda)
     else:
         train_repair(data_loader=data_train_loader,
                          model=target_network,
