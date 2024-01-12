@@ -393,7 +393,7 @@ def adv_train(data_loader,
                 pce_loss = criterion(poutput, target)
 
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * 0.5 * plosses.mean() + alpha * 0.5 * pce_loss
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss #alpha * 0.5 * plosses.mean() +
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
