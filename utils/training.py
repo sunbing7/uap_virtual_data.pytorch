@@ -521,7 +521,7 @@ def known_uap_train(data_loader,
                 output = model(input)
                 plosses = 0
                 for pmodel in p_models:
-                    poutput = pmodel(input + delta).view(len(input), -1)
+                    poutput = pmodel((input + delta).float()).view(len(input), -1)
                     plosses = plosses + calculate_entropy_tensor(poutput)
 
                 if output.shape != target.shape:
