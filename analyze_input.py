@@ -996,7 +996,7 @@ def uap_repair(args):
                   optimizer,
                   args.num_iterations,
                   args.split_layers,
-
+                  uap,
                   alpha=args.alpha,
                   use_cuda=args.use_cuda)
     else:
