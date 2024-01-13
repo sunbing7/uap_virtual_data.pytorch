@@ -370,7 +370,7 @@ def adv_train(data_loader,
                 input = input.cuda()
 
             # generate AEs
-            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
+            delta = ae_training_tgt(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
 
              # compute output
             if model._get_name() == "Inception3":
@@ -459,6 +459,33 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
             en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
         acc_loss = criterion(output, y)
         loss = (1 - alpha) * acc_loss - alpha * en_loss
+        loss.backward()
+        grad = delta.grad.detach()
+
+        idx_update = torch.ones(y.shape, dtype=torch.bool)
+        grad_sign = sign(grad)
+        delta.data[idx_update] = (delta + (eps / 4) * grad_sign)[idx_update]
+        delta.data = clamp(x + delta.data, 0, 1) - x
+        delta.data = clamp(delta.data, -eps, eps)
+        delta.grad.zero_()
+
+    return delta.detach()
+
+
+def ae_training_tgt(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
+    delta = torch.zeros_like(x).cuda()
+    if rs:
+        delta.uniform_(-eps, eps)
+
+    delta.requires_grad = True
+    for _ in range(attack_iters):
+        ae_x = clamp(x + delta, 0, 1)
+        output = model(ae_x)
+        #en_loss = 0
+        #for pmodel in pmodels:
+        #    poutput = pmodel(ae_x).view(len(x), -1)
+        #    en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+        loss = criterion(output, 150)
         loss.backward()
         grad = delta.grad.detach()
 

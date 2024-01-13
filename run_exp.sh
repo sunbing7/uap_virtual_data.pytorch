@@ -98,7 +98,7 @@
 #python analyze_input.py --option=calc_entropy --causal_type=logit --targeted=True --dataset=cifar10 --arch=vgg19 --model_name=vgg19_cifar10.pth --seed=123 --num_iterations=1 --result_subfolder=result --target_class=1 --batch_size=1 --ngpu=1 --workers=4
 
 #image net
-python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=214 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=365 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --uap_name=perturbed_net_214.pth --test_dataset=imagenet --test_arch=vgg19 --result_subfolder=result --targeted=True --target_class=214 --ngpu=1 --workers=4
 
@@ -132,3 +132,14 @@ python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=
 python analyze_input.py --option=classify --causal_type=act --target_class=731 --num_iterations=32 --split_layer=28 --th=0.5
 
 python analyze_input.py --option=repair --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layers 28 19 --seed=123 --num_iterations=0 --result_subfolder=result --batch_size=32 --ngpu=1 --workers=4 --alpha=0.9999 --target_class=150
+
+python analyze_input.py --option=repair --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layers 28 19 --seed=123 --num_iterations=1 --result_subfolder=result --batch_size=32 --ngpu=1 --workers=4 --alpha=0.1 --target_class=150
+
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layers 28 19 --seed=123 --num_iterations=1 --result_subfolder=result --batch_size=32 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=10 --target_class=150
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layers 28 19 --seed=123 --num_iterations=1 --result_subfolder=result --batch_size=32 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=20 --target_class=150
+
+#known uap
+python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --num_iterations=1000 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --uap_name=perturbed_net_150.pth --test_dataset=imagenet --test_arch=vgg19 --result_subfolder=result --targeted=True --target_class=150 --ngpu=1 --workers=4
+python analyze_input.py --option=repair_uap --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layers 28 19 --seed=123 --num_iterations=1 --result_subfolder=result --batch_size=32 --ngpu=1 --workers=4 --alpha=0.5 --target_class=150
+
