@@ -485,7 +485,8 @@ def ae_training_tgt(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392
         #for pmodel in pmodels:
         #    poutput = pmodel(ae_x).view(len(x), -1)
         #    en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
-        loss = criterion(output, 150)
+        tgt = (torch.ones(len(ae_x), dtype=torch.int64) * 150).cuda()
+        loss = criterion(output, tgt)
         loss.backward()
         grad = delta.grad.detach()
 
