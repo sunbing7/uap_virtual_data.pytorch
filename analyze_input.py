@@ -841,8 +841,9 @@ def uap_classification(args):
         if clean_h is not None:
             clean_hs.append(clean_h)
             #print('clean_h: {}'.format(clean_h))
-    print('clean_hs : {}'.format(clean_hs))
+    #print('clean_hs : {}'.format(clean_hs))
     clean_hs_avg = np.mean(np.array(clean_hs))
+    print('clean_hs_avg : {}'.format(clean_hs_avg))
 
     #get entropy of the test sample
     h_result = []
@@ -856,7 +857,9 @@ def uap_classification(args):
             outliers = [x[0] for x in top]
             h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
-    print('uap_hs : {}'.format(uap_hs))
+    #print('uap_hs : {}'.format(uap_hs))
+    uap_hs_avg = np.mean(np.array(uap_hs))
+    print('uap_hs_avg : {}'.format(uap_hs_avg))
     print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
     #get average pcc of clean data
