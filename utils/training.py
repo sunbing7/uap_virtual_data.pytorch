@@ -370,7 +370,7 @@ def adv_train(data_loader,
                 input = input.cuda()
 
             # generate AEs
-            delta = ae_training_tgt(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
+            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
 
              # compute output
             if model._get_name() == "Inception3":
