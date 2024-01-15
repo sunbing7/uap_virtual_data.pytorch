@@ -484,7 +484,8 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         idx = 0
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss_ = criterion(calculate_entropy_tensor(poutput), expected[idx])   #torch.mean(calculate_entropy_tensor(poutput))
+            en_loss_ = criterion(calculate_entropy_tensor(poutput), expected[idx])
+            print('[DEBUG] en_loss_: {}'.format(en_loss_))
             en_loss = en_loss + en_loss_
             if i == (attack_iters - 1):
                 last_itr_ens.append(torch.mean(calculate_entropy_tensor(poutput)))
