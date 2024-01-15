@@ -473,7 +473,10 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     '''
     #test threshold
     last_itr_ens = []
-    expected = torch.FloatTensor([5.02, 7.92]).cuda()
+    expected = []
+    expected.append(torch.ones(len(x), dtype=torch.int64) * 5.02)
+    expected.append(torch.ones(len(x), dtype=torch.int64) * 7.92)
+    expected = expected.cuda()
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
