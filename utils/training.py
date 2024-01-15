@@ -450,8 +450,30 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         delta.uniform_(-eps, eps)
 
     delta.requires_grad = True
+
+    '''
+    for i in range(attack_iters):
+        ae_x = clamp(x + delta, 0, 1)
+        output = model(ae_x)
+        en_loss = 0
+        for pmodel in pmodels:
+            poutput = pmodel(ae_x).view(len(x), -1)
+            en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+        acc_loss = criterion(output, y)
+        loss = (1 - alpha) * acc_loss - alpha * en_loss
+        loss.backward()
+        grad = delta.grad.detach()
+
+        idx_update = torch.ones(y.shape, dtype=torch.bool)
+        grad_sign = sign(grad)
+        delta.data[idx_update] = (delta + (eps / 4) * grad_sign)[idx_update]
+        delta.data = clamp(x + delta.data, 0, 1) - x
+        delta.data = clamp(delta.data, -eps, eps)
+        delta.grad.zero_()
+    '''
+    #test threshold
     last_itr_ens = []
-    expected = [5.02, 7.92]
+    expected = torch.FloatTensor([5.02, 7.92])
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
