@@ -447,6 +447,7 @@ def adv_train(data_loader,
 
 def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
     delta = torch.zeros_like(x).cuda()
+    return delta
     if rs:
         delta.uniform_(-eps, eps)
 
