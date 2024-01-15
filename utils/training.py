@@ -388,7 +388,7 @@ def adv_train(data_loader,
                 for pmodel in p_models:
                     poutput = pmodel(input + delta).view(len(input), -1)
                     plosses = plosses + calculate_entropy_tensor(poutput)
-                    print('[DEBUG] calculate_entropy_tensor(poutput)'.format(calculate_entropy_tensor(poutput)))
+                    print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(calculate_entropy_tensor(poutput)))
 
                 poutput = model(input + delta)
                 pce_loss = criterion(poutput, target)
