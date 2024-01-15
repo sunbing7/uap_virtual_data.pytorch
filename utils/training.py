@@ -474,8 +474,8 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     #test threshold
     last_itr_ens = []
     expected = []
-    expected.append(torch.ones(len(x), dtype=torch.int64) * 5.02).cuda()
-    expected.append(torch.ones(len(x), dtype=torch.int64) * 7.92).cuda()
+    expected.append((torch.ones(len(x), dtype=torch.int64) * 5.02).cuda())
+    expected.append((torch.ones(len(x), dtype=torch.int64) * 7.92).cuda())
 
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
