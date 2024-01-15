@@ -274,7 +274,7 @@ def main_net():
     #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
-    if args.test_dataset != "imagenet":
+    if args.test_dataset != "imagenet" or 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
