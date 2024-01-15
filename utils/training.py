@@ -451,17 +451,21 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
 
     delta.requires_grad = True
     last_itr_ens = []
+    expected = [5.02, 7.92]
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
         en_loss = 0
+        idx = 0
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+            en_loss_ = criterion(calculate_entropy_tensor(poutput), expected[idx])   #torch.mean(calculate_entropy_tensor(poutput))
+            en_loss = en_loss + en_loss_
             if i == (attack_iters - 1):
                 last_itr_ens.append(torch.mean(calculate_entropy_tensor(poutput)))
+            idx = idx + 1
         acc_loss = criterion(output, y)
-        loss = (1 - alpha) * acc_loss - alpha * en_loss
+        loss = (1 - alpha) * acc_loss + alpha * en_loss
         loss.backward()
         grad = delta.grad.detach()
 
