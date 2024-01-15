@@ -388,7 +388,7 @@ def adv_train(data_loader,
                 for pmodel in p_models:
                     poutput = pmodel(input + delta).view(len(input), -1)
                     plosses = plosses + calculate_entropy_tensor(poutput)
-                    print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(calculate_entropy_tensor(poutput)))
+                    #print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(calculate_entropy_tensor(poutput)))
 
                 poutput = model(input + delta)
                 pce_loss = criterion(poutput, target)
@@ -447,13 +447,12 @@ def adv_train(data_loader,
 
 def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
     delta = torch.zeros_like(x).cuda()
-    return delta
     if rs:
         delta.uniform_(-eps, eps)
 
     delta.requires_grad = True
 
-    '''
+    #'''
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
@@ -503,8 +502,8 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         delta.data = clamp(x + delta.data, 0, 1) - x
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
-
-    print('[DEBUG] last itr ae entropy: {}'.format(last_itr_ens))
+    '''
+    #print('[DEBUG] last itr ae entropy: {}'.format(last_itr_ens))
     return delta.detach()
 
 

@@ -1030,6 +1030,15 @@ def uap_repair(args):
 
     torch.save(target_network, model_repaired_path)
 
+    metrics_evaluate_test(data_loader=data_test_loader,
+                          target_model=target_network,
+                          uap=uap,
+                          targeted=args.targeted,
+                          target_class=214,
+                          log=None,
+                          use_cuda=args.use_cuda)
+
+
 
 def clean_classification(args):
     #get average entropy of clean data
