@@ -692,7 +692,7 @@ def test(args):
     network.eval()
 
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    if args.dataset != "imagenet" or 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
@@ -1029,15 +1029,6 @@ def uap_repair(args):
     model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_repaired.pth')
 
     torch.save(target_network, model_repaired_path)
-
-    metrics_evaluate_test(data_loader=data_test_loader,
-                          target_model=target_network,
-                          uap=uap,
-                          targeted=args.targeted,
-                          target_class=214,
-                          log=None,
-                          use_cuda=args.use_cuda)
-
 
 
 def clean_classification(args):
