@@ -388,6 +388,7 @@ def adv_train(data_loader,
                 for pmodel in p_models:
                     poutput = pmodel(input + delta).view(len(input), -1)
                     plosses = plosses + calculate_entropy_tensor(poutput)
+                    print('[DEBUG] calculate_entropy_tensor(poutput)'.format(calculate_entropy_tensor(poutput)))
 
                 poutput = model(input + delta)
                 pce_loss = criterion(poutput, target)
@@ -485,7 +486,7 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
             en_loss_ = criterion(calculate_entropy_tensor(poutput), expected[idx])
-            print('[DEBUG] en_loss_: {}'.format(calculate_entropy_tensor(poutput)))
+            print('[DEBUG] en_loss_: {}'.format(calculate_entropy_tensor(poutput)[0]))
             en_loss = en_loss + en_loss_
             if i == (attack_iters - 1):
                 last_itr_ens.append(torch.mean(calculate_entropy_tensor(poutput)))
