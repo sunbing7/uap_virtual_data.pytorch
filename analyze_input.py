@@ -13,10 +13,12 @@ from utils.network import get_num_parameters, get_num_non_trainable_parameters, 
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
     my_test, my_test_uap
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
-from causal_analysis import calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array
+from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array,
+                             calculate_shannon_entropy_batch, calc_hloss)
 from matplotlib import pyplot as plt
 from activation_analysis import outlier_detection
-from utils.training import train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint
+from utils.training import (train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint,
+                            ShannonEntropyFlat, ShannonEntropyBatch)
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -459,10 +461,11 @@ def calc_entropy_i(i, args):
     elif args.causal_type == 'act':
         ca = loaded.transpose()
 
-    #clean_h = calculate_shannon_entropy_array(clean_ca)
     uap_h = calculate_shannon_entropy_array(ca)
+    #uap_h = calc_hloss(ca)
 
     #print('entropy {}: {}'.format(i, uap_h))
+    #print('uap_hloss {}: {}'.format(i, uap_hloss))
     return uap_h
 
 def calc_entropy_old():
@@ -890,6 +893,22 @@ def uap_classification(args):
 
 
 def uap_repair(args):
+    #test
+    np_test = np.array([[1,2,3], [4,4,6]])
+    np_flat = np.array([1,2,3, 4,4,6])
+    t_test = torch.from_numpy(np_test)
+    t_flat = torch.from_numpy(np_flat)
+    np_en = calculate_shannon_entropy_batch(np_test)
+    np_flat_en = calculate_shannon_entropy_array(np_flat)
+
+    t_en_cri = ShannonEntropyFlat(False)
+    t_flat_en = t_en_cri(t_flat)
+    t_en_cri2 = ShannonEntropyBatch(False)
+    t_batch_en = t_en_cri2(t_test)
+    print('np_en {} np_en.mean {} np_flat_en {} t_flat_en {} t_batch_en.mean {} t_batch_en {}'.format(
+        np_en, np.mean(np_en), np_flat_en, t_flat_en, torch.mean(t_batch_en), t_batch_en))
+
+
     _, data_test = get_data(args.dataset, args.dataset)
     # Fix labels if needed
     if args.is_nips:
@@ -983,6 +1002,8 @@ def uap_repair(args):
                   optimizer,
                   args.num_iterations,
                   args.split_layers,
+                  mean=mean,
+                  std=std,
                   alpha=args.alpha,
                   ae_alpha=args.ae_alpha,
                   print_freq=args.print_freq,

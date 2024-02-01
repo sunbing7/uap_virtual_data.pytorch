@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import copy
 from utils.utils import time_string, print_log
 from torch.distributions import Categorical
+from torch.autograd import Variable
 
 
 def calculate_entropy_tensor(x):
@@ -18,6 +19,40 @@ def calculate_entropy_tensor(x):
     """
     entropy = Categorical(probs=x).entropy()
     return entropy
+
+
+def calculate_shannon_entropy_array(x):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    x = np.array(x)
+
+    x = x.flatten(order='C')
+    _, counts = np.unique(x, return_counts=True)
+    probabilities = counts / len(x)
+    h = -np.sum(probabilities * np.log2(probabilities))
+
+    return h
+
+
+def calculate_shannon_entropy_batch(x):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    x = np.array(x)
+    out = np.zeros(x.shape)
+    for index, x_i in enumerate(x):
+        _, counts = np.unique(x_i, return_counts=True)
+        probabilities = counts / x.shape[-1]
+        product = probabilities * np.log2(probabilities)
+        out[index][:len(counts)] = product
+
+    h = -np.sum(out, axis=-1)
+    return h
 
 
 def train(data_loader,
@@ -333,6 +368,8 @@ def adv_train(data_loader,
               optimizer,
               num_iterations,
               split_layers,
+              mean=0,
+              std=0,
               alpha=0.1,
               ae_alpha=0.1,
               print_freq=200,
@@ -370,7 +407,9 @@ def adv_train(data_loader,
                 input = input.cuda()
 
             # generate AEs
-            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True)
+            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True, use_cuda)
+            x_adv = input + delta
+            #x_adv = ae_training_tgt(model, input, target, criterion, adv_itr, eps, True)
 
              # compute output
             if model._get_name() == "Inception3":
@@ -384,17 +423,22 @@ def adv_train(data_loader,
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
 
-                plosses = 0
-                for pmodel in p_models:
-                    poutput = pmodel(input + delta).view(len(input), -1)
-                    plosses = plosses + calculate_entropy_tensor(poutput)
-                    #print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(calculate_entropy_tensor(poutput)))
+                #plosses = 0
+                #for pmodel in p_models:
+                #    poutput = pmodel(x_adv).view(len(input), -1)
+                #    en_cri = ShannonEntropyBatch(use_cuda)
+                #    en1 = np.mean(calculate_shannon_entropy_batch(poutput.cpu().detach().numpy()))
+                #    en2 = torch.mean(en_cri(poutput))
 
-                poutput = model(input + delta)
+                    #plosses = plosses + en2
+                    #print('[DEBUG] calculate_shannon_entropy_array(poutput) {}'.format(en1))
+                    #print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(en2))
+
+                poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
 
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * pce_loss #alpha * 0.5 * plosses.mean() +
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -445,23 +489,33 @@ def adv_train(data_loader,
                                                                                                 error1=100 - top1.avg))
 
 
-def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
-    delta = torch.zeros_like(x).cuda()
+def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True, use_cuda=True):
+    delta = torch.zeros_like(x)
+    if use_cuda:
+        delta = delta.cuda()
+
     if rs:
         delta.uniform_(-eps, eps)
 
     delta.requires_grad = True
 
+    en_loss = Variable(torch.tensor(.0), requires_grad=True)
     #'''
+    en_cri = hloss(use_cuda)
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
-        en_loss = 0
+        ens = []
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+            ens.append(torch.mean(en_cri(poutput)))
+            en_loss = en_loss + ens[-1]
+            #print('[DEBUG] itr {} ae entropy: {}'.format(i, ens[-1]))
+
         acc_loss = criterion(output, y)
-        loss = (1 - alpha) * acc_loss - alpha * en_loss
+        #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
+        #loss = (1 - alpha) * acc_loss - alpha * en_loss
+        loss = en_loss
         loss.backward()
         grad = delta.grad.detach()
 
@@ -471,13 +525,13 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         delta.data = clamp(x + delta.data, 0, 1) - x
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
+
     '''
     #test threshold
-    last_itr_ens = []
     expected = []
     expected.append((torch.ones(len(x), dtype=torch.int64) * 5.02).cuda())
     expected.append((torch.ones(len(x), dtype=torch.int64) * 7.92).cuda())
-
+    en_cri = ShannonEntropyBatch(use_cuda)
     for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
@@ -485,12 +539,11 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         idx = 0
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss_ = criterion(calculate_entropy_tensor(poutput), expected[idx])
-            print('[DEBUG] en_loss_: {}'.format(calculate_entropy_tensor(poutput)[0]))
+            en_loss_ = criterion(en_cri(poutput), expected[idx])
+            print('[DEBUG] itr {} en_cri(poutput): {}'.format(i, torch.mean(en_cri(poutput))))
             en_loss = en_loss + en_loss_
-            if i == (attack_iters - 1):
-                last_itr_ens.append(torch.mean(calculate_entropy_tensor(poutput)))
             idx = idx + 1
+
         acc_loss = criterion(output, y)
         loss = (1 - alpha) * acc_loss + alpha * en_loss
         loss.backward()
@@ -503,27 +556,27 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
     '''
-    #print('[DEBUG] last itr ae entropy: {}'.format(last_itr_ens))
+
     return delta.detach()
 
 
-def ae_training_tgt(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True):
+def ae_training_tgt(model, x, y, criterion, mean, std, attack_iters=10, eps=0.0392, rs=True):
     delta = torch.zeros_like(x).cuda()
     if rs:
         delta.uniform_(-eps, eps)
 
     delta.requires_grad = True
-    for _ in range(attack_iters):
+    for i in range(attack_iters):
         ae_x = clamp(x + delta, 0, 1)
         output = model(ae_x)
-        #en_loss = 0
-        #for pmodel in pmodels:
-        #    poutput = pmodel(ae_x).view(len(x), -1)
-        #    en_loss = en_loss + torch.mean(calculate_entropy_tensor(poutput))
+
         tgt = (torch.ones(len(ae_x), dtype=torch.int64) * 150).cuda()
         loss = criterion(output, tgt)
         loss.backward()
         grad = delta.grad.detach()
+
+        delta_out_class = torch.argmax(output, dim=-1)
+        print('[DEBUG] iteration {} delta_out_class: {}'.format(i, delta_out_class))
 
         idx_update = torch.ones(y.shape, dtype=torch.bool)
         grad_sign = sign(grad)
@@ -532,7 +585,28 @@ def ae_training_tgt(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
 
+
     return delta.detach()
+
+
+def ae_pgd_tgt(model, x, y, criterion, attack_iters=10, eps=0.0392, rs=True):
+    x_adv = x.detach().clone().requires_grad_(True).cuda()
+
+    for i in range(attack_iters):
+        pred = model(x_adv)
+        tgt = (torch.ones(len(x_adv), dtype=torch.int64) * 150).cuda()
+        loss = criterion(pred, tgt)
+        loss.backward()
+
+        grad = x_adv.grad.data.detach()
+        grad_unit = grad / grad.norm(p=eps, dim=(2, 3), keepdim=True)
+        x_adv = x_adv + grad_unit * (eps / 4)
+        x_adv = clamp(x_adv, 0, 1)
+        model.zero_grad()
+        delta_out_class = torch.argmax(pred, dim=-1)
+        print('[DEBUG] iteration {} delta_out_class: {}'.format(i, delta_out_class))
+
+    return x_adv.detach().cuda()
 
 
 def known_uap_train(data_loader,
@@ -1947,3 +2021,56 @@ class Mask(nn.Module):
     def forward(self, x):
         x = x * self.mask
         return x
+
+
+class ShannonEntropyBatch(nn.Module):
+    def __init__(self, cuda=True):
+        super(ShannonEntropyBatch, self).__init__()
+        self.cuda = cuda
+
+    # support per batch entropy calculation
+    def forward(self, x):
+        if x.dim() == 1:
+            _, counts = torch.unique(x, return_counts=True)
+            probabilities = counts / x.shape[-1]
+            product = probabilities * torch.log2(probabilities)
+        else:
+            product = self.unique_rows(x)
+        h = -torch.sum(product, dim=-1)
+        return h
+
+    def unique_rows(self, x):
+        out = torch.zeros(x.shape)
+        if self.cuda:
+            out = out.cuda()
+        for index, x_i in enumerate(x):
+            _, counts = torch.unique(x_i, return_counts=True)
+            probabilities = counts / x.shape[-1]
+            product = probabilities * torch.log2(probabilities)
+            out[index][:len(counts)] = product
+        return out
+
+
+class ShannonEntropyFlat(nn.Module):
+    def __init__(self, cuda=True):
+        super(ShannonEntropyFlat, self).__init__()
+        self.cuda = cuda
+
+    def forward(self, x):
+        x = torch.flatten(x)
+        _, counts = torch.unique(x, return_counts=True)
+        probabilities = counts / len(x)
+        product = probabilities * torch.log2(probabilities)
+        h = -torch.sum(product, dim=-1)
+        return h
+
+
+class hloss(nn.Module):
+    def __init__(self, cuda=True):
+        super(hloss, self).__init__()
+        self.cuda = cuda
+
+    def forward(self, x):
+        b = F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
+        b = -1.0 * b.sum()
+        return b

@@ -318,5 +318,43 @@ def calculate_shannon_entropy_array(x):
     return h
 
 
+def calculate_shannon_entropy_batch(x):
+    """
+    calculate information entropy
+    Returns:
+    H
+    """
+    x = np.array(x)
+    out = np.zeros(x.shape)
+    for index, x_i in enumerate(x):
+        _, counts = np.unique(x_i, return_counts=True)
+        probabilities = counts / x.shape[-1]
+        product = probabilities * np.log2(probabilities)
+        out[index][:len(counts)] = product
+
+    h = -np.sum(out, axis=-1)
+    return h
+
+
+def calc_hloss(x):
+    x = np.array(x)
+    b = my_softmax((x)) * my_logsoftmax(x)
+    b = -1.0 * b.sum()
+    return b
+
+
+def my_softmax(x):
+    b = x.max()
+    y = np.exp(x - b)
+    return y / y.sum()
+
+
+def my_logsoftmax(x):
+    c = x.max()
+    logsumexp = np.log(np.exp(x - c).sum())
+    return x - c - logsumexp
+
 if __name__ == '__main__':
     main()
+
+
