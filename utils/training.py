@@ -423,16 +423,13 @@ def adv_train(data_loader,
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
 
-                #plosses = 0
-                #for pmodel in p_models:
-                #    poutput = pmodel(x_adv).view(len(input), -1)
-                #    en_cri = ShannonEntropyBatch(use_cuda)
-                #    en1 = np.mean(calculate_shannon_entropy_batch(poutput.cpu().detach().numpy()))
-                #    en2 = torch.mean(en_cri(poutput))
+                plosses = 0
+                for pmodel in p_models:
+                    poutput = pmodel(x_adv).view(len(input), -1)
+                    en_cri = hloss(use_cuda)
+                    en1 = torch.mean(en_cri(poutput.cpu().detach().numpy()))
+                    print('[DEBUG] before hloss(poutput) {}'.format(en1))
 
-                    #plosses = plosses + en2
-                    #print('[DEBUG] calculate_shannon_entropy_array(poutput) {}'.format(en1))
-                    #print('[DEBUG] calculate_entropy_tensor(poutput) {}'.format(en2))
 
                 poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
@@ -451,15 +448,28 @@ def adv_train(data_loader,
             top1.update(prec1.item(), input.size(0))
             top5.update(prec5.item(), input.size(0))
 
-            for pmodel in p_models:
-                del pmodel
-
             # compute gradient and do SGD step
             optimizer.zero_grad()
             loss.backward()
 
             optimizer.step()
 
+            for pmodel in p_models:
+                del pmodel
+
+            p_models = []
+            for split_layer in split_layers:
+                pmodel, _ = split_model(model, arch, split_layer=split_layer)
+                p_models = p_models + [pmodel]
+
+            for pmodel in p_models:
+                poutput = pmodel(x_adv).view(len(input), -1)
+                en_cri = hloss(use_cuda)
+                en1 = torch.mean(en_cri(poutput.cpu().detach().numpy()))
+                print('[DEBUG] after hloss(poutput) {}'.format(en1))
+
+            for pmodel in p_models:
+                del pmodel
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -510,10 +520,10 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
             poutput = pmodel(ae_x).view(len(x), -1)
             ens.append(torch.mean(en_cri(poutput)))
             en_loss = en_loss + ens[-1]
-            #print('[DEBUG] itr {} ae entropy: {}'.format(i, ens[-1]))
+            print('[DEBUG] itr {} ae entropy: {}'.format(i, ens[-1]))
 
         acc_loss = criterion(output, y)
-        #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
+        print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
         #loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss = en_loss
         loss.backward()
