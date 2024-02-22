@@ -427,7 +427,7 @@ def adv_train(data_loader,
                 for pmodel in p_models:
                     poutput = pmodel(x_adv).view(len(input), -1)
                     en_cri = hloss(use_cuda)
-                    en1 = torch.mean(en_cri(poutput.cpu().detach().numpy()))
+                    en1 = torch.mean(en_cri(poutput))
                     print('[DEBUG] before hloss(poutput) {}'.format(en1))
 
 
@@ -520,10 +520,10 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
             poutput = pmodel(ae_x).view(len(x), -1)
             ens.append(torch.mean(en_cri(poutput)))
             en_loss = en_loss + ens[-1]
-            print('[DEBUG] itr {} ae entropy: {}'.format(i, ens[-1]))
+            print('[DEBUG] itr {} ae entropy before: {}'.format(i, ens[-1]))
 
         acc_loss = criterion(output, y)
-        print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
+        #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
         #loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss = en_loss
         loss.backward()
@@ -535,6 +535,12 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         delta.data = clamp(x + delta.data, 0, 1) - x
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
+
+        for pmodel in pmodels:
+            poutput = pmodel(clamp(x + delta, 0, 1)).view(len(x), -1)
+            ens.append(torch.mean(en_cri(poutput)))
+            en_loss = en_loss + ens[-1]
+            print('[DEBUG] itr {} ae entropy after: {}'.format(i, ens[-1]))
 
     '''
     #test threshold
