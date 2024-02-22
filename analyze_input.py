@@ -461,8 +461,8 @@ def calc_entropy_i(i, args):
     elif args.causal_type == 'act':
         ca = loaded.transpose()
 
-    uap_h = calculate_shannon_entropy_array(ca)
-    #uap_h = calc_hloss(ca)
+    #uap_h = calculate_shannon_entropy_array(ca)
+    uap_h = calc_hloss(ca)
 
     #print('entropy {}: {}'.format(i, uap_h))
     #print('uap_hloss {}: {}'.format(i, uap_hloss))
