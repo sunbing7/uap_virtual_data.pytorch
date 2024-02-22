@@ -465,7 +465,7 @@ def adv_train(data_loader,
             for pmodel in p_models:
                 poutput = pmodel(x_adv).view(len(input), -1)
                 en_cri = hloss(use_cuda)
-                en1 = torch.mean(en_cri(poutput.cpu().detach().numpy()))
+                en1 = torch.mean(en_cri(poutput))
                 print('[DEBUG] after hloss(poutput) {}'.format(en1))
 
             for pmodel in p_models:
@@ -525,7 +525,7 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
         acc_loss = criterion(output, y)
         #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
         #loss = (1 - alpha) * acc_loss - alpha * en_loss
-        loss = en_loss
+        loss = -en_loss
         loss.backward()
         grad = delta.grad.detach()
 
