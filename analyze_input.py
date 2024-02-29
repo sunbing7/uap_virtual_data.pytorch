@@ -11,7 +11,7 @@ from utils.utils import get_model_path, get_result_path, get_uap_path, get_attri
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
-    my_test, my_test_uap
+    my_test, my_test_uap, gen_low_entropy_sample
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array,
                              calculate_shannon_entropy_batch, calc_hloss)
@@ -29,7 +29,7 @@ def parse_arguments():
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
                                                                        'test', 'pcc', 'entropy', 'classify', 'repair_ae',
-                                                                       'repair', 'repair_uap'],
+                                                                       'repair', 'repair_uap', 'gen_en_sample'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -894,6 +894,7 @@ def uap_classification(args):
 
 def uap_repair(args):
     #test
+    '''
     np_test = np.array([[1,2,3], [4,4,6]])
     np_flat = np.array([1,2,3, 4,4,6])
     t_test = torch.from_numpy(np_test)
@@ -907,7 +908,7 @@ def uap_repair(args):
     t_batch_en = t_en_cri2(t_test)
     print('np_en {} np_en.mean {} np_flat_en {} t_flat_en {} t_batch_en.mean {} t_batch_en {}'.format(
         np_en, np.mean(np_en), np_flat_en, t_flat_en, torch.mean(t_batch_en), t_batch_en))
-
+    '''
 
     _, data_test = get_data(args.dataset, args.dataset)
     # Fix labels if needed
@@ -1002,7 +1003,7 @@ def uap_repair(args):
                   optimizer,
                   args.num_iterations,
                   args.split_layers,
-                  mean=mean,
+                  uap=uap,
                   std=std,
                   alpha=args.alpha,
                   ae_alpha=args.ae_alpha,
@@ -1051,6 +1052,100 @@ def uap_repair(args):
 
     torch.save(target_network, model_repaired_path)
 
+
+def uap_gen_low_en_sample(args):
+    _, data_test = get_data(args.dataset, args.dataset)
+    # Fix labels if needed
+    if args.is_nips:
+        print('is_nips')
+        data_test = fix_labels_nips(data_test, pytorch=True)
+
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=True,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
+
+    ##### Dataloader for training ####
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+
+    data_train, _ = get_data(args.dataset, args.dataset)
+
+    if args.dataset == "imagenet":
+        data_train = fix_labels(data_train)
+
+    data_train_loader = torch.utils.data.DataLoader(data_train,
+                                                    batch_size=args.batch_size,
+                                                    shuffle=True,
+                                                    num_workers=args.workers,
+                                                    pin_memory=True)
+
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.dataset,
+                            network_arch=args.arch,
+                            random_seed=args.seed)
+    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+    uap = torch.from_numpy(uap)
+
+    ####################################
+    # Init model, criterion, and optimizer
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+    model_weights_path = os.path.join(model_path, args.model_name)
+
+    target_network = get_network(args.arch,
+                                 input_size=input_size,
+                                 num_classes=num_classes,
+                                 finetune=False)
+
+    # Imagenet models use the pretrained pytorch weights
+    if args.dataset != "imagenet":
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    #non_trainale_params = get_num_non_trainable_parameters(target_network)
+    trainale_params = get_num_trainable_parameters(target_network)
+    total_params = get_num_parameters(target_network)
+    print("Target Network Trainable parameters: {}".format(trainale_params))
+    print("Target Network Total # parameters: {}".format(total_params))
+
+    target_network.train()
+
+    if args.loss_function == "ce":
+        criterion = torch.nn.CrossEntropyLoss()
+    elif args.loss_function == "neg_ce":
+        criterion = NegativeCrossEntropy()
+    elif args.loss_function == "logit":
+        criterion = LogitLoss(num_classes=num_classes, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit":
+        criterion = BoundedLogitLoss(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit_fixed_ref":
+        criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    elif args.loss_function == "bounded_logit_neg":
+        criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
+    else:
+        raise ValueError
+
+    print('Criteria: {}'.format(criterion))
+
+    if args.use_cuda:
+        target_network.cuda()
+        criterion.cuda()
+
+    optimizer = torch.optim.SGD(target_network.parameters(), lr=args.learning_rate, momentum=0.9)
+    #'''
+    delta = gen_low_entropy_sample(data_train_loader,
+                                   target_network,
+                                   args.arch,
+                                   criterion,
+                                   args.split_layers,
+                                   use_cuda=args.use_cuda,
+                                   adv_itr=args.ae_iter,
+                                   eps=args.epsilon)
+
+    np.save(model_path + '/' + 'ae', delta.cpu().detach().numpy())
 
 def clean_classification(args):
     #get average entropy of clean data
@@ -1145,6 +1240,8 @@ if __name__ == '__main__':
         print('TPR: {}, FPR: {}'.format(tpr, fpr))
     elif 'repair' in args.option:
         uap_repair(args)
+    elif args.option == 'gen_en_sample':
+        uap_gen_low_en_sample(args)
     end = time.time()
     #print('Process time: {}'.format(end - start))
 

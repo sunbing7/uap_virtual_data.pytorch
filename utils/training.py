@@ -368,7 +368,7 @@ def adv_train(data_loader,
               optimizer,
               num_iterations,
               split_layers,
-              mean=0,
+              uap=None,
               std=0,
               alpha=0.1,
               ae_alpha=0.1,
@@ -382,7 +382,10 @@ def adv_train(data_loader,
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
-
+    adv_top1 = AverageMeter()
+    adv_top5 = AverageMeter()
+    delta_top1 = AverageMeter()
+    delta_top5 = AverageMeter()
     # switch to train mode
     model.train()
 
@@ -405,10 +408,13 @@ def adv_train(data_loader,
             if use_cuda:
                 target = target.cuda()
                 input = input.cuda()
+                uap = uap.cuda()
 
             # generate AEs
-            delta = ae_training(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True, use_cuda)
+            delta = ae_training_individual(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True, use_cuda)
+            #print('[DEBUG]delta.shape {}'.format(delta.shape))
             x_adv = input + delta
+            uap_x = (input + uap).float()
             #x_adv = ae_training_tgt(model, input, target, criterion, adv_itr, eps, True)
 
              # compute output
@@ -419,23 +425,27 @@ def adv_train(data_loader,
                 loss = loss1 + 0.4 * loss2
             else:
                 output = model(input)
+                delta_output = model(x_adv)
+                adv_output = model(uap_x)
 
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-
+                #'''
+                #calculate entropy
                 plosses = 0
                 for pmodel in p_models:
                     poutput = pmodel(x_adv).view(len(input), -1)
+                    moutput = pmodel(input).view(len(input), -1)
                     en_cri = hloss(use_cuda)
-                    en1 = torch.mean(en_cri(poutput))
-                    print('[DEBUG] before hloss(poutput) {}'.format(en1))
-
-
+                    p_en_b = (en_cri(poutput)).mean()
+                    c_en_b = (en_cri(moutput)).mean()
+                #'''
                 poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
 
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * pce_loss
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss#- 0.001 * alpha * p_en_b
+                #loss = pce_loss
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -448,6 +458,14 @@ def adv_train(data_loader,
             top1.update(prec1.item(), input.size(0))
             top5.update(prec5.item(), input.size(0))
 
+            adv_prec1, adv_prec5 = accuracy(adv_output.data, target_, topk=(1, 5))
+            adv_top1.update(adv_prec1.item(), input.size(0))
+            adv_top5.update(adv_prec5.item(), input.size(0))
+
+            delta_prec1, delta_prec5 = accuracy(delta_output.data, target_, topk=(1, 5))
+            delta_top1.update(delta_prec1.item(), input.size(0))
+            delta_top5.update(delta_prec5.item(), input.size(0))
+
             # compute gradient and do SGD step
             optimizer.zero_grad()
             loss.backward()
@@ -457,6 +475,8 @@ def adv_train(data_loader,
             for pmodel in p_models:
                 del pmodel
 
+            #'''
+            #calculate entropy
             p_models = []
             for split_layer in split_layers:
                 pmodel, _ = split_model(model, arch, split_layer=split_layer)
@@ -464,34 +484,47 @@ def adv_train(data_loader,
 
             for pmodel in p_models:
                 poutput = pmodel(x_adv).view(len(input), -1)
+                moutput = pmodel(input).view(len(input), -1)
                 en_cri = hloss(use_cuda)
-                en1 = torch.mean(en_cri(poutput))
-                print('[DEBUG] after hloss(poutput) {}'.format(en1))
+                p_en_aft = (en_cri(poutput)).mean()
+                c_en_aft = (en_cri(moutput)).mean()
 
+            print('[DEBUG] before hloss(poutput) {}'.format(p_en_b))
+            #print('[DEBUG] after hloss(poutput) {}'.format(p_en_aft))
+            #print('[DEBUG] before delta hloss(output) {}'.format(c_en_b - p_en_b))
+            print('[DEBUG] clean before hloss(output) {}'.format(c_en_b))
+            #print('[DEBUG] clean after hloss(output) {}'.format(c_en_aft))
+            #print('[DEBUG] after delta hloss(output) {}'.format(c_en_aft - p_en_aft))
+            
             for pmodel in p_models:
                 del pmodel
+            #'''
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
             if num_batch % 100 == 0:
                 print('  Batch: [{:03d}/1563]   '
-                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
-                      'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
                       'Loss {loss.val:.4f} ({loss.avg:.4f})   '
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
-                    num_batch, batch_time=batch_time,
-                    data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                      'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                      'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                      'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
+                      'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
+                      .format(
+                    num_batch,
+                    loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
+                    delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
             num_batch = num_batch + 1
 
         print('  Iteration: [{:03d}/{:03d}]   '
-              'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
-              'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
               'Loss {loss.val:.4f} ({loss.avg:.4f})   '
               'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
-               iteration, num_iterations, batch_time=batch_time,
-               data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+              'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+              'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
+               iteration, num_iterations,
+               loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
 
         iteration += 1
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
@@ -499,7 +532,71 @@ def adv_train(data_loader,
                                                                                                 error1=100 - top1.avg))
 
 
+def gen_low_entropy_sample(data_loader,
+                           model,
+                           arch,
+                           criterion,
+                           split_layers,
+                           use_cuda=True,
+                           adv_itr=10,
+                           eps=0.0392):
+
+    # switch to train mode
+    model.train()
+
+    p_models = []
+    for split_layer in split_layers:
+        pmodel, _ = split_model(model, arch, split_layer=split_layer)
+        p_models = p_models + [pmodel]
+
+    delta = low_entropy_sample_training(model, p_models, data_loader, criterion, adv_itr, eps, True, use_cuda)
+
+    return delta
+
+
 def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True, use_cuda=True):
+    delta = torch.zeros_like(x[0])
+    if use_cuda:
+        delta = delta.cuda()
+
+    if rs:
+        delta.uniform_(-eps, eps)
+
+    delta.requires_grad = True
+
+    en_loss = Variable(torch.tensor(.0), requires_grad=True)
+    en_cri = hloss(use_cuda)
+    for i in range(attack_iters):
+        delta.data = clamp(delta.data, -eps, eps)
+        ae_x = torch.add(x, delta)
+        #output = model(ae_x)
+        for pmodel in pmodels:
+            poutput = pmodel(ae_x).view(len(x), -1)
+            en_loss = (en_cri(poutput)).sum()
+            #print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
+        #tgt = (torch.ones(len(ae_x), dtype=torch.int64) * 150).cuda()
+        #acc_loss = criterion(output, tgt)
+        #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
+        #loss = (1 - alpha) * acc_loss - alpha * en_loss
+        loss = -en_loss
+        #loss = acc_loss
+        loss.backward()
+        grad = delta.grad.detach()
+
+        grad_sign = sign(grad)
+        delta.data = (delta + (eps / 4) * grad_sign)
+        delta.data = clamp(delta.data, -eps, eps)
+        delta.grad.zero_()
+    '''
+    for pmodel in pmodels:
+        poutput = pmodel(torch.add(x, delta)).view(len(x), -1)
+        en_loss = torch.mean(en_cri(poutput))
+        print('[DEBUG] ae entropy after: {}'.format(en_loss))
+    '''
+    return delta.detach()
+
+
+def ae_training_individual(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True, use_cuda=True):
     delta = torch.zeros_like(x)
     if use_cuda:
         delta = delta.cuda()
@@ -510,68 +607,86 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     delta.requires_grad = True
 
     en_loss = Variable(torch.tensor(.0), requires_grad=True)
-    #'''
     en_cri = hloss(use_cuda)
     for i in range(attack_iters):
-        ae_x = clamp(x + delta, 0, 1)
-        output = model(ae_x)
-        ens = []
+        delta.data = clamp(delta.data, -eps, eps)
+        ae_x = x + delta
+        #output = model(ae_x)
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
-            ens.append(torch.mean(en_cri(poutput)))
-            en_loss = en_loss + ens[-1]
-            print('[DEBUG] itr {} ae entropy before: {}'.format(i, ens[-1]))
+            en_loss = torch.mean(en_cri(poutput))
+            #print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
 
-        acc_loss = criterion(output, y)
-        #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
         #loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss = -en_loss
+        #loss = acc_loss
         loss.backward()
         grad = delta.grad.detach()
 
-        idx_update = torch.ones(y.shape, dtype=torch.bool)
         grad_sign = sign(grad)
-        delta.data[idx_update] = (delta + (eps / 4) * grad_sign)[idx_update]
-        delta.data = clamp(x + delta.data, 0, 1) - x
-        delta.data = clamp(delta.data, -eps, eps)
-        delta.grad.zero_()
-
-        for pmodel in pmodels:
-            poutput = pmodel(clamp(x + delta, 0, 1)).view(len(x), -1)
-            ens.append(torch.mean(en_cri(poutput)))
-            en_loss = en_loss + ens[-1]
-            print('[DEBUG] itr {} ae entropy after: {}'.format(i, ens[-1]))
-
-    '''
-    #test threshold
-    expected = []
-    expected.append((torch.ones(len(x), dtype=torch.int64) * 5.02).cuda())
-    expected.append((torch.ones(len(x), dtype=torch.int64) * 7.92).cuda())
-    en_cri = ShannonEntropyBatch(use_cuda)
-    for i in range(attack_iters):
-        ae_x = clamp(x + delta, 0, 1)
-        output = model(ae_x)
-        en_loss = 0
-        idx = 0
-        for pmodel in pmodels:
-            poutput = pmodel(ae_x).view(len(x), -1)
-            en_loss_ = criterion(en_cri(poutput), expected[idx])
-            print('[DEBUG] itr {} en_cri(poutput): {}'.format(i, torch.mean(en_cri(poutput))))
-            en_loss = en_loss + en_loss_
-            idx = idx + 1
-
-        acc_loss = criterion(output, y)
-        loss = (1 - alpha) * acc_loss + alpha * en_loss
-        loss.backward()
-        grad = delta.grad.detach()
-
-        idx_update = torch.ones(y.shape, dtype=torch.bool)
-        grad_sign = sign(grad)
-        delta.data[idx_update] = (delta + (eps / 4) * grad_sign)[idx_update]
-        delta.data = clamp(x + delta.data, 0, 1) - x
+        delta.data = (delta + (eps / 4) * grad_sign)
         delta.data = clamp(delta.data, -eps, eps)
         delta.grad.zero_()
     '''
+    for pmodel in pmodels:
+        poutput = pmodel(torch.add(x, delta)).view(len(x), -1)
+        en_loss = torch.mean(en_cri(poutput))
+        print('[DEBUG] ae entropy after: {}'.format(en_loss))
+    '''
+    return delta.detach()
+
+
+def low_entropy_sample_training(model, pmodels, data_loader, criterion, attack_iters=10, eps=0.0392, rs=True, use_cuda=True):
+    delta = None
+
+    en_loss = Variable(torch.tensor(.0), requires_grad=True)
+    en_cri = hloss(use_cuda)
+    num_samples = 0
+    for x, target in data_loader:
+        num_samples += len(target)
+        if num_samples > 32:
+            break
+        for i in range(attack_iters):
+            if use_cuda:
+                target = target.cuda()
+                x = x.cuda()
+            if delta == None:
+                delta = torch.zeros_like(x[0])
+                if use_cuda:
+                    delta = delta.cuda()
+
+                if rs:
+                    delta.uniform_(-eps, eps)
+
+                delta.requires_grad = True
+
+            ae_x = clamp(torch.add(x, delta), 0, 1)
+            output = model(ae_x)
+            for pmodel in pmodels:
+                poutput = pmodel(ae_x).view(len(x), -1)
+                en_loss = torch.mean(en_cri(poutput))
+                print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
+
+            #acc_loss = criterion(output, target)
+            # print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
+            #loss = acc_loss
+            loss = -en_loss
+            loss.backward()
+            grad = delta.grad.detach()
+
+            #idx_update = torch.ones(target.shape, dtype=torch.bool)
+            grad_sign = sign(grad)
+            #delta.data[idx_update] = (delta + (eps / 4) * grad_sign)[idx_update]
+            delta.data = delta + (eps / 4) * grad_sign
+            delta.data = clamp(torch.add(x, delta.data), 0, 1) - x
+            delta.data = clamp(delta.data, -eps, eps)
+            delta.grad.zero_()
+            ae_x = clamp(torch.add(x, delta), 0, 1)
+            output = model(ae_x)
+            for pmodel in pmodels:
+                poutput = pmodel(ae_x).view(len(x), -1)
+                en_loss = torch.mean(en_cri(poutput))
+                print('[DEBUG] itr {} ae entropy after: {}'.format(i, en_loss))
 
     return delta.detach()
 
@@ -641,6 +756,8 @@ def known_uap_train(data_loader,
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
+    adv_top1 = AverageMeter()
+    adv_top5 = AverageMeter()
 
     # switch to train mode
     model.train()
@@ -679,22 +796,24 @@ def known_uap_train(data_loader,
                 output = model(input)
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-                '''
-                # entropy loss
-                plosses = 0
-                for pmodel in p_models:
-                    poutput = pmodel((input + delta).float()).view(len(input), -1)
-                    en_loss = calculate_entropy_tensor(poutput)
-                    plosses = plosses + en_loss
-                ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses.mean()
-                '''
+
                 # cce loss only
                 poutput = model((input + delta).float())
-                plosses = criterion(poutput, target)
+                pce_loss = criterion(poutput, target)
+                '''
+                # entropy loss
+                for pmodel in p_models:
+                    poutput_ = pmodel((input + delta).float()).view(len(input), -1)
+                    coutput_ = pmodel(input).view(len(input), -1)
+                    en_cri = hloss(use_cuda)
+                    p_en_b = en_cri(poutput_).mean()
+                    p_en_c = en_cri(coutput_).mean()
+                '''
 
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses
+                #loss = (1 - alpha) * ce_loss + alpha * pce_loss# - 0.001 * p_en_b
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss
+                #print('[DEBUG] p_en_c {} p_en_b {}'.format(p_en_c, p_en_b))
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -706,6 +825,10 @@ def known_uap_train(data_loader,
             losses.update(loss.item(), input.size(0))
             top1.update(prec1.item(), input.size(0))
             top5.update(prec5.item(), input.size(0))
+
+            adv_prec1, adv_prec5 = accuracy(poutput.data, target_, topk=(1, 5))
+            adv_top1.update(adv_prec1.item(), input.size(0))
+            adv_top5.update(adv_prec5.item(), input.size(0))
 
             for pmodel in p_models:
                 del pmodel
@@ -725,9 +848,13 @@ def known_uap_train(data_loader,
                       'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
                       'Loss {loss.val:.4f} ({loss.avg:.4f})   '
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                      'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                      'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                      .format(
                     num_batch, batch_time=batch_time,
-                    data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+                    data_time=data_time, loss=losses, top1=top1, top5=top5,
+                    adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
             num_batch = num_batch + 1
 
         print('  Iteration: [{:03d}/{:03d}]   '
@@ -735,9 +862,12 @@ def known_uap_train(data_loader,
               'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
               'Loss {loss.val:.4f} ({loss.avg:.4f})   '
               'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+              'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+              'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+              .format(
                iteration, num_iterations, batch_time=batch_time,
-               data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
+               adv_top1=adv_top1, adv_top5=adv_top5, data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string())
 
         iteration += 1
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
@@ -2088,5 +2218,5 @@ class hloss(nn.Module):
 
     def forward(self, x):
         b = F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
-        b = -1.0 * b.sum()
+        b = -1.0 * b.sum(dim=1)
         return b
