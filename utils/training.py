@@ -440,6 +440,7 @@ def adv_train(data_loader,
                     p_en_b = (en_cri(poutput)).mean()
                     c_en_b = (en_cri(moutput)).mean()
                 #'''
+
                 poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
 
@@ -576,6 +577,7 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
             #print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
         #tgt = (torch.ones(len(ae_x), dtype=torch.int64) * 150).cuda()
         #acc_loss = criterion(output, tgt)
+
         #print('[DEBUG] itr {} ae acc_loss: {}'.format(i, acc_loss))
         #loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss = -en_loss
