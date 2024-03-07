@@ -535,6 +535,181 @@ def adv_train(data_loader,
     return model
 
 
+def adv_ae_train( data_loader,
+                  model,
+                  arch,
+                  criterion,
+                  optimizer,
+                  num_iterations,
+                  split_layers,
+                  uap=None,
+                  std=0,
+                  alpha=0.1,
+                  ae_alpha=0.1,
+                  print_freq=200,
+                  use_cuda=True,
+                  adv_itr=10,
+                  eps=0.0392):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    adv_top1 = AverageMeter()
+    adv_top5 = AverageMeter()
+    delta_top1 = AverageMeter()
+    delta_top5 = AverageMeter()
+    # switch to train mode
+
+    model.train()
+
+    end = time.time()
+
+    #print('[DEBUG] dataloader length: {}'.format(len(data_loader)))
+
+    iteration = 0
+    while (iteration < num_iterations):
+        num_batch = 0
+        for input, target in data_loader:
+            p_models = []
+            for split_layer in split_layers:
+                pmodel, _ = split_model(model, arch, split_layer=split_layer, flat=True)
+                p_models = p_models + [pmodel]
+
+            # measure data loading time
+            data_time.update(time.time() - end)
+
+            if use_cuda:
+                target = target.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            # generate AEs
+            delta = ae_training_individual(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True,
+                                           use_cuda)
+            # print('[DEBUG]delta.shape {}'.format(delta.shape))
+            x_adv = input + delta
+            uap_x = (input + uap).float()
+            # x_adv = ae_training_tgt(model, input, target, criterion, adv_itr, eps, True)
+
+            # compute output
+            if model._get_name() == "Inception3":
+                output, aux_output = model(input)
+                loss1 = criterion(output, target)
+                loss2 = criterion(aux_output, target)
+                loss = loss1 + 0.4 * loss2
+            else:
+                output = model(input)
+                delta_output = model(x_adv)
+                adv_output = model(uap_x)
+
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+                '''
+                #calculate entropy
+                plosses = 0
+                for pmodel in p_models:
+                    poutput = pmodel(x_adv).view(len(input), -1)
+                    moutput = pmodel(input).view(len(input), -1)
+                    en_cri = hloss(use_cuda)
+                    p_en_b = (en_cri(poutput)).mean()
+                    c_en_b = (en_cri(moutput)).mean()
+                '''
+
+                poutput = model(x_adv)
+                pce_loss = criterion(poutput, target)
+
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss  # - 0.001 * alpha * p_en_b
+                # loss = pce_loss
+
+            # measure accuracy and record loss
+            if len(target.shape) > 1:
+                target_ = torch.argmax(target, dim=-1)
+            if use_cuda:
+                target_ = target_.cuda()
+
+            prec1, prec5 = accuracy(output.data, target_, topk=(1, 5))
+            losses.update(loss.item(), input.size(0))
+            top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
+
+            adv_prec1, adv_prec5 = accuracy(adv_output.data, target_, topk=(1, 5))
+            adv_top1.update(adv_prec1.item(), input.size(0))
+            adv_top5.update(adv_prec5.item(), input.size(0))
+
+            delta_prec1, delta_prec5 = accuracy(delta_output.data, target_, topk=(1, 5))
+            delta_top1.update(delta_prec1.item(), input.size(0))
+            delta_top5.update(delta_prec5.item(), input.size(0))
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+
+            for pmodel in p_models:
+                del pmodel
+
+            '''
+            #calculate entropy
+            p_models = []
+            for split_layer in split_layers:
+                pmodel, _ = split_model(model, arch, split_layer=split_layer)
+                p_models = p_models + [pmodel]
+
+            for pmodel in p_models:
+                poutput = pmodel(x_adv).view(len(input), -1)
+                moutput = pmodel(input).view(len(input), -1)
+                en_cri = hloss(use_cuda)
+                p_en_aft = (en_cri(poutput)).mean()
+                c_en_aft = (en_cri(moutput)).mean()
+
+            print('[DEBUG] before hloss(poutput) {}'.format(p_en_b))
+            #print('[DEBUG] after hloss(poutput) {}'.format(p_en_aft))
+            #print('[DEBUG] before delta hloss(output) {}'.format(c_en_b - p_en_b))
+            print('[DEBUG] clean before hloss(output) {}'.format(c_en_b))
+            #print('[DEBUG] clean after hloss(output) {}'.format(c_en_aft))
+            #print('[DEBUG] after delta hloss(output) {}'.format(c_en_aft - p_en_aft))
+
+            for pmodel in p_models:
+                del pmodel
+            '''
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+            if num_batch % 100 == 0:
+                print('  Batch: [{:03d}/1563]   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                      'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                      'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                      'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
+                      'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
+                      .format(
+                    num_batch,
+                    loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
+                    delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
+            num_batch = num_batch + 1
+
+        print('  Iteration: [{:03d}/{:03d}]   '
+              'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+              'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+              'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+              'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
+            iteration, num_iterations,
+            loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
+
+        iteration += 1
+    print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                top5=top5,
+                                                                                                error1=100 - top1.avg))
+    return model
+
+
+
 def gen_low_entropy_sample(data_loader,
                            model,
                            arch,
@@ -1956,7 +2131,7 @@ def replace_model(ori_model, model_name, replace_layer=38):
     return out_model
 
 
-def split_model(ori_model, model_name, split_layer=43):
+def split_model(ori_model, model_name, split_layer=43, flat=False):
     '''
     split given model from the dense layer before logits
     Args:
@@ -1966,68 +2141,29 @@ def split_model(ori_model, model_name, split_layer=43):
         splitted models
     '''
     if model_name == 'vgg19':
-        if split_layer < 38:
-            modules = list(ori_model.children())
-            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+        if flat:
+            layers = list(ori_model.children())
             module1 = layers[:split_layer]
-            module2 = layers[split_layer:38]
-            module3 = layers[38:]
+            module2 = layers[split_layer:]
             model_1st = nn.Sequential(*module1)
-            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+            model_2nd = nn.Sequential(*module2)
         else:
-            modules = list(ori_model.children())
-            layers = list(modules[0]) + [modules[1]] + list(modules[2])
-            module1 = layers[:38]
-            moduel2 = layers[38:split_layer]
-            module3 = layers[split_layer:]
-            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-            model_2nd = nn.Sequential(*module3)
-    elif model_name == 'alexnet':
-        if split_layer == 6:
-            modules = list(ori_model.children())
-            module1 = modules[0]
-            module2 = [modules[1]]
-            module_ = list(modules[2])
-            module3 = module_[:5]
-            module4 = module_[5:]
-
-            model_1st = nn.Sequential(*[*module1, Flatten(), *module2, *module3])
-            model_2nd = nn.Sequential(*module4)
-    else:
-        return None, None
-
-    return model_1st, model_2nd
-
-
-def split_and_replace_model(ori_model, model_name, split_layer=43):
-    '''
-    split given model from the dense layer before logits
-    Args:
-        ori_model:
-        model_name: model name
-    Returns:
-        splitted models
-def split_and_replace_model(ori_model, model_name, split_layer=43):
-    '''
-    if m    odel_name == 'vgg19':
-
-
-        if split_layer < 38:
-            modules = list(ori_model.children())
-            layers = list(modules[0]) + [modules[1]] + list(modules[2])
-            module1 = layers[:split_layer]
-            module2 = layers[split_layer:38]
-            module3 = layers[38:]
-            model_1st = nn.Sequential(*module1)
-            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
-        else:
-            modules = list(ori_model.children())
-            layers = list(modules[0]) + [modules[1]] + list(modules[2])
-            module1 = layers[:38]
-            moduel2 = layers[38:split_layer]
-            module3 = layers[split_layer:]
-            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
-            model_2nd = nn.Sequential(*module3)
+            if split_layer < 38:
+                modules = list(ori_model.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:split_layer]
+                module2 = layers[split_layer:38]
+                module3 = layers[38:]
+                model_1st = nn.Sequential(*module1)
+                model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+            else:
+                modules = list(ori_model.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:38]
+                moduel2 = layers[38:split_layer]
+                module3 = layers[split_layer:]
+                model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+                model_2nd = nn.Sequential(*module3)
     elif model_name == 'alexnet':
         if split_layer == 6:
             modules = list(ori_model.children())

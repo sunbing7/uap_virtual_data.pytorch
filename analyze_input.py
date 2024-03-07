@@ -11,7 +11,7 @@ from utils.utils import get_model_path, get_result_path, get_uap_path, get_attri
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
-    my_test, my_test_uap, gen_low_entropy_sample, replace_model
+    my_test, my_test_uap, gen_low_entropy_sample, replace_model, adv_ae_train
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array,
                              calculate_shannon_entropy_batch, calc_hloss)
@@ -30,7 +30,7 @@ def parse_arguments():
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
                                                                        'test', 'pcc', 'entropy', 'classify', 'repair_ae',
                                                                        'repair', 'repair_uap', 'gen_en_sample',
-                                                                       'repair_enpool'],
+                                                                       'repair_enpool', 'repair_enrep'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -1026,6 +1026,23 @@ def uap_repair(args):
     elif 'enpool' in args.option:
         repaired_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
         print("=> repaired_network :\n {}".format(repaired_network))
+    elif 'enrep' in args.option:
+        target_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
+        repaired_network = adv_ae_train(data_train_loader,
+                                        target_network,
+                                        args.arch,
+                                        criterion,
+                                        optimizer,
+                                        args.num_iterations,
+                                        args.split_layers,
+                                        uap=uap,
+                                        std=std,
+                                        alpha=args.alpha,
+                                        ae_alpha=args.ae_alpha,
+                                        print_freq=args.print_freq,
+                                        use_cuda=args.use_cuda,
+                                        adv_itr=args.ae_iter,
+                                        eps=args.epsilon)
     else:
         repaired_network = train_repair(data_loader=data_train_loader,
                          model=target_network,
