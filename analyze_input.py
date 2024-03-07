@@ -11,7 +11,7 @@ from utils.utils import get_model_path, get_result_path, get_uap_path, get_attri
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
-    my_test, my_test_uap, gen_low_entropy_sample
+    my_test, my_test_uap, gen_low_entropy_sample, replace_model
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array,
                              calculate_shannon_entropy_batch, calc_hloss)
@@ -29,7 +29,8 @@ def parse_arguments():
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
                                                                        'test', 'pcc', 'entropy', 'classify', 'repair_ae',
-                                                                       'repair', 'repair_uap', 'gen_en_sample'],
+                                                                       'repair', 'repair_uap', 'gen_en_sample',
+                                                                       'repair_enpool'],
                         help='Run options')
     parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
@@ -996,7 +997,7 @@ def uap_repair(args):
     start = time.time()
 
     if 'ae' in args.option:
-        adv_train(data_train_loader,
+        repaired_network = adv_train(data_train_loader,
                   target_network,
                   args.arch,
                   criterion,
@@ -1012,7 +1013,7 @@ def uap_repair(args):
                   adv_itr=args.ae_iter,
                   eps=args.epsilon)
     elif 'uap' in args.option:
-        known_uap_train(data_train_loader,
+        repaired_network = known_uap_train(data_train_loader,
                         target_network,
                         args.arch,
                         criterion,
@@ -1022,8 +1023,11 @@ def uap_repair(args):
                         uap,
                         alpha=args.alpha,
                         use_cuda=args.use_cuda)
+    elif 'enpool' in args.option:
+        repaired_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
+        print("=> repaired_network :\n {}".format(repaired_network))
     else:
-        train_repair(data_loader=data_train_loader,
+        repaired_network = train_repair(data_loader=data_train_loader,
                          model=target_network,
                          arch=args.arch,
                          criterion=criterion,
@@ -1041,7 +1045,7 @@ def uap_repair(args):
     if args.use_cuda:
         uap = uap.cuda()
     metrics_evaluate_test(data_loader=data_test_loader,
-                          target_model=target_network,
+                          target_model=repaired_network,
                           uap=uap,
                           targeted=args.targeted,
                           target_class=args.target_class,
@@ -1050,7 +1054,7 @@ def uap_repair(args):
 
     model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_repaired.pth')
 
-    torch.save(target_network, model_repaired_path)
+    torch.save(repaired_network, model_repaired_path)
 
 
 def uap_gen_low_en_sample(args):

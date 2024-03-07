@@ -360,6 +360,7 @@ def train_repair(data_loader,
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
                                                                                                 top5=top5,
                                                                                                 error1=100 - top1.avg))
+    return model
 
 def adv_train(data_loader,
               model,
@@ -430,7 +431,7 @@ def adv_train(data_loader,
 
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-                #'''
+                '''
                 #calculate entropy
                 plosses = 0
                 for pmodel in p_models:
@@ -439,7 +440,7 @@ def adv_train(data_loader,
                     en_cri = hloss(use_cuda)
                     p_en_b = (en_cri(poutput)).mean()
                     c_en_b = (en_cri(moutput)).mean()
-                #'''
+                '''
 
                 poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
@@ -476,7 +477,7 @@ def adv_train(data_loader,
             for pmodel in p_models:
                 del pmodel
 
-            #'''
+            '''
             #calculate entropy
             p_models = []
             for split_layer in split_layers:
@@ -499,7 +500,7 @@ def adv_train(data_loader,
             
             for pmodel in p_models:
                 del pmodel
-            #'''
+            '''
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -531,6 +532,7 @@ def adv_train(data_loader,
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
                                                                                                 top5=top5,
                                                                                                 error1=100 - top1.avg))
+    return model
 
 
 def gen_low_entropy_sample(data_loader,
@@ -570,7 +572,7 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     for i in range(attack_iters):
         delta.data = clamp(delta.data, -eps, eps)
         ae_x = torch.add(x, delta)
-        #output = model(ae_x)
+        output = model(ae_x)
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
             en_loss = (en_cri(poutput)).sum()
@@ -1920,6 +1922,39 @@ def eval_uap_model(test_data_loader, target_model, pert_model, target_class, log
     return test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr
 
 
+def replace_model(ori_model, model_name, replace_layer=38):
+    '''
+    reconstruct given model with costumized pooling layer
+    '''
+    if model_name == 'vgg19':
+        if replace_layer == 38:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:37]
+            module3 = layers[38:]
+            out_model = nn.Sequential(*[*module1, MyAvgPool2D(output_size=(7, 7)), Flatten(), *module3])
+        elif replace_layer <= 37:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:replace_layer-1]
+            module2 = layers[replace_layer:38]
+            module3 = layers[38:]
+            out_model = nn.Sequential(*[*module1, MyMaxPool2D(kernel_size=2, stride=2, replace=True),
+                                        *module2, Flatten(), *module3])
+        elif replace_layer == 43:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            module2 = layers[38:replace_layer]
+            module3 = layers[replace_layer:]
+            out_model = nn.Sequential(*[*module1, Flatten(), *module2, EntropyWeight(), *module3])
+        else:
+            return ori_model
+    else:
+        return ori_model
+
+    return out_model
+
 
 def split_model(ori_model, model_name, split_layer=43):
     '''
@@ -1931,6 +1966,52 @@ def split_model(ori_model, model_name, split_layer=43):
         splitted models
     '''
     if model_name == 'vgg19':
+        if split_layer < 38:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:split_layer]
+            module2 = layers[split_layer:38]
+            module3 = layers[38:]
+            model_1st = nn.Sequential(*module1)
+            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+        else:
+            modules = list(ori_model.children())
+            layers = list(modules[0]) + [modules[1]] + list(modules[2])
+            module1 = layers[:38]
+            moduel2 = layers[38:split_layer]
+            module3 = layers[split_layer:]
+            model_1st = nn.Sequential(*[*module1, Flatten(), *moduel2])
+            model_2nd = nn.Sequential(*module3)
+    elif model_name == 'alexnet':
+        if split_layer == 6:
+            modules = list(ori_model.children())
+            module1 = modules[0]
+            module2 = [modules[1]]
+            module_ = list(modules[2])
+            module3 = module_[:5]
+            module4 = module_[5:]
+
+            model_1st = nn.Sequential(*[*module1, Flatten(), *module2, *module3])
+            model_2nd = nn.Sequential(*module4)
+    else:
+        return None, None
+
+    return model_1st, model_2nd
+
+
+def split_and_replace_model(ori_model, model_name, split_layer=43):
+    '''
+    split given model from the dense layer before logits
+    Args:
+        ori_model:
+        model_name: model name
+    Returns:
+        splitted models
+def split_and_replace_model(ori_model, model_name, split_layer=43):
+    '''
+    if m    odel_name == 'vgg19':
+
+
         if split_layer < 38:
             modules = list(ori_model.children())
             layers = list(modules[0]) + [modules[1]] + list(modules[2])
@@ -2162,12 +2243,96 @@ class Flatten(nn.Module):
         return x
 
 
+class MyAvgPool2D(nn.Module):
+    '''
+    tested model:
+    - vgg19
+    '''
+    def __init__(self, output_size, replace=False):
+        super(MyAvgPool2D, self).__init__()
+        self.output_size = output_size
+        self.kernel_size = 4
+        self.stride = 4
+
+    def forward(self, x):
+        self.stride = x.size(2) // self.output_size[0]
+        self.kernel_size = int(x.size(2) - (self.output_size[0] - 1) * self.stride)
+        #print('[DEBUG] kernel_size {}'.format(self.kernel_size))
+        #print('[DEBUG] stride {}'.format(self.stride))
+        return self.get_pools(x)
+
+    def get_pools(self, x):
+        pooled = []
+        for i in torch.arange(start=0, end=x.size(2), step=self.stride):
+            for j in torch.arange(start=0, end=x.size(2), step=self.stride):
+                #get a single pool
+                fmap = x[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
+                pooled.append(torch.mean(fmap, dim=2))
+        return torch.reshape(torch.stack(pooled, dim=2),
+                             (pooled[0].size(0), pooled[0].size(1), self.output_size[0], self.output_size[1]))
+
+
+class MyMaxPool2D(nn.Module):
+    '''
+    tested model:
+    - vgg19
+    '''
+    def __init__(self, kernel_size, stride, replace=False):
+        super(MyMaxPool2D, self).__init__()
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.output_size = (7, 7)
+        self.replace = replace
+
+    def forward(self, x):
+        self.output_size = (x.size(2) // self.stride, x.size(2) // self.stride)
+        #print('[DEBUG] output_size {}'.format(self.output_size))
+        if self.replace:
+            return self.get_entropy_pools(self.get_pools(x))
+        else:
+            return self.get_pools(x)
+
+    def get_pools(self, x):
+        pooled = []
+        for i in torch.arange(start=0, end=x.size(2), step=self.stride):
+            for j in torch.arange(start=0, end=x.size(2), step=self.stride):
+                #get a single pool
+                fmap = x[:, :, i:i+self.kernel_size, j:j+self.kernel_size]
+                pooled.append(torch.max(torch.max(fmap,dim=2).values,dim=2,keepdim=True).values)
+        return torch.reshape(torch.stack(pooled, dim=2),
+                             (pooled[0].size(0), pooled[0].size(1), self.output_size[0], self.output_size[1]))
+
+    def get_entropy_pools(self, pooled):
+        global_pool_entropy = F.softmax(pooled, dim=1) * F.log_softmax(pooled, dim=1)
+        global_pool_entropy = -1.0 * global_pool_entropy.sum(dim=1)
+        max_entropy = torch.unsqueeze(torch.max(
+                                   torch.max(global_pool_entropy, dim=1).values, dim=1, keepdim=True).values, dim=2)
+        #mask = (global_pool_entropy > max_entropy * 0.8)
+        global_entropy_weight = (1 - torch.div(global_pool_entropy, max_entropy))
+        weighted_pooled = pooled * torch.unsqueeze(global_entropy_weight, dim=1)
+        #weighted_pooled = pooled * torch.unsqueeze(mask, dim=1)
+        return weighted_pooled
+
+
 class Mask(nn.Module):
     def __init__(self, mask):
         super(Mask, self).__init__()
         self.mask = mask.to(torch.float)
     def forward(self, x):
         x = x * self.mask
+        return x
+
+
+class EntropyWeight(nn.Module):
+    def __init__(self):
+        super(EntropyWeight, self).__init__()
+
+    def forward(self, x):
+        entropy = F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
+        entropy = -1.0 * entropy.sum(dim=1)
+        max_entropy = torch.max(entropy)
+        adjust_weight = (1 - torch.div(entropy, max_entropy))
+        x = x * torch.unsqueeze(adjust_weight, dim=1)
         return x
 
 
