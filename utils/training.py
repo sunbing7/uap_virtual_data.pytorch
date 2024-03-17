@@ -261,8 +261,6 @@ def train_repair(data_loader,
                  criterion,
                  optimizer,
                  num_iterations,
-                 split_layers,
-                 alpha=0.1,
                  print_freq=200,
                  use_cuda=True):
 
@@ -283,10 +281,6 @@ def train_repair(data_loader,
     while (iteration < num_iterations):
         num_batch = 0
         for input, target in data_loader:
-            p_models = []
-            for split_layer in split_layers:
-                pmodel, _ = split_model(model, arch, split_layer=split_layer)
-                p_models = p_models + [pmodel]
 
             # measure data loading time
             data_time.update(time.time() - end)
@@ -303,15 +297,10 @@ def train_repair(data_loader,
                 loss = loss1 + 0.4 * loss2
             else:
                 output = model(input)
-                plosses = 0
-                for pmodel in p_models:
-                    poutput = pmodel(input).view(len(input), -1)
-                    plosses = plosses + calculate_entropy_tensor(poutput)
 
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-                ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * plosses.mean()
+                loss = criterion(output, target)
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -323,9 +312,6 @@ def train_repair(data_loader,
             losses.update(loss.item(), input.size(0))
             top1.update(prec1.item(), input.size(0))
             top5.update(prec5.item(), input.size(0))
-
-            for pmodel in p_models:
-                del pmodel
 
             # compute gradient and do SGD step
             optimizer.zero_grad()

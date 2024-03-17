@@ -959,7 +959,7 @@ def uap_repair(args):
                                  finetune=False)
 
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    if args.dataset != "imagenet" or 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
@@ -1012,6 +1012,7 @@ def uap_repair(args):
                   use_cuda=args.use_cuda,
                   adv_itr=args.ae_iter,
                   eps=args.epsilon)
+        post_fix = 'ae'
     elif 'uap' in args.option:
         repaired_network = known_uap_train(data_train_loader,
                         target_network,
@@ -1023,9 +1024,11 @@ def uap_repair(args):
                         uap,
                         alpha=args.alpha,
                         use_cuda=args.use_cuda)
+        post_fix = 'uap'
     elif 'enpool' in args.option:
         repaired_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
         print("=> repaired_network :\n {}".format(repaired_network))
+        post_fix = 'enpool'
     elif 'enrep' in args.option:
         target_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
         repaired_network = adv_ae_train(data_train_loader,
@@ -1043,17 +1046,18 @@ def uap_repair(args):
                                         use_cuda=args.use_cuda,
                                         adv_itr=args.ae_iter,
                                         eps=args.epsilon)
+        post_fix = 'enrep'
     else:
+        #fine tune with clean sample only
         repaired_network = train_repair(data_loader=data_train_loader,
-                         model=target_network,
-                         arch=args.arch,
-                         criterion=criterion,
-                         optimizer=optimizer,
-                         num_iterations=args.num_iterations,
-                         split_layers=args.split_layers,
-                         alpha=args.alpha,
-                         print_freq=args.print_freq,
-                         use_cuda=args.use_cuda)
+                                        model=target_network,
+                                        arch=args.arch,
+                                        criterion=criterion,
+                                        optimizer=optimizer,
+                                        num_iterations=args.num_iterations,
+                                        print_freq=args.print_freq,
+                                        use_cuda=args.use_cuda)
+        post_fix = 'finetuned'
 
     end = time.time()
     print("Time needed for UAP repair: {}".format(end - start))
@@ -1069,7 +1073,7 @@ def uap_repair(args):
                           log=None,
                           use_cuda=args.use_cuda)
 
-    model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_repaired.pth')
+    model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_' + post_fix + '_repaired.pth')
 
     torch.save(repaired_network, model_repaired_path)
 
