@@ -9,7 +9,7 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data, fix_labels_nips, fix_labels
+from utils.data import get_data_specs, get_data
 from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
@@ -108,11 +108,6 @@ def main():
 
     _, pretrained_data_test = get_data(args.pretrained_dataset, args.pretrained_dataset)
 
-    # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        pretrained_data_test = fix_labels_nips(pretrained_data_test, pytorch=True)
-
     pretrained_data_test_loader = torch.utils.data.DataLoader(pretrained_data_test,
                                                     batch_size=args.batch_size,
                                                     shuffle=False,
@@ -123,9 +118,6 @@ def main():
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
     data_train, _ = get_data(args.dataset, args.pretrained_dataset)
-
-    if args.dataset == "imagenet":
-        data_train = fix_labels(data_train)
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,

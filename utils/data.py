@@ -114,6 +114,9 @@ def get_data(dataset, pretrained_dataset):
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
+        #if args.is_nips:
+        #    print('is_nips')
+        #    data_test = fix_labels_nips(data_test, pytorch=True)
         '''
 
         full_val = dset.ImageFolder(root=traindir, transform=train_transform)

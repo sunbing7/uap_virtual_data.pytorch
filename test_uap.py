@@ -9,7 +9,7 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data, fix_labels_nips, fix_labels
+from utils.data import get_data_specs, get_data
 from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
@@ -108,10 +108,6 @@ def main():
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
     _, data_test = get_data(args.test_dataset, args.test_dataset)
-    # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        data_test = fix_labels_nips(data_test, pytorch=True)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
@@ -121,15 +117,6 @@ def main():
 
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
-
-    #data_train, _ = get_data(args.dataset, args.pretrained_dataset)
-    #if args.dataset == "imagenet":
-    #    data_train = fix_labels(data_train)
-    #data_train_loader = torch.utils.data.DataLoader(data_train,
-    #                                                batch_size=args.batch_size,
-    #                                                shuffle=True,
-    #                                                num_workers=args.workers,
-    #                                                pin_memory=True)
 
     ####################################
     # Init model, criterion, and optimizer
@@ -233,12 +220,6 @@ def main_net():
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
     _, data_test = get_data(args.test_dataset, args.test_dataset)
-    # Fix labels if needed
-    #if args.is_nips:
-    #    print('is_nips')
-    #    data_test = fix_labels_nips(data_test, pytorch=True)
-
-
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
@@ -248,15 +229,6 @@ def main_net():
 
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
-
-    #data_train, _ = get_data(args.dataset, args.pretrained_dataset)
-    #if args.dataset == "imagenet":
-    #    data_train = fix_labels(data_train)
-    #data_train_loader = torch.utils.data.DataLoader(data_train,
-    #                                                batch_size=args.batch_size,
-    #                                                shuffle=True,
-    #                                                num_workers=args.workers,
-    #                                                pin_memory=True)
 
     ####################################
     # Init model, criterion, and optimizer

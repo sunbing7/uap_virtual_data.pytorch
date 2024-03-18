@@ -6,7 +6,7 @@ import torch
 import argparse
 import torch.backends.cudnn as cudnn
 
-from utils.data import get_data_specs, get_data, get_data_class, fix_labels_nips, fix_labels
+from utils.data import get_data_specs, get_data, get_data_class
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -708,13 +708,8 @@ def test(args):
     data_train, data_test = get_data(args.dataset, args.dataset)
 
     if args.is_train:
-        if args.dataset == "imagenet":
-            data_train = fix_labels(data_train)
         dataset = data_train
     else:
-        # Fix labels if needed
-        if args.dataset == "imagenet":
-            data_test = fix_labels_nips(data_test, pytorch=True)
         dataset = data_test
 
 
@@ -912,10 +907,6 @@ def uap_repair(args):
     '''
 
     _, data_test = get_data(args.dataset, args.dataset)
-    # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        data_test = fix_labels_nips(data_test, pytorch=True)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                    batch_size=args.batch_size,
@@ -927,9 +918,6 @@ def uap_repair(args):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
 
     data_train, _ = get_data(args.dataset, args.dataset)
-
-    if args.dataset == "imagenet":
-        data_train = fix_labels(data_train)
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
@@ -1080,10 +1068,6 @@ def uap_repair(args):
 
 def uap_gen_low_en_sample(args):
     _, data_test = get_data(args.dataset, args.dataset)
-    # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        data_test = fix_labels_nips(data_test, pytorch=True)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                    batch_size=args.batch_size,
@@ -1095,9 +1079,6 @@ def uap_gen_low_en_sample(args):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
 
     data_train, _ = get_data(args.dataset, args.dataset)
-
-    if args.dataset == "imagenet":
-        data_train = fix_labels(data_train)
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
