@@ -98,7 +98,7 @@ def get_data(dataset, pretrained_dataset):
         #valdir = os.path.join(IMAGENET_PATH, 'val')
         traindir = os.path.join(IMAGENET_PATH, 'validation')
         #traindir = IMAGENET_PATH
-        valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
+        #valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
                 transforms.Resize(256),
@@ -106,16 +106,25 @@ def get_data(dataset, pretrained_dataset):
                 transforms.RandomCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
-
+        '''
         test_transform = transforms.Compose([
                 transforms.Resize(256),
                 # transforms.Resize(299), # inception_v3
                 transforms.CenterCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
-
-        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
         test_data = dset.ImageFolder(root=valdir, transform=test_transform)
+        '''
+
+        full_val = dset.ImageFolder(root=traindir, transform=train_transform)
+        full_val = fix_labels(full_val)
+
+        full_index = np.arange(0, len(full_val))
+        index_test = np.load(IMAGENET_PATH + '/validation/index_test.npy').astype(np.int64)
+        index_train = [x for x in full_index if x not in index_test]
+        train_data = torch.utils.data.Subset(full_val, index_train)
+        test_data = torch.utils.data.Subset(full_val, index_test)
+        print('test size {} train size {}'.format(len(test_data), len(train_data)))
 
     elif dataset == "coco":
         train_transform = transforms.Compose([

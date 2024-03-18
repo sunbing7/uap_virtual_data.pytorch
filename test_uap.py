@@ -232,31 +232,13 @@ def main_net():
     print_log("Torch  version : {}".format(torch.__version__), log)
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
-    full_val, data_test = get_data(args.test_dataset, args.test_dataset)
+    _, data_test = get_data(args.test_dataset, args.test_dataset)
     # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        data_test = fix_labels_nips(data_test, pytorch=True)
+    #if args.is_nips:
+    #    print('is_nips')
+    #    data_test = fix_labels_nips(data_test, pytorch=True)
 
-    full_val = fix_labels(full_val)
-    #random split
-    #full_index = np.arange(0, len(full_val))
-    #random_index_test = random.sample(range(0, len(full_val)), 2000)
-    #np.save('../data/imagenet/validation/index_test.npy', random_index_test)
-    #random_index_train = [x for x in full_index if x not in random_index_test]
-    #print(random_index_test)
-    #print(random_index_train)
 
-    #train_size = int(0.8 * len(full_val))
-    #test_size = len(full_val) - train_size
-    #data_train, data_test = torch.utils.data.random_split(full_val, [train_size, test_size])
-    #data_test = data_train
-    full_index = np.arange(0, len(full_val))
-    index_test = np.load('../data/imagenet/validation/index_test.npy').astype(np.int64)
-    index_train = [x for x in full_index if x not in index_test]
-    data_train = torch.utils.data.Subset(full_val, index_train)
-    data_test = torch.utils.data.Subset(full_val, index_test)
-    print('test size {} train size {}'.format(len(data_test), len(data_test)))
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
