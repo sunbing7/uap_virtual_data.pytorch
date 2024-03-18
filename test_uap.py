@@ -240,9 +240,9 @@ def main_net():
 
     full_val = fix_labels(full_val)
     #random split
-    full_index = np.arange(0, len(full_val))
-    random_index_test = random.sample(range(0, len(full_val)), 2000)
-    np.save('../data/imagenet/validation/index_test.npy', random_index_test)
+    #full_index = np.arange(0, len(full_val))
+    #random_index_test = random.sample(range(0, len(full_val)), 2000)
+    #np.save('../data/imagenet/validation/index_test.npy', random_index_test)
     #random_index_train = [x for x in full_index if x not in random_index_test]
     #print(random_index_test)
     #print(random_index_train)
@@ -251,6 +251,7 @@ def main_net():
     #test_size = len(full_val) - train_size
     #data_train, data_test = torch.utils.data.random_split(full_val, [train_size, test_size])
     #data_test = data_train
+    full_index = np.arange(0, len(full_val))
     index_test = np.load('../data/imagenet/validation/index_test.npy').astype(np.int64)
     index_train = [x for x in full_index if x not in index_test]
     data_train = torch.utils.data.Subset(full_val, index_train)
