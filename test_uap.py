@@ -232,11 +232,14 @@ def main_net():
     print_log("Torch  version : {}".format(torch.__version__), log)
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
-    data_test, _ = get_data(args.test_dataset, args.test_dataset)
+    data_train, data_test = get_data(args.test_dataset, args.test_dataset)
     # Fix labels if needed
-    #if args.is_nips:
-    #    print('is_nips')
-    #    data_test = fix_labels_nips(data_test, pytorch=True)
+    if args.is_nips:
+        print('is_nips')
+        data_test = fix_labels_nips(data_test, pytorch=True)
+
+    data_train = fix_labels(data_train)
+    data_test = data_train
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
