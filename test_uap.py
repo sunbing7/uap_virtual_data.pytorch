@@ -234,9 +234,9 @@ def main_net():
 
     data_test, _ = get_data(args.test_dataset, args.test_dataset)
     # Fix labels if needed
-    if args.is_nips:
-        print('is_nips')
-        data_test = fix_labels_nips(data_test, pytorch=True)
+    #if args.is_nips:
+    #    print('is_nips')
+    #    data_test = fix_labels_nips(data_test, pytorch=True)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
