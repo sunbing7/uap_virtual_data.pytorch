@@ -256,6 +256,7 @@ def main_net():
     index_train = [x for x in full_index if x not in index_test]
     data_train = torch.utils.data.Subset(full_val, index_train)
     data_test = torch.utils.data.Subset(full_val, index_test)
+    print('test size {} train size {}'.format(len(data_test), len(data_test)))
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
                                                     batch_size=args.batch_size,
