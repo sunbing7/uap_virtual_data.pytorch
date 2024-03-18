@@ -240,7 +240,7 @@ def main_net():
 
     full_val = fix_labels(full_val)
     #random split
-    random_index = random.sample(np.aranage(0, len(full_val)), 2000)
+    random_index = random.sample(range(0, len(full_val)), 2000)
     print(random_index)
 
     train_size = int(0.8 * len(full_val))
