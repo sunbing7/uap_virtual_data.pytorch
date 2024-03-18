@@ -240,8 +240,11 @@ def main_net():
 
     full_val = fix_labels(full_val)
     #random split
-    random_index = random.sample(range(0, len(full_val)), 2000)
-    print(random_index)
+    full_index = np.arange(0, len(full_val))
+    random_index_test = random.sample(range(0, len(full_val)), 2000)
+    random_index_train = [x for x in full_index if x not in random_index_test]
+    print(random_index_test)
+    print(random_index_train)
 
     train_size = int(0.8 * len(full_val))
     test_size = len(full_val) - train_size
