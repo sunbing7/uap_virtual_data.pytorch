@@ -232,7 +232,7 @@ def main_net():
     print_log("Torch  version : {}".format(torch.__version__), log)
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
-    _, data_test = get_data(args.test_dataset, args.test_dataset)
+    data_test, _ = get_data(args.test_dataset, args.test_dataset)
     # Fix labels if needed
     if args.is_nips:
         print('is_nips')
