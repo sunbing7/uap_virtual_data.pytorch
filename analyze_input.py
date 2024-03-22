@@ -53,6 +53,7 @@ def parse_arguments():
     # Parameters regarding UAP
     parser.add_argument('--num_iterations', type=int, default=32,
                         help='Number of iterations for causality analysis (default: 32)')
+    parser.add_argument('--num_batches', type=int, default=1500)
     parser.add_argument('--result_subfolder', default='result', type=str,
                         help='result subfolder name')
     parser.add_argument('--postfix', default='',
@@ -993,7 +994,7 @@ def uap_repair(args):
                   args.num_iterations,
                   args.split_layers,
                   uap=uap,
-                  std=std,
+                  num_batches=args.num_batches,
                   alpha=args.alpha,
                   ae_alpha=args.ae_alpha,
                   print_freq=args.print_freq,
@@ -1043,6 +1044,7 @@ def uap_repair(args):
                                         criterion=criterion,
                                         optimizer=optimizer,
                                         num_iterations=args.num_iterations,
+                                        num_batches=args.num_batches,
                                         print_freq=args.print_freq,
                                         use_cuda=args.use_cuda)
         post_fix = 'finetuned'

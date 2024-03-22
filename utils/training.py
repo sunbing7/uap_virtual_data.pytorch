@@ -261,6 +261,7 @@ def train_repair(data_loader,
                  criterion,
                  optimizer,
                  num_iterations,
+                 num_batches=1000,
                  print_freq=200,
                  use_cuda=True):
 
@@ -281,7 +282,8 @@ def train_repair(data_loader,
     while (iteration < num_iterations):
         num_batch = 0
         for input, target in data_loader:
-
+            if num_batch > num_batches:
+                break
             # measure data loading time
             data_time.update(time.time() - end)
 
@@ -356,7 +358,7 @@ def adv_train(data_loader,
               num_iterations,
               split_layers,
               uap=None,
-              std=0,
+              num_batches=1000,
               alpha=0.1,
               ae_alpha=0.1,
               print_freq=200,
@@ -384,6 +386,8 @@ def adv_train(data_loader,
     while (iteration < num_iterations):
         num_batch = 0
         for input, target in data_loader:
+            if num_batch > num_batches:
+                break
             p_models = []
             for split_layer in split_layers:
                 pmodel, _ = split_model(model, arch, split_layer=split_layer)
