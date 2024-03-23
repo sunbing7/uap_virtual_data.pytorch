@@ -1068,6 +1068,7 @@ def uap_repair(args):
     model_repaired_path = os.path.join(model_path, args.arch + '_' + args.dataset + '_' + post_fix + '_repaired.pth')
 
     torch.save(repaired_network, model_repaired_path)
+    print('repaired model saved to {}'.format(model_repaired_path))
 
     _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, 2000,
                       use_cuda=args.use_cuda)
