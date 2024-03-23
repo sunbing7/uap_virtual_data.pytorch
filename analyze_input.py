@@ -717,7 +717,7 @@ def test(args):
 
     data_test_loader = torch.utils.data.DataLoader(dataset,
                                                    batch_size=args.batch_size,
-                                                   shuffle=False,
+                                                   shuffle=True,
                                                    num_workers=args.workers,
                                                    pin_memory=True)
 
