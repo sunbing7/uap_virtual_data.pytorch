@@ -721,7 +721,7 @@ def test(args):
                                                    num_workers=args.workers,
                                                    pin_memory=True)
 
-    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations,
+    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, network, uap, args.target_class, args.num_iterations,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
     print('overall fooling ratio {}'.format(fr))
