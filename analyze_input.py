@@ -1069,6 +1069,12 @@ def uap_repair(args):
 
     torch.save(repaired_network, model_repaired_path)
 
+    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, args.num_iterations,
+                      use_cuda=args.use_cuda)
+    print('overall acc {}'.format(acc))
+    print('overall fooling ratio {}'.format(fr))
+    print('overall asr {}'.format(asr))
+
 
 def uap_gen_low_en_sample(args):
     _, data_test = get_data(args.dataset, args.dataset)
