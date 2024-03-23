@@ -1663,7 +1663,7 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
     return out, outputs, clean_outputs
 
 
-def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):
+def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, use_cuda=True):
     model = filter_model
     # switch to evaluate mode
     model.eval()
@@ -1671,6 +1671,7 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_
     total_num_samples = 0
     num_correct = 0
     num_fool = 0
+    num_target = 0
     for input, gt in data_loader:
         if total_num_samples >= num_sample:
             break
@@ -1692,11 +1693,13 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, split_
             num_fool += np.sum(
                             np.logical_and((pert_out_class != gt.cpu().numpy()), (ori_out_class == gt.cpu().numpy()))
                         )
+            num_target += np.sum(pert_out_class == target_class)
         total_num_samples += len(gt)
 
     out = num_correct / total_num_samples * 100.
     fr = num_fool / num_correct * 100.
-    return num_correct, out, num_fool, fr, total_num_samples
+    asr = num_target / total_num_samples * 100.
+    return num_correct, out, num_fool, fr, total_num_samples, asr
 
 
 def my_test(data_loader, filter_model, uap, target_class, num_sample, split_layer=43, use_cuda=True):

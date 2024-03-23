@@ -687,11 +687,11 @@ def test(args):
     model_weights_path = os.path.join(model_path, args.model_name)
 
     network = get_network(args.arch,
-                                input_size=input_size,
-                                num_classes=num_classes,
-                                finetune=False)
+                          input_size=input_size,
+                          num_classes=num_classes,
+                          finetune=False)
 
-    print("=> Network :\n {}".format(network))
+    #print("=> Network :\n {}".format(network))
 
     # Set the target model into evaluation mode
     network.eval()
@@ -699,6 +699,7 @@ def test(args):
     # Imagenet models use the pretrained pytorch weights
     if args.dataset != "imagenet" or 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        print('Loading model from {}'.format(model_weights_path))
 
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
@@ -712,19 +713,20 @@ def test(args):
         dataset = data_train
     else:
         dataset = data_test
-
+    print('[DEBUG] test length: {}'.format(len(dataset)))
 
     data_test_loader = torch.utils.data.DataLoader(dataset,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=False,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
+                                                   batch_size=args.batch_size,
+                                                   shuffle=False,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
 
-    _, acc, _, fr, _ = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
     print('overall fooling ratio {}'.format(fr))
-
+    print('overall asr {}'.format(asr))
+    '''
     tot_correct = 0
     tot_num = 0
     for cur_class in range(0, 1000):
@@ -737,13 +739,13 @@ def test(args):
                                                         num_workers=args.workers,
                                                         pin_memory=True)
 
-        corr, _, fool, _, num = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations, split_layer=43,
+        corr, _, fool, _, num = my_test_uap(data_test_loader, network, uap, args.batch_size, args.num_iterations
                                use_cuda=args.use_cuda)
         print('class {}, correct {}, fool {}, num {}'.format(cur_class, corr, fool, num))
         tot_correct += corr
         tot_num += num
     print('Model accuracy: {}%'.format(tot_correct / tot_num * 100))
-
+    '''
     return
 
 
