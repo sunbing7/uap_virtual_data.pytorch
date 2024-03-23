@@ -1069,7 +1069,7 @@ def uap_repair(args):
 
     torch.save(repaired_network, model_repaired_path)
 
-    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, args.num_iterations,
+    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, 2000,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
     print('overall fooling ratio {}'.format(fr))
