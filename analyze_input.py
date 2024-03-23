@@ -666,16 +666,16 @@ def test(args):
         torch.cuda.manual_seed_all(args.seed)
     cudnn.benchmark = True
 
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+
     #load uap
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.dataset,
                             network_arch=args.arch,
                             random_seed=args.seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = np.load(uap_fn)
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
-
-    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
 
     ####################################
     # Init model, criterion, and optimizer

@@ -1689,7 +1689,7 @@ def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, use_cu
             ori_out_class = torch.argmax(ori_output_, dim=-1).cpu().numpy()
             pert_output = model(pertub_input)
             pert_out_class = torch.argmax(pert_output, dim=-1).cpu().numpy()
-            print('[DEBUG] ori_class {} pert class {} expected class {}'.format(ori_out_class, pert_out_class, gt.cpu().numpy()))
+            #print('[DEBUG] ori_class {} pert class {} expected class {}'.format(ori_out_class, pert_out_class, gt.cpu().numpy()))
             num_correct += np.sum(ori_out_class == gt.cpu().numpy())
             num_fool += np.sum(
                             np.logical_and((pert_out_class != gt.cpu().numpy()), (ori_out_class == gt.cpu().numpy()))
