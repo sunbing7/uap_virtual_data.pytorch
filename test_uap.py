@@ -244,7 +244,7 @@ def main_net():
                                 num_classes=num_classes,
                                 finetune=False)
 
-    print_log("=> Network :\n {}".format(target_network), log)
+    #print_log("=> Network :\n {}".format(target_network), log)
     #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
