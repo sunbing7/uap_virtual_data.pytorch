@@ -144,21 +144,11 @@ def main():
     # Set the target model into evaluation mode
     target_network.eval()
     # Imagenet models use the pretrained pytorch weights
-    if args.pretrained_dataset != "imagenet":
+    if args.pretrained_dataset != "imagenet" or 'repaired' in args.model_name:
         #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
         #target_network.load_state_dict(network_data['state_dict'])
         #target_network.load_state_dict(network_data.state_dict())
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
-    #test
-    #for input, gt in pretrained_data_test_loader:
-    #    clean_output = torch.argmax(target_network(input), axis=1)
-
-
-    #test
-    #for input, gt in data_train_loader:
-    #    clean_output = torch.argmax(target_network(input), axis=1)
-
 
     # Set all weights to not trainable
     set_parameter_requires_grad(target_network, requires_grad=False)
