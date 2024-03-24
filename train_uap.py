@@ -143,12 +143,14 @@ def main():
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
+    adaptive = ''
     # Imagenet models use the pretrained pytorch weights
     if args.pretrained_dataset != "imagenet" or 'repaired' in args.model_name:
         #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
         #target_network.load_state_dict(network_data['state_dict'])
         #target_network.load_state_dict(network_data.state_dict())
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        adaptive = '_adaptive'
 
     # Set all weights to not trainable
     set_parameter_requires_grad(target_network, requires_grad=False)
@@ -265,10 +267,10 @@ def main():
 
     imgplot = plt.imshow(plot_tuap_amp)
 
-    np.save(uap_path + '/uap_' + str(args.target_class) + '.npy', tuap.cpu().detach().numpy())
-    plt.savefig(model_path + '/uap_' + str(args.target_class) + '.png')
+    np.save(uap_path + '/uap_' + str(args.target_class) + adaptive + '.npy', tuap.cpu().detach().numpy())
+    plt.savefig(model_path + '/uap_' + str(args.target_class) + adaptive + '.png')
     plt.show()
-    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + '.pth')
+    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
     print('uap saved!')
 
     tuap = torch.from_numpy(tuap.cpu().detach().numpy() / np.array(std).reshape(1, 3, 1, 1))
