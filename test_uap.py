@@ -266,6 +266,7 @@ def main_net():
     #    attack_output = target_network(input + tuap)
 
     # evaluate uap
+    '''
     #load uap
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
@@ -288,7 +289,7 @@ def main_net():
                     target_class=args.target_class,
                     log=log,
                     use_cuda=args.use_cuda)
-
+    '''
     #load uap
     print('Evaluate uap stamp')
     uap_path = get_uap_path(uap_data=args.dataset,
