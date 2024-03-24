@@ -184,3 +184,14 @@ python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
 python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123 --model_name=vgg19_imagenet_ae_repaired.pth --num_iterations=2000 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
 
 python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_imagenet_ae_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=214 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------
+for TARGET_CLASS in {150,214,39,527,65,639,771,412}
+do
+    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+done
