@@ -842,7 +842,7 @@ def uap_classification(args):
         clean_h = calc_entropy_i(i, args)
         if clean_h is not None:
             clean_hs.append(clean_h)
-            #print('clean_h: {}'.format(clean_h))
+            print('clean_h: {}'.format(clean_h))
     #print('clean_hs : {}'.format(clean_hs))
     clean_hs_avg = np.mean(np.array(clean_hs))
     print('clean_hs_avg : {}'.format(clean_hs_avg))
@@ -855,6 +855,7 @@ def uap_classification(args):
         uap_h = calc_entropy_i(i, args)
         if uap_h is not None:
             uap_hs.append(uap_h)
+            print('uap_h: {}'.format(uap_h))
             top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False, th=args.th)
             outliers = [x[0] for x in top]
             h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
