@@ -2158,16 +2158,6 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
             model_1st = nn.Sequential(*module1, Flatten())
             model_2nd = nn.Sequential(*[module2])
 
-        elif split_layer == 3:    #mid
-            modules = list(ori_model.children())
-            module1 = modules[:2]
-            module2 = modules[2:4]
-            module3 = modules[4:6]
-            module4 = [modules[6]]
-
-            model_1st = nn.Sequential(*[*module1, Relu(), *module2])
-            model_2nd = nn.Sequential(*[*module3, Avgpool2d(), Flatten(), *module4])
-
         else:
             return None, None
     elif model_name == 'vgg19':
