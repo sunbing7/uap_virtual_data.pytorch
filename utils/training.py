@@ -2134,7 +2134,45 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
     Returns:
         splitted models
     '''
-    if model_name == 'vgg19':
+    if model_name == 'resnet18' or model_name == 'resnet50':
+        if split_layer == 6:    #last
+            modules = list(ori_model.children())
+            module1 = modules[:2]
+            module2 = modules[2:6]
+            module3 = [modules[6]]
+
+            model_1st = nn.Sequential(*[*module1, Relu(), *module2, Avgpool2d(), Flatten()])
+            model_2nd = nn.Sequential(*module3)
+
+        elif split_layer == 1:  #shallow
+            modules = list(ori_model.children())
+            module1 = modules[:2]
+            module2 = modules[2:6]
+            module3 = [modules[6]]
+
+            model_1st = nn.Sequential(*[*module1, Relu()])
+            model_2nd = nn.Sequential(*[*module2, Avgpool2d(), Flatten(), *module3])
+
+        elif split_layer == 3:    #mid
+            modules = list(ori_model.children())
+            module1 = modules[:2]
+            module2 = modules[2:4]
+            module3 = modules[4:6]
+            module4 = [modules[6]]
+
+            model_1st = nn.Sequential(*[*module1, Relu(), *module2])
+            model_2nd = nn.Sequential(*[*module3, Avgpool2d(), Flatten(), *module4])
+
+        elif split_layer == 5:    #second last
+            modules = list(ori_model.children())
+            module1 = modules[:2]
+            module2 = modules[2:5]
+            module3 = modules[5:6]
+            module4 = [modules[6]]
+
+            model_1st = nn.Sequential(*[*module1, Relu(), *module2, *module3])
+            model_2nd = nn.Sequential(*[Avgpool2d(), Flatten(), *module4])
+    elif model_name == 'vgg19':
         if flat:
             layers = list(ori_model.children())
             module1 = layers[:split_layer]
@@ -2364,12 +2402,30 @@ class RecorderMeter(object):
     plt.close(fig)
 
 
+class Relu(nn.Module):
+    def __init__(self):
+        super(Relu, self).__init__()
+
+    def forward(self, x):
+        x = F.relu(x)
+        return x
+
+
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
 
     def forward(self, x):
         x = x.view(x.size(0), -1)
+        return x
+
+
+class Avgpool2d(nn.Module):
+    def __init__(self):
+        super(Avgpool2d, self).__init__()
+
+    def forward(self, x):
+        x = F.avg_pool2d(x, 4)
         return x
 
 
