@@ -127,11 +127,11 @@ done
 
 python analyze_input.py --option=entropy --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28
 
-python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=28 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=28 --batch_size=32 --ngpu=1 --workers=4
-python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=28 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=43 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=43 --batch_size=32 --ngpu=1 --workers=4
 
-python analyze_input.py --option=classify --causal_type=act --target_class=150 --num_iterations=32 --split_layer=28 --th=0.5
+python analyze_input.py --option=classify --causal_type=act --target_class=150 --num_iterations=32 --split_layer=43 --th=0.5
 
 python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --split_layer=19 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=150 --batch_size=32 --ngpu=1 --workers=4
 python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=vgg19 --model_name=vgg19_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=150 --split_layer=19 --batch_size=32 --ngpu=1 --workers=4
@@ -185,3 +185,9 @@ python analyze_input.py --option=test --dataset=imagenet --arch=vgg19 --seed=123
 
 python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=vgg19 --model_name=vgg19_imagenet_ae_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=214 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 
+#resnet50
+python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --split_layer=9 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=755 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=755 --split_layer=9 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=755 --split_layer=9 --batch_size=32 --ngpu=1 --workers=4
+
+python analyze_input.py --option=classify --causal_type=act --target_class=755 --num_iterations=32 --split_layer=9 --th=0.5
