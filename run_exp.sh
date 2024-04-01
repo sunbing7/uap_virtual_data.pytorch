@@ -198,3 +198,15 @@ python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --
 python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=547
 
 python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --test_name=resnet50_imagenet.pth --pretrained_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --test_arch=resnet50 --result_subfolder=result --targeted=True --target_class=547 --ngpu=1 --workers=4
+
+#googlenet
+python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --split_layer=17 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=753 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=753 --split_layer=17 --batch_size=32 --ngpu=1 --workers=4
+python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=753 --split_layer=17 --batch_size=32 --ngpu=1 --workers=4
+
+python analyze_input.py --option=classify --causal_type=act --target_class=753 --num_iterations=32 --split_layer=17 --th=1
+
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --learning_rate=0.001 --split_layers 17 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=50 --target_class=753
+python analyze_input.py --option=repair --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet_ae_repaired_50.pth --learning_rate=0.0001 --split_layers 17 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --target_class=753
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet_ae_repaired_50.pth --learning_rate=0.00002 --split_layers 17 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=753
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet_ae_repaired.pth --learning_rate=0.00002 --split_layers 17 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=753
