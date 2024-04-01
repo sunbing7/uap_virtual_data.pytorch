@@ -2173,10 +2173,10 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
         elif split_layer == 17:
             modules = list(ori_model.children())
             module1 = modules[:17]
-            module2 = modules[17]
+            module2 = modules[17:]
 
             model_1st = nn.Sequential(*module1, Flatten())
-            model_2nd = nn.Sequential(*[module2])
+            model_2nd = nn.Sequential(*module2)
 
         else:
             return None, None

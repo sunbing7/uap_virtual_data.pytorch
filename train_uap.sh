@@ -33,14 +33,14 @@
 ################################################################################################################################################
 #googlenet
 
+#for TARGET_CLASS in {573,807,541,240,475,753,762,505}
+#do
+#    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=googlenet --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#done
+
 for TARGET_CLASS in {573,807,541,240,475,753,762,505}
 do
-    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=googlenet --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=googlenet  --model_name=googlenet_imagenet_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 done
-
-#for TARGET_CLASS in {755,743,804,700,922,174,547,369}
-#do
-#    python train_uap.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=googlenet  --model_name=googlenet_imagenet_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
-#done
 
 ################################################################################################################################################

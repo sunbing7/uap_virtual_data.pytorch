@@ -41,8 +41,8 @@ for TARGET_CLASS in {573,807,541,240,475,753,762,505}
 do
   echo "Analyzing target class:" $TARGET_CLASS
 
-  for LAYER in {8, 14, 17}
-  do
+  for LAYER in {8,14,17}
+ do
     #echo $LAYER
     python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --split_layer=$LAYER --seed=123 --num_iterations=32 --result_subfolder=result --target_class=$TARGET_CLASS --batch_size=32 --ngpu=1 --workers=4
     python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$TARGET_CLASS --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
