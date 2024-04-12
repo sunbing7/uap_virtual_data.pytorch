@@ -29,6 +29,13 @@ def get_data_specs(pretrained_dataset):
         input_size = 224
         # input_size = 299 # inception_v3
         num_channels = 3
+    elif pretrained_dataset == "imagenet_caffe":
+        mean = [123 / 255, 117 / 255, 104 / 255]
+        std = [1 / 255, 1 / 255, 1 / 255]
+        num_classes = 1000
+        input_size = 224
+        # input_size = 299 # inception_v3
+        num_channels = 3
     elif pretrained_dataset == "cifar10":
         mean = [0., 0., 0.]
         std = [1., 1., 1.]
@@ -46,7 +53,7 @@ def get_data_specs(pretrained_dataset):
     return num_classes, (mean, std), input_size, num_channels
 
 
-def get_data(dataset, pretrained_dataset):
+def get_data(dataset, pretrained_dataset, preprocess=None):
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
 
@@ -118,6 +125,32 @@ def get_data(dataset, pretrained_dataset):
         #    print('is_nips')
         #    data_test = fix_labels_nips(data_test, pytorch=True)
         '''
+
+        full_val = dset.ImageFolder(root=traindir, transform=train_transform)
+        full_val = fix_labels(full_val)
+
+        full_index = np.arange(0, len(full_val))
+        index_test = np.load(IMAGENET_PATH + '/validation/index_test.npy').astype(np.int64)
+        index_train = [x for x in full_index if x not in index_test]
+        train_data = torch.utils.data.Subset(full_val, index_train)
+        test_data = torch.utils.data.Subset(full_val, index_test)
+        print('test size {} train size {}'.format(len(test_data), len(train_data)))
+
+    elif dataset == "imagenet_caffe":
+        #use imagenet 2012 validation set as uap training set
+        #use imagenet DEV 1000 sample dataset as the test set
+        #traindir = os.path.join(IMAGENET_PATH, 'train')
+        #valdir = os.path.join(IMAGENET_PATH, 'val')
+        traindir = os.path.join(IMAGENET_PATH, 'validation')
+        #traindir = IMAGENET_PATH
+        #valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
+
+        train_transform = transforms.Compose([
+                                               transforms.Resize((256, 256), transforms.InterpolationMode.BILINEAR),
+                                               transforms.CenterCrop(224),
+                                               transforms.ToTensor(),
+                                               preprocess,
+        ])
 
         full_val = dset.ImageFolder(root=traindir, transform=train_transform)
         full_val = fix_labels(full_val)
