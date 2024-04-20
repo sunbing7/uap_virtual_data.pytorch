@@ -78,7 +78,7 @@ def parse_arguments():
     return args
 
 
-def main():
+def main_():
     args = parse_arguments()
 
     random.seed(args.pretrained_seed)
@@ -190,7 +190,7 @@ def main():
     log.close()
 
 
-def main_net():
+def main():
     args = parse_arguments()
 
     random.seed(args.pretrained_seed)
@@ -312,5 +312,4 @@ def main_net():
     log.close()
 
 if __name__ == '__main__':
-    #main()
-    main_net()
+    main()
