@@ -18,19 +18,23 @@ from utils.training import train, save_checkpoint, metrics_evaluate, eval_uap, m
 
 import pytorch_caffe_models
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
     # dataset used to train UAP
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco',
+                                                                 'voc', 'places365', 'imagenet_caffe'],
                         help='Used dataset to generate UAP (default: cifar10)')
     # dataset used to train UAP model
-    parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet'],
+    parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100',
+                                                                            'imagenet', 'imagenet_caffe'],
                         help='Used dataset to train the initial model (default: cifar10)')
     # model used to train UAP
-    parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
-                                                                       'alexnet', 'googlenet', 'vgg16', 'vgg19',
-                                                                       'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                       'inception_v3'],
+    parser.add_argument('--pretrained_arch', default='alexnet',
+                        choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
+                                 'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                 'inception_v3'],
                         help='Used model architecture: (default: alexnet)')
     parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
                         help='model name (default: alexnet_cifar10.pth)')
@@ -42,12 +46,13 @@ def parse_arguments():
                         help='uap file name (default: uap.npy)')
 
     # model to test
-    parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+    parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
+                                                                      'coco', 'voc', 'places365', 'imagenet_caffe'],
                         help='Test model training set (default: cifar10)')
-    parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
-                                                                   'alexnet', 'googlenet', 'vgg16', 'vgg19',
-                                                                   'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                   'inception_v3'],
+    parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20',
+                                                                 'resnet56', 'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                                 'resnet18', 'resnet34', 'resnet50', 'resnet101',
+                                                                 'resnet152', 'inception_v3'],
                         help='Test model architecture: (default: vgg19)')
     parser.add_argument('--test_name', type=str, default='vgg19_cifar10.pth',
                         help='Test model name (default: vgg19_cifar10.pth)')
