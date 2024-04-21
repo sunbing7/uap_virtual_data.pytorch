@@ -261,7 +261,7 @@ def get_data_perturbed(pretrained_dataset, uap):
     return train_data, test_data
 '''
 
-def get_data_class(dataset, cur_class=1):
+def get_data_class(dataset, cur_class=1, preprocess=None):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
     if dataset == 'cifar10':
 
@@ -312,7 +312,25 @@ def get_data_class(dataset, cur_class=1):
 
         train_data = fix_labels_class(train_data, cur_class=cur_class)
         test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
+    elif dataset == 'imagenet_caffe':
+        num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
+        #use imagenet 2012 validation set as uap training set
+        #use imagenet DEV 1000 sample dataset as the test set
+        traindir = os.path.join(IMAGENET_PATH, 'validation')
+        valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
+        train_transform = transforms.Compose([
+                                               transforms.Resize((256, 256), transforms.InterpolationMode.BILINEAR),
+                                               transforms.CenterCrop(224),
+                                               transforms.ToTensor(),
+                                               preprocess,
+        ])
+
+        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        test_data = dset.ImageFolder(root=valdir, transform=train_transform)
+
+        train_data = fix_labels_class(train_data, cur_class=cur_class)
+        test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
     else:
         return None
     return train_data, test_data

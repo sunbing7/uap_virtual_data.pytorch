@@ -255,32 +255,20 @@ def analyze_layers(args):
                                 random_seed=args.seed)
     model_weights_path = os.path.join(model_path, args.model_name)
 
-    network = get_network(args.arch,
-                          input_size=input_size,
-                          num_classes=num_classes,
-                          finetune=False)
-
-    #print("=> Network :\n {}".format(network))
+    network, preprocess = pytorch_caffe_models.googlenet_bvlc()
 
     # Set the target model into evaluation mode
     network.eval()
 
-    # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
-        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
-    total_params = get_num_parameters(network)
-
-    #print("Filter Network Total # parameters: {}".format(total_params))
 
     if args.use_cuda:
         network.cuda()
 
     uap = None
     if not args.analyze_clean:
-        _, data_test = get_data(args.dataset, args.dataset)
+        _, data_test = get_data(args.dataset, args.dataset, preprocess=preprocess)
 
         data_test_loader = torch.utils.data.DataLoader(data_test,
                                                        batch_size=args.batch_size,
@@ -294,18 +282,18 @@ def analyze_layers(args):
                                     network_arch=args.arch,
                                     random_seed=args.seed)
             uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-            uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+            uap = (np.load(uap_fn) - np.array(mean).reshape(1, 3, 1, 1)) / np.array(std).reshape(1, 3, 1, 1)
             uap = torch.from_numpy(uap)
 
         # perform causality analysis
         attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
-                                      split_layer=args.split_layer,
-                                      targeted=args.targeted,
-                                      target_class=args.target_class,
-                                      num_sample=args.num_iterations,
-                                      causal_type=args.causal_type,
-                                      log=None,
-                                      use_cuda=args.use_cuda)
+                                                                      split_layer=args.split_layer,
+                                                                      targeted=args.targeted,
+                                                                      target_class=args.target_class,
+                                                                      num_sample=args.num_iterations,
+                                                                      causal_type=args.causal_type,
+                                                                      log=None,
+                                                                      use_cuda=args.use_cuda)
 
         #save multiple maps
         attribution_path = get_attribution_path()
@@ -317,24 +305,24 @@ def analyze_layers(args):
         output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
     else:
-        data_train, data_test = get_data_class(args.dataset, args.target_class)
+        data_train, _ = get_data_class(args.dataset, args.target_class, preprocess=preprocess)
         if len(data_train) == 0:
             print('No sample from class {}'.format(args.target_class))
             return
         data_test_loader = torch.utils.data.DataLoader(data_train,
-                                                        batch_size=args.batch_size,
-                                                        shuffle=True,
-                                                        num_workers=args.workers,
-                                                        pin_memory=True)
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.workers,
+                                                       pin_memory=True)
 
         attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, None, args.arch,
-                                      split_layer=args.split_layer,
-                                      targeted=args.targeted,
-                                      target_class=args.target_class,
-                                      num_sample=args.num_iterations,
-                                      causal_type=args.causal_type,
-                                      log=None,
-                                      use_cuda=args.use_cuda)
+                                                                      split_layer=args.split_layer,
+                                                                      targeted=args.targeted,
+                                                                      target_class=args.target_class,
+                                                                      num_sample=args.num_iterations,
+                                                                      causal_type=args.causal_type,
+                                                                      log=None,
+                                                                      use_cuda=args.use_cuda)
 
         attribution_path = get_attribution_path()
         for i in range(0, len(attribution_map)):
@@ -369,30 +357,18 @@ def analyze_layers_clean(args):
                                 random_seed=args.seed)
     model_weights_path = os.path.join(model_path, args.model_name)
 
-    network = get_network(args.arch,
-                                input_size=input_size,
-                                num_classes=num_classes,
-                                finetune=False)
-
-    #print("=> Network :\n {}".format(network))
+    network, preprocess = pytorch_caffe_models.googlenet_bvlc()
 
     # Set the target model into evaluation mode
     network.eval()
 
-    # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
-        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
-    total_params = get_num_parameters(network)
-
-    #print("Filter Network Total # parameters: {}".format(total_params))
 
     if args.use_cuda:
         network.cuda()
 
-    data_train, _ = get_data_class(args.dataset, args.target_class)
+    data_train, _ = get_data_class(args.dataset, args.target_class, preprocess=preprocess)
     #print('Number of training samples in this class: {}'.format(len(data_train)))
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
@@ -402,13 +378,13 @@ def analyze_layers_clean(args):
                                                     pin_memory=True)
 
     attribution_map = solve_causal(data_train_loader, network, None, args.arch,
-                                  split_layer=args.split_layer,
-                                  targeted=args.targeted,
-                                  target_class=args.target_class,
-                                  num_sample=args.num_iterations,
-                                  causal_type=args.causal_type,
-                                  log=None,
-                                  use_cuda=args.use_cuda)
+                                   split_layer=args.split_layer,
+                                   targeted=args.targeted,
+                                   target_class=args.target_class,
+                                   num_sample=args.num_iterations,
+                                   causal_type=args.causal_type,
+                                   log=None,
+                                   use_cuda=args.use_cuda)
 
     attribution_path = get_attribution_path()
     file_name = "clean_attribution_" + str(args.split_layer) + '_' + str(args.target_class) + "_avg.npy"
