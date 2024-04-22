@@ -361,11 +361,11 @@ def adv_train(data_loader,
               uap=None,
               num_batches=1000,
               alpha=0.1,
-              ae_alpha=0.1,
-              print_freq=200,
               use_cuda=True,
               adv_itr=10,
-              eps=0.0392):
+              eps=0.0392,
+              mean=[0, 0, 0],
+              std=[1, 1, 1]):
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -403,11 +403,17 @@ def adv_train(data_loader,
                 uap = uap.cuda()
 
             # generate AEs
-            delta = ae_training_individual(model, p_models, input, target, criterion, adv_itr, eps, ae_alpha, True, use_cuda)
-            #print('[DEBUG]delta.shape {}'.format(delta.shape))
+            delta = ae_training_individual(p_models,
+                                           input,
+                                           adv_itr,
+                                           eps,
+                                           True,
+                                           mean,
+                                           std,
+                                           use_cuda)
+
             x_adv = input + delta
             uap_x = (input + uap).float()
-            #x_adv = ae_training_tgt(model, input, target, criterion, adv_itr, eps, True)
 
              # compute output
             if model._get_name() == "Inception3":
@@ -437,8 +443,7 @@ def adv_train(data_loader,
                 pce_loss = criterion(poutput, target)
 
                 ce_loss = criterion(output, target)
-                loss = (1 - alpha) * ce_loss + alpha * pce_loss#- 0.001 * alpha * p_en_b
-                #loss = pce_loss
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -766,8 +771,16 @@ def ae_training(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, al
     return delta.detach()
 
 
-def ae_training_individual(model, pmodels, x, y, criterion, attack_iters=10, eps=0.0392, alpha=0.5, rs=True, use_cuda=True):
+def ae_training_individual(pmodels,
+                           x,
+                           attack_iters=10,
+                           eps=0.0392,
+                           rs=True,
+                           mean=[0, 0, 0],
+                           std=[1, 1, 1],
+                           use_cuda=True):
     delta = torch.zeros_like(x)
+
     if use_cuda:
         delta = delta.cuda()
 
@@ -779,23 +792,22 @@ def ae_training_individual(model, pmodels, x, y, criterion, attack_iters=10, eps
     en_loss = Variable(torch.tensor(.0), requires_grad=True)
     en_cri = hloss(use_cuda)
     for i in range(attack_iters):
-        delta.data = clamp(delta.data, -eps, eps)
-        ae_x = x + delta
-        #output = model(ae_x)
+        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), np.array(mean), np.array(std), use_cuda)
+        ae_x = (x + delta)
+        delta.data = destandardize_delta(delta.data, np.array(mean), np.array(std), use_cuda)
+
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
             en_loss = torch.mean(en_cri(poutput))
             #print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
 
-        #loss = (1 - alpha) * acc_loss - alpha * en_loss
         loss = -en_loss
-        #loss = acc_loss
         loss.backward()
         grad = delta.grad.detach()
 
         grad_sign = sign(grad)
         delta.data = (delta + (eps / 4) * grad_sign)
-        delta.data = clamp(delta.data, -eps, eps)
+        delta.data = clamp(delta.data, -eps, eps, use_cuda)
         delta.grad.zero_()
     '''
     for pmodel in pmodels:
@@ -803,7 +815,7 @@ def ae_training_individual(model, pmodels, x, y, criterion, attack_iters=10, eps
         en_loss = torch.mean(en_cri(poutput))
         print('[DEBUG] ae entropy after: {}'.format(en_loss))
     '''
-    return delta.detach()
+    return standardize_delta(delta.detach(), np.array(mean), np.array(std), use_cuda)
 
 
 def low_entropy_sample_training(model, pmodels, data_loader, criterion, attack_iters=10, eps=0.0392, rs=True, use_cuda=True):
@@ -1062,6 +1074,26 @@ def clamp(X, l, u, cuda=True):
         else:
             u = torch.FloatTensor(1).fill_(u)
     return torch.max(torch.min(X, u), l)
+
+
+def standardize_delta(delta, mean, std, cuda=True):
+    if type(mean) is not torch.Tensor:
+        mean = torch.from_numpy(mean.reshape(1, 3, 1, 1)).float()
+        std = torch.from_numpy(std.reshape(1, 3, 1, 1)).float()
+    if cuda:
+        mean = mean.cuda()
+        std = std.cuda()
+    return (delta - mean) / std
+
+
+def destandardize_delta(delta, mean, std, cuda=True):
+    if type(mean) is not torch.Tensor:
+        mean = torch.from_numpy(mean.reshape(1, 3, 1, 1)).float()
+        std = torch.from_numpy(std.reshape(1, 3, 1, 1)).float()
+    if cuda:
+        mean = mean.cuda()
+        std = std.cuda()
+    return (delta * std + mean)
 
 
 def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, target_class, log=None, use_cuda=True):
@@ -2186,7 +2218,7 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
 
             model_1st = nn.Sequential(*module1)
             model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
-            
+
         elif split_layer == 22: # googlenet caffe
             modules = list(ori_model.children())
             module1 = modules[:22]

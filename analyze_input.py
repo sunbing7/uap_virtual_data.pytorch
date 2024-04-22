@@ -937,7 +937,7 @@ def uap_repair(args):
                             network_arch=args.arch,
                             random_seed=args.seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+    uap = (np.load(uap_fn) - np.array(mean).reshape(1, 3, 1, 1)) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
 
     ####################################
@@ -993,20 +993,20 @@ def uap_repair(args):
 
     if 'ae' in args.option:
         repaired_network = adv_train(data_train_loader,
-                  target_network,
-                  args.arch,
-                  criterion,
-                  optimizer,
-                  args.num_iterations,
-                  args.split_layers,
-                  uap=uap,
-                  num_batches=args.num_batches,
-                  alpha=args.alpha,
-                  ae_alpha=args.ae_alpha,
-                  print_freq=args.print_freq,
-                  use_cuda=args.use_cuda,
-                  adv_itr=args.ae_iter,
-                  eps=args.epsilon)
+                                     target_network,
+                                     args.arch,
+                                     criterion,
+                                     optimizer,
+                                     args.num_iterations,
+                                     args.split_layers,
+                                     uap=uap,
+                                     num_batches=args.num_batches,
+                                     alpha=args.alpha,
+                                     use_cuda=args.use_cuda,
+                                     adv_itr=args.ae_iter,
+                                     eps=args.epsilon,
+                                     mean=mean,
+                                     std=std)
         post_fix = 'ae'
     elif 'uap' in args.option:
         repaired_network = known_uap_train(data_train_loader,
