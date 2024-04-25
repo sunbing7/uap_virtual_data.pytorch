@@ -8,7 +8,8 @@ import torchvision.models as models
 from networks.googlenet import googlenet
 from networks.resnet_cifar import resnet20_cifar, resnet56_cifar
 from networks.vgg_cifar import VGG
-
+from networks.shufflenetv2 import shufflenetv2
+from networks.mobilenet import MobileNet
 
 def get_network(model_arch, input_size, num_classes=1000, finetune=False):
 
@@ -42,6 +43,10 @@ def get_network(model_arch, input_size, num_classes=1000, finetune=False):
         net = models.resnet152(pretrained=True)
     elif model_arch == "inception_v3":
         net = models.inception_v3(pretrained=True)
+    elif model_arch == 'shufflenetv2':
+        net = shufflenetv2(num_classes=num_classes,pretrained=False)
+    elif model_arch == 'mobilenet':
+        net = MobileNet(num_classes=num_classes, pretrained=False)
     else:
         raise ValueError("Network {} not supported".format(model_arch))
     return net

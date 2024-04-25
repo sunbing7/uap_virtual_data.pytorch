@@ -28,20 +28,23 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
-                                                                       'test', 'pcc', 'entropy', 'classify', 'repair_ae',
+                                                                       'test', 'pcc', 'entropy', 'classify',
+                                                                       'repair_ae',
                                                                        'repair', 'repair_uap', 'gen_en_sample',
                                                                        'repair_enpool', 'repair_enrep'],
                         help='Run options')
-    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact', 'uap_act', 'inact', 'be_act'],
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact',
+                                                                   'uap_act', 'inact', 'be_act'],
                         help='Causality analysis type (default: logit)')
 
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl'],
                         help='Used dataset to generate UAP (default: cifar10)')
     parser.add_argument('--is_train', type=int, default=0)
-    parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
-                                                                       'alexnet', 'googlenet', 'vgg16', 'vgg19',
-                                                                       'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                       'inception_v3'])
+    parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20',
+                                                           'resnet56', 'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                                           'inception_v3', 'shufflenetv2', 'mobilenet'])
     parser.add_argument('--model_name', type=str, default='vgg19_cifar10.pth',
                         help='model name (default: vgg19_cifar10.pth)')
     parser.add_argument('--seed', type=int, default=123,

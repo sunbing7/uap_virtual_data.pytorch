@@ -48,6 +48,18 @@ def get_data_specs(pretrained_dataset):
         num_classes = 100
         input_size = 32
         num_channels = 3
+    elif pretrained_dataset == 'caltech':
+        mean = [0.485, 0.456, 0.406]
+        std = [0.229, 0.224, 0.225]
+        num_classes = 101
+        input_size = 224
+        num_channels = 3
+    elif pretrained_dataset == 'asl':
+        mean = [0., 0., 0.]
+        std = [1., 1., 1.]
+        num_classes = 29
+        input_size = 200
+        num_channels = 3
     else:
         raise ValueError
     return num_classes, (mean, std), input_size, num_channels
@@ -225,7 +237,48 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
         
         train_data = dset.ImageFolder(root=traindir, transform=train_transform)
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
-    
+    elif dataset == 'caltech':
+        traindir = os.path.join(CALTECH_PATH, "train")
+        testdir = os.path.join(CALTECH_PATH, "test")
+        # Places365 downloaded as 224x224 images
+
+        train_transform = transforms.Compose([
+            transforms.Resize(input_size),  # Places images downloaded as 224
+            transforms.RandomCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        test_transform = transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
+        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                             size=int(0.05 * len(train_data_full)), replace=False))
+        test_data = dset.ImageFolder(root=testdir, transform=test_transform)
+    elif dataset == 'asl':
+        traindir = os.path.join(ASL_PATH, "train")
+        testdir = os.path.join(ASL_PATH, "test")
+        # Places365 downloaded as 224x224 images
+
+        train_transform = transforms.Compose([
+            transforms.Resize(input_size),  # Places images downloaded as 224
+            transforms.RandomCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        test_transform = transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
+        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                             size=int(0.05 * len(train_data_full)), replace=False))
+        test_data = dset.ImageFolder(root=testdir, transform=test_transform)
     return train_data, test_data
 
 
@@ -331,6 +384,51 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
 
         train_data = fix_labels_class(train_data, cur_class=cur_class)
         test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
+    elif dataset == 'caltech':
+        num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
+        traindir = os.path.join(CALTECH_PATH, "train")
+        testdir = os.path.join(CALTECH_PATH, "test")
+        # Places365 downloaded as 224x224 images
+
+        train_transform = transforms.Compose([
+            transforms.Resize(input_size),  # Places images downloaded as 224
+            transforms.RandomCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        test_transform = transforms.Compose([
+            transforms.Resize(input_size),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        test_data_all = dset.ImageFolder(root=testdir, transform=test_transform)
+
+        class_ids = np.array(list(zip(*test_data_all.imgs))[1])
+        wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
+        test_data  = torch.utils.data.Subset(test_data_all, wanted_idx)
+
+    elif dataset == 'asl':
+        num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
+        traindir = os.path.join(ASL_PATH, "train")
+        testdir = os.path.join(ASL_PATH, "test")
+        # Places365 downloaded as 224x224 images
+
+        train_transform = transforms.Compose([
+            transforms.ToTensor()]
+            )
+
+        test_transform = transforms.Compose([
+            transforms.ToTensor()]
+        )
+
+        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
+        test_data_all = dset.ImageFolder(root=testdir, transform=test_transform)
+
+        class_ids = np.array(list(zip(*test_data_all.imgs))[1])
+        wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
+        test_data  = torch.utils.data.Subset(test_data_all, wanted_idx)
     else:
         return None
     return train_data, test_data
