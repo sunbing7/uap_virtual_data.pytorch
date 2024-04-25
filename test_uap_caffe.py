@@ -118,7 +118,15 @@ def main():
     # Init model, criterion, and optimizer
     print_log("=> Creating model '{}'".format(args.test_arch), log)
 
-    target_network, preprocess = pytorch_caffe_models.googlenet_bvlc()
+    if 'repaired' in args.test_name:
+        target_network, preprocess = pytorch_caffe_models.googlenet_bvlc(pretrained=False)
+        model_path = get_model_path(dataset_name=args.test_dataset,
+                                    network_arch=args.test_arch,
+                                    random_seed=args.pretrained_seed)
+        model_weights_path = os.path.join(model_path, args.test_name)
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+    else:
+        target_network, preprocess = pytorch_caffe_models.googlenet_bvlc(pretrained=True)
 
     # Set the target model into evaluation mode
     target_network.eval()

@@ -877,22 +877,16 @@ def uap_repair(args):
     ####################################
     # Init model, criterion, and optimizer
     # get a path for loading the model to be attacked
-    target_network, preprocess = pytorch_caffe_models.googlenet_bvlc()
-
-    model_path = get_model_path(dataset_name=args.dataset,
-                                network_arch=args.arch,
-                                random_seed=args.seed)
-    model_weights_path = os.path.join(model_path, args.model_name)
-    '''
-    target_network = get_network(args.arch,
-                                 input_size=input_size,
-                                 num_classes=num_classes,
-                                 finetune=False)
-
-    # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet" or 'repaired' in args.model_name:
+    if 'repaired' in args.model_name:
+        target_network, preprocess = pytorch_caffe_models.googlenet_bvlc(pretrained=False)
+        model_path = get_model_path(dataset_name=args.dataset,
+                                    network_arch=args.arch,
+                                    random_seed=args.seed)
+        model_weights_path = os.path.join(model_path, args.model_name)
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-    '''
+    else:
+        target_network, preprocess = pytorch_caffe_models.googlenet_bvlc(pretrained=True)
+
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
     trainale_params = get_num_trainable_parameters(target_network)
     total_params = get_num_parameters(target_network)

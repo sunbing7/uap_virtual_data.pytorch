@@ -22,7 +22,7 @@ class RGBToBGR(nn.Module):
         raise TypeError('Argument must be either Tensor or PIL image.')
 
 
-def googlenet_bvlc():
+def googlenet_bvlc(pretrained=True):
     """Returns the model and preprocessing transform for the BVLC GoogLeNet,
     trained on ImageNet.
     
@@ -33,8 +33,10 @@ def googlenet_bvlc():
         RGBToBGR(),
     ])
     model = GoogLeNet(num_classes=1000)
-    url = 'https://github.com/crowsonkb/pytorch-caffe-models/releases/download/models-2/bvlc_googlenet-1f25f8c8778a8802.pth'
-    model.load_state_dict(torch.hub.load_state_dict_from_url(url, check_hash=True))
+    if pretrained:
+        url = 'https://github.com/crowsonkb/pytorch-caffe-models/releases/download/models-2/bvlc_googlenet-1f25f8c8778a8802.pth'
+        model.load_state_dict(torch.hub.load_state_dict_from_url(url, check_hash=True))
+
     return model, transform
 
 
