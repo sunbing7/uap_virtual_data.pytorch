@@ -57,16 +57,16 @@ def calculate_shannon_entropy_batch(x):
 
 
 def train(data_loader,
-            model,
-            criterion,
-            optimizer,
-            epsilon,
-            num_iterations,
-            targeted,
-            target_class,
-            log,
-            print_freq=200,
-            use_cuda=True):
+          model,
+          criterion,
+          optimizer,
+          epsilon,
+          num_iterations,
+          targeted,
+          target_class,
+          log,
+          print_freq=200,
+          use_cuda=True):
     # train function (forward, backward, update)
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -83,7 +83,7 @@ def train(data_loader,
     data_iterator = iter(data_loader)
 
     iteration=0
-    while (iteration<num_iterations):
+    while iteration < num_iterations:
         try:
             input, target = next(data_iterator)
         except StopIteration:
@@ -792,9 +792,9 @@ def ae_training_individual(pmodels,
     en_loss = Variable(torch.tensor(.0), requires_grad=True)
     en_cri = hloss(use_cuda)
     for i in range(attack_iters):
-        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), np.array(mean), np.array(std), use_cuda)
+        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), np.array([0., 0., 0.]), np.array(std), use_cuda)
         ae_x = (x + delta)
-        delta.data = destandardize_delta(delta.data, np.array(mean), np.array(std), use_cuda)
+        delta.data = destandardize_delta(delta.data, np.array([0., 0., 0.]), np.array(std), use_cuda)
 
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
@@ -815,7 +815,7 @@ def ae_training_individual(pmodels,
         en_loss = torch.mean(en_cri(poutput))
         print('[DEBUG] ae entropy after: {}'.format(en_loss))
     '''
-    return standardize_delta(delta.detach(), np.array(mean), np.array(std), use_cuda)
+    return standardize_delta(delta.detach(), np.array([0., 0., 0.]), np.array(std), use_cuda)
 
 
 def low_entropy_sample_training(model, pmodels, data_loader, criterion, attack_iters=10, eps=0.0392, rs=True, use_cuda=True):

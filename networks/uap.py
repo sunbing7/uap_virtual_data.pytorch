@@ -34,7 +34,7 @@ class UAP(nn.Module):
         # Put image into original form
         orig_img = x * self.std_tensor + self.mean_tensor
         
-        # Add uap to input
+        # Add uap to input; uap is in original form
         adv_orig_img = orig_img + uap
         # Put image into normalized form
         adv_x = (adv_orig_img - self.mean_tensor)/self.std_tensor

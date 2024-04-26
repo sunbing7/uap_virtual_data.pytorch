@@ -236,28 +236,28 @@ def main():
     # Measure the time needed for the UAP generation
     start = time.time()
     train(data_loader=data_train_loader,
-            model=perturbed_net,
-            criterion=criterion,
-            optimizer=optimizer,
-            epsilon=args.epsilon,
-            num_iterations=args.num_iterations,
-            targeted=args.targeted,
-            target_class=args.target_class,
-            log=log,
-            print_freq=args.print_freq,
-            use_cuda=args.use_cuda)
+          model=perturbed_net,
+          criterion=criterion,
+          optimizer=optimizer,
+          epsilon=args.epsilon,
+          num_iterations=args.num_iterations,
+          targeted=args.targeted,
+          target_class=args.target_class,
+          log=log,
+          print_freq=args.print_freq,
+          use_cuda=args.use_cuda)
     end = time.time()
     print_log("Time needed for UAP generation: {}".format(end - start), log)
     # evaluate
     print_log("Final evaluation:", log)
     #'''
     metrics_evaluate(data_loader=pretrained_data_test_loader,
-                    target_model=target_network,
-                    perturbed_model=perturbed_net,
-                    targeted=args.targeted,
-                    target_class=args.target_class,
-                    log=log,
-                    use_cuda=args.use_cuda)
+                     target_model=target_network,
+                     perturbed_model=perturbed_net,
+                     targeted=args.targeted,
+                     target_class=args.target_class,
+                     log=log,
+                     use_cuda=args.use_cuda)
 
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
@@ -294,7 +294,8 @@ def main():
     tuap = torch.from_numpy(tuap.cpu().detach().numpy() / np.array(std).reshape(1, 3, 1, 1))
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(pretrained_data_test_loader, target_network, tuap,
-                                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda, targeted=args.targeted)
+                                                                 target_class=args.target_class, log=log,
+                                                                use_cuda=args.use_cuda, targeted=args.targeted)
     print('All samples: UAP targeted attack testing set SR: %.2f' % (test_sr))
     print('All samples: UAP non-targeted attack testing set SR: %.2f' % (nt_sr))
     print('UAP targeted attack testing set SR: %.2f' % (_test_sr))

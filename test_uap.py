@@ -163,7 +163,7 @@ def main_():
                             network_arch=args.pretrained_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, args.uap_name)
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    uap = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     tuap = torch.from_numpy(uap)
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(data_test_loader, target_network, tuap,
@@ -278,36 +278,30 @@ def main():
     if args.use_cuda:
         target_network = target_network.cuda()
 
-    #test
-    #for input, gt in pretrained_data_test_loader:
-    #    clean_output = target_network(input)
-    #    attack_output = target_network(input + tuap)
-
     # evaluate uap
-    '''
-    #load uap
-    uap_path = get_uap_path(uap_data=args.dataset,
-                            model_data=args.pretrained_dataset,
-                            network_arch=args.pretrained_arch,
-                            random_seed=args.pretrained_seed)
-    uap_fn = os.path.join(uap_path, args.uap_name)
+    if '.npy' not in args.uap_name:
+        #load uap
+        uap_path = get_uap_path(uap_data=args.dataset,
+                                model_data=args.pretrained_dataset,
+                                network_arch=args.pretrained_arch,
+                                random_seed=args.pretrained_seed)
+        uap_fn = os.path.join(uap_path, args.uap_name)
 
-    if args.use_cuda:
-        uap_pert_model = torch.load(uap_fn)
-        uap_pert_model = uap_pert_model.cuda()
-    else:
-        uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
+        if args.use_cuda:
+            uap_pert_model = torch.load(uap_fn)
+            uap_pert_model = uap_pert_model.cuda()
+        else:
+            uap_pert_model = torch.load(uap_fn, map_location=torch.device('cpu'))
 
+        print('Evaluate perterbued model')
+        metrics_evaluate(data_loader=data_test_loader,
+                         target_model=target_network,
+                         perturbed_model=uap_pert_model,
+                         targeted=args.targeted,
+                         target_class=args.target_class,
+                         log=log,
+                         use_cuda=args.use_cuda)
 
-    print('Evaluate perterbued model')
-    metrics_evaluate(data_loader=data_test_loader,
-                    target_model=target_network,
-                    perturbed_model=uap_pert_model,
-                    targeted=args.targeted,
-                    target_class=args.target_class,
-                    log=log,
-                    use_cuda=args.use_cuda)
-    '''
     #load uap
     print('Evaluate uap stamp')
     uap_path = get_uap_path(uap_data=args.dataset,
@@ -315,17 +309,17 @@ def main():
                             network_arch=args.pretrained_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     tuap = torch.from_numpy(uap)
     if args.use_cuda:
         tuap = tuap.cuda()
     metrics_evaluate_test(data_loader=data_test_loader,
-                    target_model=target_network,
-                    uap=tuap,
-                    targeted=args.targeted,
-                    target_class=args.target_class,
-                    log=log,
-                    use_cuda=args.use_cuda)
+                          target_model=target_network,
+                          uap=tuap,
+                          targeted=args.targeted,
+                          target_class=args.target_class,
+                          log=log,
+                          use_cuda=args.use_cuda)
 
     log.close()
 

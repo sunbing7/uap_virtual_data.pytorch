@@ -132,7 +132,7 @@ def main():
                                 network_arch=args.pretrained_arch,
                                 random_seed=args.pretrained_seed)
         uap_fn = os.path.join(uap_path, 'uap.npy')
-        uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+        uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
         uap = torch.from_numpy(uap)
 
     data_train, _ = get_data(args.filter_dataset, args.filter_dataset)

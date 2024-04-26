@@ -145,7 +145,7 @@ def analyze_inputs(args):
                                 network_arch=args.arch,
                                 random_seed=args.seed)
         uap_fn = os.path.join(uap_path, 'uap.npy')
-        uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+        uap = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
         uap = torch.from_numpy(uap)
 
     '''
@@ -295,7 +295,7 @@ def analyze_layers(args):
                                     network_arch=args.arch,
                                     random_seed=args.seed)
             uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-            uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+            uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
             uap = torch.from_numpy(uap)
 
         # perform causality analysis
@@ -477,7 +477,7 @@ def calc_entropy_old():
     attribution_path = get_attribution_path()
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     uap_fn = os.path.join(attribution_path, "uap_attribution_s_4.npy")
-    loaded = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     uap_ca = np.transpose(loaded[:, 1].reshape(3, 224, 224), (1, 2, 0))
     #uap_ca = uap_ca[:, :, 2]
     uap_h = calculate_shannon_entropy(uap_ca, 224*224*3)
@@ -509,7 +509,7 @@ def calc_entropy_layer_old():
     attribution_path = get_attribution_path()
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s7.npy")
-    loaded = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     uap_ca = loaded[:, 1]
 
     uap_h = calculate_shannon_entropy_array(uap_ca)
@@ -536,7 +536,7 @@ def calc_entropy_layer(i):
     attribution_path = get_attribution_path()
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i) + ".npy")
-    loaded = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     uap_ca = loaded[:, 1]
 
     uap_h = calculate_shannon_entropy_array(uap_ca)
@@ -620,7 +620,7 @@ def calc_pcc_i_old(i, args):
     clean_ca = loaded[:, -1]
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     uap_fn = os.path.join(attribution_path, args.uap_ca_name)
-    loaded = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1,3,1,1)
+    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
     uap_ca = loaded[:, 1]
 
     uap_pcc = np.corrcoef(uap_ca, clean_ca)[0, 1]
@@ -680,7 +680,7 @@ def test(args):
                             network_arch=args.arch,
                             random_seed=args.seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
 
     ####################################
@@ -940,7 +940,7 @@ def uap_repair(args):
                             network_arch=args.arch,
                             random_seed=args.seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1, 3, 1, 1)) / np.array(std).reshape(1, 3, 1, 1)
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
 
     ####################################
@@ -1109,7 +1109,7 @@ def uap_gen_low_en_sample(args):
                             network_arch=args.arch,
                             random_seed=args.seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = (np.load(uap_fn) - np.array(mean).reshape(1,3,1,1)) / np.array(std).reshape(1, 3, 1, 1)
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
 
     ####################################

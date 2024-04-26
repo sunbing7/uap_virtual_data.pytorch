@@ -240,10 +240,9 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
     elif dataset == 'caltech':
         traindir = os.path.join(CALTECH_PATH, "train")
         testdir = os.path.join(CALTECH_PATH, "test")
-        # Places365 downloaded as 224x224 images
 
         train_transform = transforms.Compose([
-            transforms.Resize(input_size),  # Places images downloaded as 224
+            transforms.Resize(input_size),
             transforms.RandomCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)])
@@ -261,10 +260,9 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
     elif dataset == 'asl':
         traindir = os.path.join(ASL_PATH, "train")
         testdir = os.path.join(ASL_PATH, "test")
-        # Places365 downloaded as 224x224 images
 
         train_transform = transforms.Compose([
-            transforms.Resize(input_size),  # Places images downloaded as 224
+            transforms.Resize(input_size),
             transforms.RandomCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)])
