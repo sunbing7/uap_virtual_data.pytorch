@@ -1,3 +1,4 @@
+
 #vgg19
 #for TARGET_CLASS in {150,214,39,527,65,639,771,412}
 #do
@@ -35,7 +36,17 @@
 #do
 #    python test_uap_caffe.py --targeted=True --dataset=imagenet_caffe --pretrained_dataset=imagenet_caffe --test_name=googlenet_imagenet_caffe.pth --pretrained_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet_caffe --test_arch=googlenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 #done
-for TARGET_CLASS in {573,807,541,240,475,753,762,505}
-do
-    python test_uap_caffe.py --targeted=True --dataset=imagenet_caffe --pretrained_dataset=imagenet_caffe --test_name=googlenet_imagenet_caffe_finetuned_repaired.pth --pretrained_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet_caffe --test_arch=googlenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-done
+#for TARGET_CLASS in {573,807,541,240,475,753,762,505}#
+#do
+#    python test_uap_caffe.py --targeted=True --dataset=imagenet_caffe --pretrained_dataset=imagenet_caffe --test_name=googlenet_imagenet_caffe_finetuned_repaired.pth --pretrained_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet_caffe --test_arch=googlenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done
+################################################################################################################################################
+#shufflenetv2
+#for TARGET_CLASS in {296,864,19,470,575,209,59,855}
+#do
+#    python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltech --test_name=shufflenetv2_caltech.pth --pretrained_arch=shufflenetv2 --pretrained_arch=shufflenetv2 --pretrained_seed=123 --test_dataset=imagenet --test_dataset=caltech --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done
+#for TARGET_CLASS in {296,864,19,470,575,209,59,855}
+#do
+#    python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltech --test_name=shufflenetv2_caltech_finetuned_repaired.pth --pretrained_arch=shufflenetv2 --pretrained_seed=123 --test_dataset=caltech --test_arch=done --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done

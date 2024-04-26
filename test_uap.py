@@ -45,12 +45,13 @@ def parse_arguments():
                         help='uap file name (default: uap.npy)')
 
     # model to test
-    parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet', 'coco', 'voc', 'places365'],
+    parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
+                                                                      'coco', 'voc', 'places365', 'caltech', 'asl'],
                         help='Test model training set (default: cifar10)')
     parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                    'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                    'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                   'inception_v3'],
+                                                                   'inception_v3',  'shufflenetv2'],
                         help='Test model architecture: (default: vgg19)')
     parser.add_argument('--test_name', type=str, default='vgg19_cifar10.pth',
                         help='Test model name (default: vgg19_cifar10.pth)')
@@ -250,7 +251,22 @@ def main():
     #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
-    if args.test_dataset != "imagenet" or 'repaired' in args.test_name:
+
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        if 'state_dict' in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict['state_dict']
+        if "state_dict" in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict["state_dict"]
+        new_state_dict = OrderedDict()
+        for k, v in target_network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        target_network.load_state_dict(new_state_dict)
+
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable

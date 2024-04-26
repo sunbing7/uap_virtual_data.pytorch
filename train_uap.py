@@ -144,17 +144,31 @@ def main():
                                 finetune=False)
 
     print_log("=> Network :\n {}".format(target_network), log)
+
+    adaptive = ''
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        if 'state_dict' in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict['state_dict']
+        if "state_dict" in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict["state_dict"]
+        new_state_dict = OrderedDict()
+        for k, v in target_network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        target_network.load_state_dict(new_state_dict)
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
+
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        adaptive = '_adaptive'
+
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
-    adaptive = ''
-    # Imagenet models use the pretrained pytorch weights
-    if args.pretrained_dataset != "imagenet" or 'repaired' in args.model_name:
-        #network_data = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        #target_network.load_state_dict(network_data['state_dict'])
-        #target_network.load_state_dict(network_data.state_dict())
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        adaptive = '_adaptive'
 
     # Set all weights to not trainable
     set_parameter_requires_grad(target_network, requires_grad=False)

@@ -14,7 +14,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as tfunc
 
 from config.config import IMAGENET_PATH, DATASET_BASE_PATH
-from config.config import COCO_2017_TRAIN_IMGS, COCO_2017_VAL_IMGS, COCO_2017_TRAIN_ANN, COCO_2017_VAL_ANN, VOC_2012_ROOT, PLACES365_ROOT
+from config.config import *
 from dataset_utils.voc0712 import VOCDetection
 
 #import utils.utils_backdoor as utils_backdoor
