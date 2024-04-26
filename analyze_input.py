@@ -15,7 +15,7 @@ from utils.training import solve_input_attribution, solve_input_attribution_sing
 from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
 from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculate_shannon_entropy_array,
                              calculate_shannon_entropy_batch, calc_hloss)
-from matplotlib import pyplot as plt
+from collections import OrderedDict
 from activation_analysis import outlier_detection
 from utils.training import (train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint,
                             ShannonEntropyFlat, ShannonEntropyBatch)
@@ -176,8 +176,21 @@ def analyze_inputs(args):
     # Set the target model into evaluation mode
     network.eval()
 
-    # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        if 'state_dict' in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict['state_dict']
+        if "state_dict" in orig_state_dict.keys():
+            orig_state_dict = orig_state_dict["state_dict"]
+        new_state_dict = OrderedDict()
+        for k, v in network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        network.load_state_dict(new_state_dict)
+
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
@@ -261,20 +274,26 @@ def analyze_layers(args):
                           num_classes=num_classes,
                           finetune=False)
 
-    #print("=> Network :\n {}".format(network))
-
     # Set the target model into evaluation mode
     network.eval()
 
+    if args.dataset == "caltech" or args.dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        network.load_state_dict(new_state_dict)
+
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
     total_params = get_num_parameters(network)
-
-    #print("Filter Network Total # parameters: {}".format(total_params))
 
     if args.use_cuda:
         network.cuda()
@@ -323,19 +342,19 @@ def analyze_layers(args):
             print('No sample from class {}'.format(args.target_class))
             return
         data_test_loader = torch.utils.data.DataLoader(data_train,
-                                                        batch_size=args.batch_size,
-                                                        shuffle=True,
-                                                        num_workers=args.workers,
-                                                        pin_memory=True)
+                                                       batch_size=args.batch_size,
+                                                       shuffle=True,
+                                                       num_workers=args.workers,
+                                                       pin_memory=True)
 
         attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, None, args.arch,
-                                      split_layer=args.split_layer,
-                                      targeted=args.targeted,
-                                      target_class=args.target_class,
-                                      num_sample=args.num_iterations,
-                                      causal_type=args.causal_type,
-                                      log=None,
-                                      use_cuda=args.use_cuda)
+                                                                      split_layer=args.split_layer,
+                                                                      targeted=args.targeted,
+                                                                      target_class=args.target_class,
+                                                                      num_sample=args.num_iterations,
+                                                                      causal_type=args.causal_type,
+                                                                      log=None,
+                                                                      use_cuda=args.use_cuda)
 
         attribution_path = get_attribution_path()
         for i in range(0, len(attribution_map)):
@@ -380,8 +399,18 @@ def analyze_layers_clean(args):
     # Set the target model into evaluation mode
     network.eval()
 
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        network.load_state_dict(new_state_dict)
+
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Set all weights to not trainable
@@ -702,10 +731,19 @@ def test(args):
     # Set the target model into evaluation mode
     network.eval()
 
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        network.load_state_dict(new_state_dict)
+
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet" or 'repaired' in args.model_name:
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        print('Loading model from {}'.format(model_weights_path))
 
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
@@ -956,8 +994,18 @@ def uap_repair(args):
                                  num_classes=num_classes,
                                  finetune=False)
 
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in target_network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        target_network.load_state_dict(new_state_dict)
+
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet" or 'repaired' in args.model_name:
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
@@ -1125,8 +1173,18 @@ def uap_gen_low_en_sample(args):
                                  num_classes=num_classes,
                                  finetune=False)
 
+    if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
+        #state dict
+        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in target_network.state_dict().items():
+            if k in orig_state_dict.keys():
+                new_state_dict[k] = orig_state_dict[k]
+
+        target_network.load_state_dict(new_state_dict)
+
     # Imagenet models use the pretrained pytorch weights
-    if args.dataset != "imagenet":
+    elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     #non_trainale_params = get_num_non_trainable_parameters(target_network)

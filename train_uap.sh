@@ -50,12 +50,13 @@
 ################################################################################################################################################
 #shufflenetv2 caltech
 
-for TARGET_CLASS in {37,99,95,79,21,9,4,6}
+for TARGET_CLASS in {37,85,55,79,21,9,4,6}
 do
-    python train_uap.py --dataset=caltech --pretrained_dataset=caltech --pretrained_arch=shufflenetv2 --test_arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+    python train_uap.py --dataset=caltech --pretrained_dataset=caltech --pretrained_arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 done
 
-#for TARGET_CLASS in {37,99,95,79,21,9,4,6}
+#for TARGET_CLASS in {37,85,55,79,21,9,4,6}
 #do
-#    python train_uap.py --dataset=caltech --pretrained_dataset=caltech --pretrained_arch=shufflenetv2 --test_arch=shufflenetv2 --model_name=googlenet_imagenet_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#    python train_uap.py --dataset=caltech --pretrained_dataset=caltech --pretrained_arch=shufflenetv2 --model_name=googlenet_imagenet_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 #done
+#python train_uap.py --dataset=caltech --pretrained_dataset=caltech --pretrained_arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=85 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005

@@ -42,11 +42,11 @@
 #done
 ################################################################################################################################################
 #shufflenetv2
-for TARGET_CLASS in {37,99,95,79,21,9,4,6}
+for TARGET_CLASS in {37,85,55,79,21,9,4,6}
 do
     python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltech --test_name=shufflenetv2_caltech.pth --pretrained_arch=shufflenetv2 --test_arch=shufflenetv2 --pretrained_seed=123 --test_dataset=caltech --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 done
-#for TARGET_CLASS in {37,99,95,79,21,9,4,6}
+#for TARGET_CLASS in {37,85,55,79,21,9,4,6}
 #do
 #    python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltech --test_name=shufflenetv2_caltech_finetuned_repaired.pth --test_arch=shufflenetv2 --pretrained_seed=123 --test_dataset=caltech --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 #done

@@ -269,9 +269,6 @@ def main():
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
-    # Set all weights to not trainable
-    #set_parameter_requires_grad(target_network, requires_grad=False)
-
     total_params = get_num_parameters(target_network)
     print_log("Target Network Total # parameters: {}".format(total_params), log)
 
