@@ -226,3 +226,10 @@ python test_uap_caffe.py --targeted=True --dataset=imagenet_caffe --pretrained_d
 
 python test_uap_caffe.py --targeted=True --dataset=imagenet_caffe --pretrained_dataset=imagenet_caffe --test_name=googlenet_imagenet_caffe.pth --pretrained_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet_caffe --test_arch=googlenet --result_subfolder=result --targeted=True --target_class=573 --ngpu=1 --workers=4
 
+#shufflenetv2 caltech
+python analyze_input.py --option=repair_ae --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --learning_rate=0.001 --split_layers 6 --seed=123 --num_iterations=20 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=205 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=50 --target_class=37
+python analyze_input.py --option=repair --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech_ae_repaired_20_50.pth --learning_rate=0.0001 --split_layers 6 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=205 --ngpu=1 --workers=4 --target_class=37
+python analyze_input.py --option=repair_ae --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech_ae_repaired_20_50.pth --learning_rate=0.00002 --split_layers 6 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=205 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=37
+python analyze_input.py --option=repair_ae --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech_ae_repaired.pth --learning_rate=0.00002 --split_layers 6 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=37
+
+python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltech --model_name=shufflenetv2_caltech_ae_repaired_20_50.pth --pretrained_arch=shufflenetv2 --pretrained_seed=123 --test_dataset=caltech --test_arch=shufflenetv2 --result_subfolder=result --targeted=True --target_class=37 --ngpu=1 --workers=4

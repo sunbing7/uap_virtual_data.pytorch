@@ -30,11 +30,6 @@ def parse_arguments():
                                                                             'imagenet', 'caltech', 'asl'],
                         help='Used dataset to train the initial model (default: cifar10)')
     # model used to train UAP
-    parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
-                                                                       'alexnet', 'googlenet', 'vgg16', 'vgg19',
-                                                                       'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                       'inception_v3', 'shufflenetv2'],
-                        help='Used model architecture: (default: alexnet)')
     parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
                         help='model name (default: alexnet_cifar10.pth)')
     parser.add_argument('--pretrained_seed', type=int, default=123,
@@ -53,8 +48,6 @@ def parse_arguments():
                                                                    'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
                                                                    'inception_v3',  'shufflenetv2'],
                         help='Test model architecture: (default: vgg19)')
-    parser.add_argument('--test_name', type=str, default='vgg19_cifar10.pth',
-                        help='Test model name (default: vgg19_cifar10.pth)')
 
     # Parameters regarding UAP
     parser.add_argument('--result_subfolder', default='result', type=str,
@@ -92,7 +85,7 @@ def main_():
 
     # get the result path to store the results
     result_path = get_result_path(dataset_name=args.dataset,
-                                network_arch=args.pretrained_arch,
+                                network_arch=args.test_arch,
                                 random_seed=args.pretrained_seed,
                                 result_subfolder=args.result_subfolder,
                                 postfix=args.postfix)
@@ -160,7 +153,7 @@ def main_():
     #load uap
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
-                            network_arch=args.pretrained_arch,
+                            network_arch=args.test_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, args.uap_name)
     uap = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
@@ -183,7 +176,7 @@ def main_():
                     use_cuda=args.use_cuda)
 
     save_checkpoint({
-      'arch'        : args.pretrained_arch,
+      'arch'        : args.test_arch,
       # 'state_dict'  : perturbed_net.state_dict(),
       'state_dict'  : perturbed_net.module.generator.state_dict(),
       #'optimizer'   : optimizer.state_dict(),
@@ -204,7 +197,7 @@ def main():
 
     # get the result path to store the results
     result_path = get_result_path(dataset_name=args.dataset,
-                                network_arch=args.pretrained_arch,
+                                network_arch=args.test_arch,
                                 random_seed=args.pretrained_seed,
                                 result_subfolder=args.result_subfolder,
                                 postfix=args.postfix)
@@ -240,7 +233,7 @@ def main():
     model_path = get_model_path(dataset_name=args.test_dataset,
                                 network_arch=args.test_arch,
                                 random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.test_name)
+    model_weights_path = os.path.join(model_path, args.model_name)
 
     target_network = get_network(args.test_arch,
                                 input_size=input_size,
@@ -253,18 +246,17 @@ def main():
     target_network.eval()
 
     if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
-        #state dict
-        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        if 'state_dict' in orig_state_dict.keys():
-            orig_state_dict = orig_state_dict['state_dict']
-        if "state_dict" in orig_state_dict.keys():
-            orig_state_dict = orig_state_dict["state_dict"]
-        new_state_dict = OrderedDict()
-        for k, v in target_network.state_dict().items():
-            if k in orig_state_dict.keys():
-                new_state_dict[k] = orig_state_dict[k]
+        if 'repaired' in args.model_name:
+            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        else:
+            #state dict
+            orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            new_state_dict = OrderedDict()
+            for k, v in target_network.state_dict().items():
+                if k in orig_state_dict.keys():
+                    new_state_dict[k] = orig_state_dict[k]
 
-        target_network.load_state_dict(new_state_dict)
+            target_network.load_state_dict(new_state_dict)
 
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -280,7 +272,7 @@ def main():
         #load uap
         uap_path = get_uap_path(uap_data=args.dataset,
                                 model_data=args.pretrained_dataset,
-                                network_arch=args.pretrained_arch,
+                                network_arch=args.test_arch,
                                 random_seed=args.pretrained_seed)
         uap_fn = os.path.join(uap_path, args.uap_name)
 
@@ -303,7 +295,7 @@ def main():
     print('Evaluate uap stamp')
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
-                            network_arch=args.pretrained_arch,
+                            network_arch=args.test_arch,
                             random_seed=args.pretrained_seed)
     uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
     uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)

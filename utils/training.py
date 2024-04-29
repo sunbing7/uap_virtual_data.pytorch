@@ -501,7 +501,7 @@ def adv_train(data_loader,
             batch_time.update(time.time() - end)
             end = time.time()
             if num_batch % 100 == 0:
-                print('  Batch: [{:03d}/1563]   '
+                print('  Batch: [{:03d}/{}]   '
                       'Loss {loss.val:.4f} ({loss.avg:.4f})   '
                       'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
                       'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
@@ -510,7 +510,7 @@ def adv_train(data_loader,
                       'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
                       'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
                       .format(
-                    num_batch,
+                    num_batch,len(data_loader),
                     loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
                     delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
             num_batch = num_batch + 1
@@ -2263,6 +2263,27 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
 
             model_1st = nn.Sequential(*[*module1, Flatten(), *module2, *module3])
             model_2nd = nn.Sequential(*module4)
+    elif model_name == 'shufflenetv2':
+        if split_layer == 6:
+            modules = list(ori_model.children())
+            sub_modules = list(modules[-1])
+            module0 = [modules[0]]
+            module1 = modules[1:6]
+            module2 = [sub_modules[0]]
+            module3 = [sub_modules[1]]
+
+            model_1st = nn.Sequential(*[*module0, *module1, Avgpool2d_n(poolsize=7), Flatten(), *module2])
+            model_2nd = nn.Sequential(*module3)
+        elif split_layer == 1:
+            modules = list(ori_model.children())
+            sub_modules = list(modules[-1])
+            module0 = [modules[0]]
+            module1 = [modules[1]]
+            module2 = modules[2:6]
+            module3 = sub_modules
+
+            model_1st = nn.Sequential(*[*module0, *module1])
+            model_2nd = nn.Sequential(*[*module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
     else:
         return None, None
 

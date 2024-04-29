@@ -242,21 +242,26 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
         testdir = os.path.join(CALTECH_PATH, "test")
 
         train_transform = transforms.Compose([
-            transforms.Resize(input_size),
-            transforms.RandomCrop(input_size),
             transforms.ToTensor(),
+            transforms.RandomResizedCrop(size=256, scale=(0.8, 1.0)),
+            transforms.RandomRotation(degrees=15),
+            transforms.RandomHorizontalFlip(),
+            transforms.CenterCrop(size=input_size),
             transforms.Normalize(mean, std)])
 
         test_transform = transforms.Compose([
-            transforms.Resize(input_size),
+            transforms.Resize(256),
             transforms.CenterCrop(input_size),
             transforms.ToTensor(),
             transforms.Normalize(mean, std)])
 
         train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
         train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
-                                             size=int(0.05 * len(train_data_full)), replace=False))
+                                             size=int(0.5 * len(train_data_full)), replace=False))
+        #train_data = train_data_full
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
+        print('[DEBUG] caltech train len: {}'.format(len(train_data_full)))
+        print('[DEBUG] caltech test len: {}'.format(len(test_data)))
     elif dataset == 'asl':
         traindir = os.path.join(ASL_PATH, "train")
         testdir = os.path.join(ASL_PATH, "test")

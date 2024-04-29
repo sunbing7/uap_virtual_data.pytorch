@@ -77,9 +77,9 @@ for TARGET_CLASS in {37,85,55,79,21,9,4,6}
 do
   echo "Analyzing target class:" $TARGET_CLASS
 
-  for LAYER in {19,22}
+  for LAYER in {1,6}
   do
-    #echo $LAYER
+    echo "Analyzing layer:" $LAYER
     python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --split_layer=$LAYER --seed=123 --num_iterations=32 --result_subfolder=result --target_class=$TARGET_CLASS --batch_size=32 --ngpu=1 --workers=4
     python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$TARGET_CLASS --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
     python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=$TARGET_CLASS --split_layer=$LAYER --batch_size=32 --ngpu=1 --workers=4
@@ -89,3 +89,8 @@ do
     rm attribution/clean*.npy
   done
 done
+
+#python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --split_layer=6 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=37 --batch_size=32 --ngpu=1 --workers=4
+#python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=37 --split_layer=6 --batch_size=32 --ngpu=1 --workers=4
+#python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=37 --split_layer=6 --batch_size=32 --ngpu=1 --workers=4
+#python analyze_input.py --option=classify --causal_type=act --target_class=37 --num_iterations=32 --split_layer=6 --th=1

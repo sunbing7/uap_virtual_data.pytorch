@@ -19,6 +19,9 @@ from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy,
 
 from matplotlib import pyplot as plt
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
@@ -147,20 +150,18 @@ def main():
 
     adaptive = ''
     if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':
-        #state dict
-        orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        if 'state_dict' in orig_state_dict.keys():
-            orig_state_dict = orig_state_dict['state_dict']
-        if "state_dict" in orig_state_dict.keys():
-            orig_state_dict = orig_state_dict["state_dict"]
-        new_state_dict = OrderedDict()
-        for k, v in target_network.state_dict().items():
-            if k in orig_state_dict.keys():
-                new_state_dict[k] = orig_state_dict[k]
-
-        target_network.load_state_dict(new_state_dict)
         if 'repaired' in args.model_name:
+            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
+        else:
+            #state dict
+            orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            new_state_dict = OrderedDict()
+            for k, v in target_network.state_dict().items():
+                if k in orig_state_dict.keys():
+                    new_state_dict[k] = orig_state_dict[k]
+
+            target_network.load_state_dict(new_state_dict)
 
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
