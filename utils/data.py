@@ -280,8 +280,10 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
 
         train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
         train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
-                                             size=int(0.05 * len(train_data_full)), replace=False))
+                                             size=int(0.5 * len(train_data_full)), replace=False))
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
+        print('[DEBUG] asl train len: {}'.format(len(train_data_full)))
+        print('[DEBUG] asl test len: {}'.format(len(test_data)))
     return train_data, test_data
 
 

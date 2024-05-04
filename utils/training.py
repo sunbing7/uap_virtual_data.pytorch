@@ -2284,6 +2284,24 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
 
             model_1st = nn.Sequential(*[*module0, *module1])
             model_2nd = nn.Sequential(*[*module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
+    elif model_name == 'mobilenet':
+        if split_layer == 3:
+            modules = list(ori_model.children())
+            module1 = modules[:2]
+            module2 = [modules[2]]
+            module3 = [modules[3]]
+
+            model_1st = nn.Sequential(*[*module1, Relu(), *module2, Avgpool2d_n(poolsize=7), Flatten()])
+            model_2nd = nn.Sequential(*module3)
+        if split_layer == 1:
+            modules = list(ori_model.children())
+            module0 = [modules[0]]
+            module1 = [modules[1]]
+            module2 = [modules[2]]
+            module3 = [modules[3]]
+            model_1st = nn.Sequential(*module0)
+            model_2nd = nn.Sequential(*[*module1, Relu(), *module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
+
     else:
         return None, None
 

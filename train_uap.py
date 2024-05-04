@@ -37,7 +37,7 @@ def parse_arguments():
                                                                        'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                        'resnet18', 'resnet34', 'resnet50', 'resnet101',
                                                                        'resnet152', 'shufflenetv2',
-                                                                       'inception_v3'],
+                                                                       'inception_v3', 'mobilenet'],
                         help='Used model architecture: (default: alexnet)')
     parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
                         help='model name (default: alexnet_cifar10.pth)')
@@ -291,7 +291,7 @@ def main():
     plt.show()
     torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
     print('uap saved!')
-
+    '''
     tuap = torch.from_numpy(tuap.cpu().detach().numpy() / np.array(std).reshape(1, 3, 1, 1))
 
     test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(pretrained_data_test_loader, target_network, tuap,
@@ -302,7 +302,7 @@ def main():
     print('UAP targeted attack testing set SR: %.2f' % (_test_sr))
     print('UAP non-targeted attack testing set SR: %.2f' % (_nt_sr))
     print('Clean sample test accuracy: %.2f' % clean_test_acc)
-
+    '''
     log.close()
 
 

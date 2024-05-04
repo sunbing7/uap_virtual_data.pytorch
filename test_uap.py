@@ -46,7 +46,7 @@ def parse_arguments():
     parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                    'alexnet', 'googlenet', 'vgg16', 'vgg19',
                                                                    'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
-                                                                   'inception_v3',  'shufflenetv2'],
+                                                                   'inception_v3',  'shufflenetv2', 'mobilenet'],
                         help='Test model architecture: (default: vgg19)')
 
     # Parameters regarding UAP
