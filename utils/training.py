@@ -1186,7 +1186,7 @@ def metrics_evaluate(data_loader, target_model, perturbed_model, targeted, targe
 
 
 
-def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class, log=None, use_cuda=True):
+def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class, mask=None, log=None, use_cuda=True):
     # switch to evaluate mode
     target_model.eval()
 
@@ -1209,7 +1209,11 @@ def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class
         # compute output
         with torch.no_grad():
             clean_output = target_model(input)
-            attack_output = target_model((input + uap).float())
+            if mask is None:
+                adv_x = (input + uap).float()
+            else:
+                adv_x = torch.mul((1 - mask), input) + torch.mul(mask, uap).float()
+            attack_output = target_model(adv_x)
 
         correctly_classified_mask = torch.argmax(clean_output, dim=-1).cpu() == gt.cpu()
         cl_acc = accuracy(clean_output.data, gt, topk=(1,))
@@ -1227,7 +1231,7 @@ def metrics_evaluate_test(data_loader, target_model, uap, targeted, target_class
 
         if torch.sum(correctly_classified_mask)>0:
             with torch.no_grad():
-                pert_output_corr_cl = target_model(((input + uap).float())[correctly_classified_mask])
+                pert_output_corr_cl = target_model(adv_x[correctly_classified_mask])
             attack_succ_rate = accuracy(pert_output_corr_cl, gt[correctly_classified_mask], topk=(1,))
             attack_success_rate.update(attack_succ_rate[0].item(), pert_output_corr_cl.size(0))
 

@@ -108,3 +108,20 @@ def get_imagenet_dicts():
         cls2label = {class_idx[str(k)][0]: class_idx[str(k)][1] for k in range(len(class_idx))}
 
     return idx2label, cls2label
+
+
+def init_patch_square(data_shape, h_min, h_max, w_min, w_max):
+    n, c, h, w = data_shape
+
+    # get dummy image
+    patch = torch.zeros(data_shape)
+    mask = torch.zeros(data_shape)
+
+    mask[:, :, h_min : h_max, w_min : w_max] = 1
+
+    _patch = np.random.uniform(0.0, 1.0, (n, c, h_max - h_min, w_max - w_min))
+    _patch = torch.from_numpy(_patch)
+
+    patch[:, : , h_min: h_max, w_min: w_max] = _patch
+
+    return patch, mask

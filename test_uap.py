@@ -8,16 +8,11 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from collections import OrderedDict
 
-from networks.uap import UAP
 from utils.data import get_data_specs, get_data
-from utils.utils import get_model_path, get_result_path, get_uap_path
-from utils.utils import print_log
-from utils.network import get_network, set_parameter_requires_grad
-from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
-from utils.training import train, save_checkpoint, metrics_evaluate, eval_uap, metrics_evaluate_test
-from utils.custom_loss import LogitLoss, BoundedLogitLoss, NegativeCrossEntropy, BoundedLogitLossFixedRef, BoundedLogitLoss_neg
+from utils.utils import *
+from utils.network import *
+from utils.training import *
 
-from matplotlib import pyplot as plt
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
@@ -240,8 +235,6 @@ def main():
                                 num_classes=num_classes,
                                 finetune=False)
 
-    #print_log("=> Network :\n {}".format(target_network), log)
-    #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
     target_network.eval()
 
@@ -266,7 +259,7 @@ def main():
 
     if args.use_cuda:
         target_network = target_network.cuda()
-
+    '''
     # evaluate uap
     if '.npy' not in args.uap_name:
         #load uap
@@ -290,16 +283,29 @@ def main():
                          target_class=args.target_class,
                          log=log,
                          use_cuda=args.use_cuda)
-
+    '''
     #load uap
+    mask = None
     print('Evaluate uap stamp')
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.pretrained_dataset,
                             network_arch=args.test_arch,
                             random_seed=args.pretrained_seed)
-    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
-    tuap = torch.from_numpy(uap)
+    if 'spgd' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.pth')
+        tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
+        tuap = torch.load(uap_fn) / tstd
+    elif 'lavan' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.pth')
+        tuap = torch.load(uap_fn)
+        _, mask = init_patch_square((1, 3, 224, 224), 176, 224, 176, 224)
+        if args.use_cuda:
+            mask = mask.cuda()
+    else:
+        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+        uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+        tuap = torch.from_numpy(uap)
+
     if args.use_cuda:
         tuap = tuap.cuda()
     metrics_evaluate_test(data_loader=data_test_loader,
@@ -307,6 +313,7 @@ def main():
                           uap=tuap,
                           targeted=args.targeted,
                           target_class=args.target_class,
+                          mask=mask,
                           log=log,
                           use_cuda=args.use_cuda)
 
