@@ -197,7 +197,7 @@ python analyze_input.py --option=repair --dataset=imagenet --arch=resnet50 --mod
 python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired_50.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=547
 python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=547
 
-python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --test_name=resnet50_imagenet.pth --pretrained_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --test_arch=resnet50 --result_subfolder=result --targeted=True --target_class=547 --ngpu=1 --workers=4
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=resnet50_imagenet.pth --pretrained_seed=123 --test_dataset=imagenet --test_arch=resnet50 --result_subfolder=result --targeted=True --target_class=547 --ngpu=1 --workers=4
 
 #googlenet
 python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=googlenet --model_name=googlenet_imagenet.pth --split_layer=17 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=753 --batch_size=32 --ngpu=1 --workers=4
@@ -241,3 +241,28 @@ python analyze_input.py --option=repair_ae --dataset=asl --arch=mobilenet --mode
 python analyze_input.py --option=repair_ae --dataset=asl --arch=mobilenet --model_name=mobilenet_asl_ae_repaired.pth --learning_rate=0.00002 --split_layers 3 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1020 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=19
 
 python test_uap.py --targeted=True --dataset=asl --pretrained_dataset=asl --model_name=mobilenet_asl_ae_repaired_20_50.pth --test_arch=mobilenet --pretrained_seed=123 --test_dataset=caltech --test_arch=shufflenetv2 --result_subfolder=result --targeted=True --target_class=19 --ngpu=1 --workers=4
+
+
+#naive uap
+python train_uap_naive.py --dataset=imagenet --pretrained_dataset=imagenet --pretrained_arch=resnet50 --pretrained_seed=123 --epsilon=0.0392 --num_iterations=50 --result_subfolder=result --targeted=True --target_class=296 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+
+
+#sPGD uap
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=uap_611.pth --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=611 --ngpu=1 --workers=4
+
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=uap_611.pth --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=611 --ngpu=1 --workers=4
+
+#lavan uap
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=391 --ngpu=1 --workers=4
+python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=391 --ngpu=1 --workers=4
+
+
+#eurosat uap
+python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.005 --split_layers 9 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=20 --target_class=3
+python analyze_input.py --option=repair --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat_ae_repaired.pth --learning_rate=0.001 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --target_class=3
+python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=3
+python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.00002 --split_layers 96 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=3
+
+python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=uap.npy --model_name=resnet50_eurosat.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=3 --ngpu=1 --workers=4
+
+

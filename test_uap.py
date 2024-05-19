@@ -18,11 +18,13 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
     # dataset used to train UAP
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
-                                                                 'coco', 'voc', 'places365', 'caltech', 'asl'],
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                 'eurosat'],
                         help='Used dataset to generate UAP (default: cifar10)')
     # dataset used to train UAP model
     parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100',
-                                                                            'imagenet', 'caltech', 'asl'],
+                                                                            'imagenet', 'caltech', 'asl',
+                                                                            'eurosat'],
                         help='Used dataset to train the initial model (default: cifar10)')
     # model used to train UAP
     parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
@@ -36,7 +38,8 @@ def parse_arguments():
 
     # model to test
     parser.add_argument('--test_dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
-                                                                      'coco', 'voc', 'places365', 'caltech', 'asl'],
+                                                                      'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                      'eurosat'],
                         help='Test model training set (default: cifar10)')
     parser.add_argument('--test_arch', default='vgg19', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20', 'resnet56',
                                                                    'alexnet', 'googlenet', 'vgg16', 'vgg19',
@@ -213,10 +216,10 @@ def main():
     _, data_test = get_data(args.test_dataset, args.test_dataset)
 
     data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=False,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
+                                                   batch_size=args.batch_size,
+                                                   shuffle=False,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
 
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
@@ -250,7 +253,8 @@ def main():
                     new_state_dict[k] = orig_state_dict[k]
 
             target_network.load_state_dict(new_state_dict)
-
+    elif args.pretrained_dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 

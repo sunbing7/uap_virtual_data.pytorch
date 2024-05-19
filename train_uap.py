@@ -27,10 +27,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
     # pretrained
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
-                                                                 'coco', 'voc', 'places365', 'caltech', 'asl'],
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                 'eurosat'],
                         help='Used dataset to generate UAP (default: cifar10)')
     parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100'
-        , 'imagenet', 'caltech', 'asl'],
+        , 'imagenet', 'caltech', 'asl', 'eurosat'],
                         help='Used dataset to train the initial model (default: cifar10)')
     parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar',
                                                                          'resnet20', 'resnet56',
@@ -163,6 +164,8 @@ def main():
 
             target_network.load_state_dict(new_state_dict)
 
+    elif args.pretrained_dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         adaptive = '_adaptive'

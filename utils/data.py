@@ -17,6 +17,8 @@ from config.config import IMAGENET_PATH, DATASET_BASE_PATH
 from config.config import *
 from dataset_utils.voc0712 import VOCDetection
 
+from utils.data_sat import *
+
 #import utils.utils_backdoor as utils_backdoor
 #DATA_DIR = 'data'  # data folder
 #DATA_FILE = 'cifar_dataset.h5'  # dataset file
@@ -60,6 +62,12 @@ def get_data_specs(pretrained_dataset):
         num_classes = 29
         input_size = 200
         num_channels = 3
+    elif pretrained_dataset == 'eurosat':
+        mean = [0.3442, 0.3801, 0.4077]
+        std = [0.2025, 0.1368, 0.1156]
+        num_classes = 10
+        input_size = 64
+        num_channels = 3
     else:
         raise ValueError
     return num_classes, (mean, std), input_size, num_channels
@@ -81,7 +89,7 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
                      (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
                  )
                  ])
-        
+
 
         test_transform = transforms.Compose(
                 [transforms.ToTensor(),
@@ -284,40 +292,33 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
         print('[DEBUG] asl train len: {}'.format(len(train_data_full)))
         print('[DEBUG] asl test len: {}'.format(len(test_data)))
+
+    elif dataset == 'eurosat':
+        train_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(degrees=15),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        train_dataset = EuroSAT(transform=train_transform)
+
+        test_dataset = EuroSAT(transform=test_transform)
+
+        trainval, _ = random_split(train_dataset, 0.9, random_state=42)
+        train_data_full, _ = random_split(trainval, 0.9, random_state=7)
+        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                             size=int(0.5 * len(train_data_full)), replace=False))
+        _, test_data = random_split(test_dataset, 0.9, random_state=42)
+        print('[DEBUG] train len: {}'.format(len(train_data)))
+        print('[DEBUG] test len: {}'.format(len(test_data)))
     return train_data, test_data
 
-
-'''
-def get_data_perturbed(pretrained_dataset, uap):
-
-    if pretrained_dataset == 'cifar10':
-        train_transform = transforms.Compose(
-            [transforms.Resize(size=(224, 224)),
-             transforms.Lambda(lambda y: (y + uap)),
-             transforms.RandomHorizontalFlip(),
-             transforms.RandomCrop(224, padding=4),
-             transforms.ToTensor(),
-             # transforms.Normalize(mean, std),
-             transforms.Normalize(
-                 (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-             )
-             ])
-
-        test_transform = transforms.Compose(
-            [transforms.Resize(size=(224, 224)),
-             transforms.Lambda(lambda y: (y + uap)),
-             transforms.ToTensor(),
-             # transforms.Normalize(mean, std),
-             transforms.Normalize(
-                 (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-             )
-             ])
-
-        train_data = dset.CIFAR10(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
-        test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
-
-    return train_data, test_data
-'''
 
 def get_data_class(dataset, cur_class=1, preprocess=None):
     #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
@@ -616,3 +617,14 @@ def load_dataset_h5(data_filename, keys=None):
                 dataset[name] = np.array(hf.get(name))
 
     return dataset
+
+
+def random_split(dataset, ratio=0.9, random_state=None):
+    if random_state is not None:
+        state = torch.random.get_rng_state()
+        torch.random.manual_seed(random_state)
+    n = int(len(dataset) * ratio)
+    split = torch.utils.data.random_split(dataset, [n, len(dataset) - n])
+    if random_state is not None:
+        torch.random.set_rng_state(state)
+    return split

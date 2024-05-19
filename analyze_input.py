@@ -38,7 +38,8 @@ def parse_arguments():
                         help='Causality analysis type (default: logit)')
 
     parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
-                                                                 'coco', 'voc', 'places365', 'caltech', 'asl'],
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                 'eurosat'],
                         help='Used dataset to generate UAP (default: cifar10)')
     parser.add_argument('--is_train', type=int, default=0)
     parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20',
@@ -189,6 +190,9 @@ def analyze_inputs(args):
 
             network.load_state_dict(new_state_dict)
 
+    elif args.dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
@@ -288,6 +292,9 @@ def analyze_layers(args):
                     new_state_dict[k] = orig_state_dict[k]
 
             network.load_state_dict(new_state_dict)
+
+    elif args.dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
@@ -413,6 +420,9 @@ def analyze_layers_clean(args):
                     new_state_dict[k] = orig_state_dict[k]
 
             network.load_state_dict(new_state_dict)
+
+    elif args.dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
@@ -749,6 +759,9 @@ def test(args):
 
             network.load_state_dict(new_state_dict)
 
+    elif args.dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -998,6 +1011,9 @@ def uap_repair(args):
 
             target_network.load_state_dict(new_state_dict)
 
+    elif args.dataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -1179,6 +1195,9 @@ def uap_gen_low_en_sample(args):
                     new_state_dict[k] = orig_state_dict[k]
 
             target_network.load_state_dict(new_state_dict)
+
+    elif args.datasetdataset == 'eurosat':
+        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
