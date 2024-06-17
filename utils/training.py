@@ -10,6 +10,7 @@ from utils.utils import time_string, print_log
 from torch.distributions import Categorical
 from torch.autograd import Variable
 from torchsummary import summary
+from matplotlib import pyplot as plt
 
 
 def calculate_entropy_tensor(x):
@@ -413,6 +414,20 @@ def adv_train(data_loader,
                                            use_cuda)
 
             x_adv = input + delta
+
+            #plot x_adv
+            pert_img = delta[0]
+            pert_img = pert_img.cpu().detach().numpy()
+            pert_img_amp = np.transpose(pert_img, (1, 2, 0))
+            pert_img_amp = pert_img_amp / 2 + 0.5
+            tuap_range = np.max(pert_img_amp) - np.min(pert_img_amp)
+            pert_img_amp = pert_img_amp / tuap_range + 0.5
+            pert_img_amp -= np.min(pert_img_amp)
+
+            imgplot = plt.imshow(pert_img_amp)
+            my_path = '/root/autodl-tmp/sunbing/workspace/uap/uap_virtual_data.pytorch/uap/imagenet_imagenet_resnet50_123'
+            plt.savefig(my_path + '/delta_174_' + str(num_batch) + '.png')
+
             uap_x = (input + uap).float()
 
              # compute output
@@ -1703,6 +1718,40 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         # insert neuron index
         out = dense_avg
     return out, outputs, clean_outputs
+
+
+def solve_causal_uap(filter_model, uap, filter_arch, split_layer=43, causal_type='logit', use_cuda=True):
+
+    #split the model
+    model1, model2 = split_model(filter_model, filter_arch, split_layer=split_layer)
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+    #filter_model.eval()
+    out = []
+    if causal_type == 'act':
+        dense_avg = []
+        outputs = []
+
+        if use_cuda:
+            uap = uap.cuda().float()
+            input = uap
+
+        # compute output
+        with torch.no_grad():
+            dense_output = model1(input)
+            ori_output = model2(dense_output)
+            #test
+            #test_output = filter_model(input)
+            ori_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+            outputs = outputs + list(ori_out_class)
+            dense_this = torch.reshape(dense_output, (dense_output.shape[0], -1)).cpu().detach().numpy()# 4096
+        dense_avg = dense_avg + list(dense_this)  # batchx4096
+
+        # insert neuron index
+        out = dense_avg
+    return out, outputs
 
 
 def my_test_uap(data_loader, filter_model, uap, target_class, num_sample, use_cuda=True):

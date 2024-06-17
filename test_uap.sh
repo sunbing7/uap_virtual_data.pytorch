@@ -96,5 +96,5 @@ done
 #resnet50
 for TARGET_CLASS in {9,1,8,2,3,7,4,6}
 do
-    python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=uap.npy --model_name=resnet50_eurosat_ae_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+    python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=uap.npy --model_name=resnet50_eurosat_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 done

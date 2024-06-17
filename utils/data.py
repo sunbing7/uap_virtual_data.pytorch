@@ -321,7 +321,7 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
 
 
 def get_data_class(dataset, cur_class=1, preprocess=None):
-    #num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
     if dataset == 'cifar10':
 
         data_file = DATASET_BASE_PATH + '/cifar.h5'
@@ -346,6 +346,7 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
         train_data = CustomCifarClassDataSet(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
         test_data = CustomCifarClassDataSet(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
     elif dataset == 'imagenet':
+        #'''
         num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
         #use imagenet 2012 validation set as uap training set
         #use imagenet DEV 1000 sample dataset as the test set
@@ -367,10 +368,36 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
                 transforms.Normalize(mean, std)])
 
         train_data = dset.ImageFolder(root=traindir, transform=train_transform)
-        test_data = dset.ImageFolder(root=valdir, transform=test_transform)
+        #test_data = dset.ImageFolder(root=valdir, transform=test_transform)
 
         train_data = fix_labels_class(train_data, cur_class=cur_class)
-        test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
+        #test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
+        test_data = train_data
+        '''
+        traindir = os.path.join(IMAGENET_PATH, 'validation')
+
+        train_transform = transforms.Compose([
+                transforms.Resize(256),
+                # transforms.Resize(299), # inception_v3
+                transforms.RandomCrop(input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)])
+
+        full_val = dset.ImageFolder(root=traindir, transform=train_transform)
+        full_val = fix_labels(full_val)
+
+        full_index = np.arange(0, len(full_val))
+        index_test = np.load(IMAGENET_PATH + '/validation/index_test.npy').astype(np.int64)
+        index_train = [x for x in full_index if x not in index_test]
+
+        train_data = torch.utils.data.Subset(full_val, index_train)
+        test_data = torch.utils.data.Subset(full_val, index_test)
+
+        train_data = filter_class(train_data, cur_class)
+        test_data = filter_class(test_data, cur_class)
+        print('test size {} train size {}'.format(len(test_data), len(train_data)))
+        '''
+
     elif dataset == 'imagenet_caffe':
         num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
         #use imagenet 2012 validation set as uap training set
@@ -435,6 +462,35 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
         class_ids = np.array(list(zip(*test_data_all.imgs))[1])
         wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
         test_data  = torch.utils.data.Subset(test_data_all, wanted_idx)
+    elif dataset == 'eurosat':
+        train_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(degrees=15),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)])
+
+        train_dataset = EuroSAT(transform=train_transform)
+
+        test_dataset = EuroSAT(transform=test_transform)
+
+        trainval, _ = random_split(train_dataset, 0.9, random_state=42)
+        train_data_full, _ = random_split(trainval, 0.9, random_state=7)
+        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                             size=int(0.5 * len(train_data_full)), replace=False))
+        _, test_data_all = random_split(test_dataset, 0.9, random_state=42)
+        print('[DEBUG] train len: {}'.format(len(train_data)))
+        print('[DEBUG] test len: {}'.format(len(test_data_all)))
+
+        class_ids = np.array(list(zip(*train_dataset.imgs))[1])
+        wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
+        test_data = torch.utils.data.Subset(train_dataset, wanted_idx)
+
     else:
         return None
     return train_data, test_data
@@ -581,6 +637,38 @@ def fix_labels(test_set):
 
     test_set.samples = new_data_samples
     return test_set
+
+
+def filter_class(subset, cur_class):
+    new_indices = []
+    for i in range(0, len(subset.indices)):
+        org_label = subset.dataset.samples[i][1]
+        if org_label == cur_class:
+            new_indices.append(i)
+    subset.indices = new_indices
+    return subset
+
+
+def filter_classes_and_fix_labels(dataset_ori, cur_class, wanted_index):
+    val_dict = {}
+    groudtruth = os.path.join(IMAGENET_PATH, 'validation/classes.txt')
+
+    i = 0
+    with open(groudtruth) as file:
+        for line in file:
+            (key, class_name) = line.split(':')
+            val_dict[key] = i
+            i = i + 1
+
+    new_data_samples = []
+    for i, j in enumerate(dataset.samples):
+        class_id = dataset.samples[i][0].split('/')[-1].split('.')[0].split('_')[-1]
+        org_label = val_dict[class_id]
+        if org_label == cur_class and i in wanted_index:
+            new_data_samples.append((dataset.samples[i][0], org_label))
+
+    dataset.samples = new_data_samples
+    return dataset
 
 
 def fix_labels_class(test_set, cur_class=1):

@@ -18,7 +18,7 @@ from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculat
 from collections import OrderedDict
 from activation_analysis import outlier_detection
 from utils.training import (train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint,
-                            ShannonEntropyFlat, ShannonEntropyBatch)
+                            ShannonEntropyFlat, ShannonEntropyBatch, solve_causal_uap)
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -179,7 +179,7 @@ def analyze_inputs(args):
 
     if args.dataset == "caltech" or args.dataset == 'asl':
         if 'repaired' in args.model_name:
-            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
             #state dict
             orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -191,7 +191,7 @@ def analyze_inputs(args):
             network.load_state_dict(new_state_dict)
 
     elif args.dataset == 'eurosat':
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -282,7 +282,7 @@ def analyze_layers(args):
 
     if args.dataset == "caltech" or args.dataset == 'asl':
         if 'repaired' in args.model_name:
-            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
             #state dict
             orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -294,7 +294,7 @@ def analyze_layers(args):
             network.load_state_dict(new_state_dict)
 
     elif args.dataset == 'eurosat':
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
@@ -308,7 +308,7 @@ def analyze_layers(args):
         network.cuda()
 
     uap = None
-    if not args.analyze_clean:
+    if args.analyze_clean == 0:
         _, data_test = get_data(args.dataset, args.dataset)
 
         data_test_loader = torch.utils.data.DataLoader(data_test,
@@ -328,13 +328,13 @@ def analyze_layers(args):
 
         # perform causality analysis
         attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
-                                      split_layer=args.split_layer,
-                                      targeted=args.targeted,
-                                      target_class=args.target_class,
-                                      num_sample=args.num_iterations,
-                                      causal_type=args.causal_type,
-                                      log=None,
-                                      use_cuda=args.use_cuda)
+                                                                      split_layer=args.split_layer,
+                                                                      targeted=args.targeted,
+                                                                      target_class=args.target_class,
+                                                                      num_sample=args.num_iterations,
+                                                                      causal_type=args.causal_type,
+                                                                      log=None,
+                                                                      use_cuda=args.use_cuda)
 
         #save multiple maps
         attribution_path = get_attribution_path()
@@ -343,9 +343,12 @@ def analyze_layers(args):
             uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
                                   + '_' + str(outputs[i]) + ".npy")
             np.save(uap_fn, attribution_map_)
+            uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
+                                  + ".npy")
+            np.save(uap_fn, attribution_map_)
         output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
-    else:
+    elif args.analyze_clean == 1:
         _, data_test = get_data_class(args.dataset, args.target_class)
         if len(data_test) == 0:
             print('No sample from class {}'.format(args.target_class))
@@ -373,6 +376,26 @@ def analyze_layers(args):
             np.save(uap_fn, attribution_map_)
         output_fn = os.path.join(attribution_path, "clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
+    elif args.analyze_clean == 2: #analyze uap only
+        uap_path = get_uap_path(uap_data=args.dataset,
+                                model_data=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+        uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+        uap = torch.from_numpy(uap)
+        attribution_map, outputs = solve_causal_uap(network, uap, args.arch,
+                                                    split_layer=args.split_layer,
+                                                    causal_type=args.causal_type,
+                                                    use_cuda=args.use_cuda)
+
+        attribution_path = get_attribution_path()
+        for i in range(0, len(attribution_map)):
+            attribution_map_ = attribution_map[i]
+            uap_fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+            np.save(uap_fn, attribution_map_)
+        calc_entropy_uap(args)
+
     return
 
 
@@ -410,7 +433,7 @@ def analyze_layers_clean(args):
 
     if args.dataset == "caltech" or args.dataset == 'asl':
         if 'repaired' in args.model_name:
-            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
             #state dict
             orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -422,7 +445,7 @@ def analyze_layers_clean(args):
             network.load_state_dict(new_state_dict)
 
     elif args.dataset == 'eurosat':
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
@@ -471,10 +494,10 @@ def calc_entropy(args):
     loaded = np.load(clean_fn)
     clean_ca = loaded[:, -1]
 
-    if not args.analyze_clean:
+    if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
-    else:
+    elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
 
@@ -494,12 +517,20 @@ def calc_entropy(args):
 def calc_entropy_i(i, args):
     attribution_path = get_attribution_path()
 
-    if not args.analyze_clean:
-        fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
-                          str(i) + '_' + str(args.target_class) + ".npy")
-    else:
+    if args.analyze_clean == 0:
+        if 'repaired' in args.model_name:
+            fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
+                              str(i) + ".npy")
+        else:
+            fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
+                              str(i) + '_' + str(args.target_class) + ".npy")
+
+    elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(i) + '_' + str(args.target_class) + ".npy")
+    elif args.analyze_clean == 2:
+        fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+
     if os.path.exists(fn):
         loaded = np.load(fn)
     else:
@@ -516,6 +547,29 @@ def calc_entropy_i(i, args):
     #print('entropy {}: {}'.format(i, uap_h))
     #print('uap_hloss {}: {}'.format(i, uap_hloss))
     return uap_h
+
+
+def calc_entropy_uap(args):
+    attribution_path = get_attribution_path()
+
+    fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+    if os.path.exists(fn):
+        loaded = np.load(fn)
+    else:
+        return
+
+    if args.causal_type == 'logit':
+        ca = loaded[:, 1]
+    elif args.causal_type == 'act':
+        ca = loaded.transpose()
+
+    # uap_h = calculate_shannon_entropy_array(ca)
+    uap_h = calc_hloss(ca)
+
+    print('entropy uap: {}'.format(uap_h))
+    # print('uap_hloss {}: {}'.format(i, uap_hloss))
+    return uap_h
+
 
 def calc_entropy_old():
     attribution_path = get_attribution_path()
@@ -601,11 +655,11 @@ def calc_pcc(args):
     loaded = np.load(clean_fn)
     clean_ca = loaded[:, -1]
 
-    if not args.analyze_clean:
+    if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
         prefix = 'uap'
-    else:
+    elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(args.idx) + '_' + str(args.target_class) + ".npy")
         prefix = 'clean'
@@ -634,10 +688,10 @@ def calc_pcc_i(i, args):
     loaded = np.load(clean_fn)
     clean_ca = loaded[:, -1]
 
-    if not args.analyze_clean:
+    if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
                           str(i) + '_' + str(args.target_class) + ".npy")
-    else:
+    elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
                           str(i) + '_' + str(args.target_class) + ".npy")
     if os.path.exists(fn):
@@ -748,7 +802,7 @@ def test(args):
 
     if args.dataset == "caltech" or args.dataset == 'asl':
         if 'repaired' in args.model_name:
-            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
             #state dict
             orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -760,7 +814,7 @@ def test(args):
             network.load_state_dict(new_state_dict)
 
     elif args.dataset == 'eurosat':
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
@@ -928,7 +982,7 @@ def uap_classification(args):
     #print('uap_hs : {}'.format(uap_hs))
     uap_hs_avg = np.mean(np.array(uap_hs))
     print('uap_hs_avg : {}'.format(uap_hs_avg))
-    print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
+    #print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
     #get average pcc of clean data
     clean_pccs = []
@@ -953,8 +1007,9 @@ def uap_classification(args):
             outliers = [x[0] for x in top]
             pcc_result.append(int((len(clean_pccs + [uap_pcc]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
-    print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
-    return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
+    #print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
+    #return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
+    return 0
 
 
 def uap_repair(args):
@@ -1268,7 +1323,7 @@ def clean_classification(args):
             outliers = [x[0] for x in top]
             h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
-    print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
+    #print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
 
     #get average pcc of clean data
     clean_pccs = []
@@ -1290,7 +1345,7 @@ def clean_classification(args):
             outliers = [x[0] for x in top]
             pcc_result.append(int((len(clean_pccs + [uap_pcc]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
-    print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
+    #print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1) / len(pcc_result)) * 100
 
 
@@ -1335,7 +1390,7 @@ if __name__ == '__main__':
     elif args.option == 'classify':
         tpr = uap_classification(args)
         fpr = clean_classification(args)
-        print('TPR: {}, FPR: {}'.format(tpr, fpr))
+        #print('TPR: {}, FPR: {}'.format(tpr, fpr))
     elif 'repair' in args.option:
         uap_repair(args)
     elif args.option == 'gen_en_sample':

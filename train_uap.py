@@ -279,6 +279,7 @@ def main():
     #export uap and save it
     #'''
     tuap = torch.unsqueeze(generator.uap, dim=0)
+
     plot_tuap = tuap[0].cpu().detach().numpy()
     plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
     plot_tuap_normal = plot_tuap + 0.5
@@ -290,10 +291,12 @@ def main():
     imgplot = plt.imshow(plot_tuap_amp)
 
     np.save(uap_path + '/uap_' + str(args.target_class) + adaptive + '.npy', tuap.cpu().detach().numpy())
-    plt.savefig(model_path + '/uap_' + str(args.target_class) + adaptive + '.png')
+    plt.savefig(uap_path + '/uap_' + str(args.target_class) + adaptive + '.png')
     plt.show()
     torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
     print('uap saved!')
+
+
     '''
     tuap = torch.from_numpy(tuap.cpu().detach().numpy() / np.array(std).reshape(1, 3, 1, 1))
 

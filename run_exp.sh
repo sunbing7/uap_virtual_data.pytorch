@@ -192,7 +192,7 @@ python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=
 
 python analyze_input.py --option=classify --causal_type=act --target_class=755 --num_iterations=32 --split_layer=9 --th=0.5
 
-python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --learning_rate=0.001 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=50 --target_class=547
+python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --learning_rate=0.001 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=50 --target_class=174
 python analyze_input.py --option=repair --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired_50.pth --learning_rate=0.0001 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --target_class=547
 python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired_50.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=547
 python analyze_input.py --option=repair_ae --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet_ae_repaired.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=1600 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=547
@@ -258,7 +258,7 @@ python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
 
 
 #eurosat uap
-python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.005 --split_layers 9 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=20 --target_class=3
+python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.005 --split_layers 9 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=50 --target_class=3
 python analyze_input.py --option=repair --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat_ae_repaired.pth --learning_rate=0.001 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --target_class=3
 python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=3
 python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.00002 --split_layers 96 --seed=123 --num_iterations=1 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=300 --ngpu=1 --workers=4 --alpha=0.5 --ae_alpha=0.5 --ae_iter=5 --target_class=3
@@ -266,3 +266,39 @@ python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --m
 python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=uap.npy --model_name=resnet50_eurosat.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=3 --ngpu=1 --workers=4
 
 
+########################################################        instructions      ########################################################
+1. plot uap and uap perturbed image: plot_uap.py
+python plot_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=174 --ngpu=1 --workers=4
+2. plot generated AE: insert below code to adv_train
+
+            #plot x_adv
+            num_plot = 0
+            for pert_img in x_adv:
+                pert_img = pert_img.cpu().detach().numpy()
+                pert_img_amp = np.transpose(pert_img, (1, 2, 0))
+                pert_img_amp = pert_img_amp / 2 + 0.5
+                tuap_range = np.max(pert_img_amp) - np.min(pert_img_amp)
+                pert_img_amp = pert_img_amp / tuap_range + 0.5
+                pert_img_amp -= np.min(pert_img_amp)
+
+                imgplot = plt.imshow(pert_img_amp)
+                my_path = '/root/autodl-tmp/sunbing/workspace/uap/uap_virtual_data.pytorch/uap/imagenet_imagenet_resnet50_123'
+                plt.savefig(my_path + '/ae_174_' + str(num_plot) + '.png')
+                num_plot = num_plot + 1
+            #plot x_adv
+            num_plot = 0
+            for pert_img in input:
+                pert_img = pert_img.cpu().detach().numpy()
+                pert_img_amp = np.transpose(pert_img, (1, 2, 0))
+                pert_img_amp = pert_img_amp / 2 + 0.5
+                tuap_range = np.max(pert_img_amp) - np.min(pert_img_amp)
+                pert_img_amp = pert_img_amp / tuap_range + 0.5
+                pert_img_amp -= np.min(pert_img_amp)
+
+                imgplot = plt.imshow(pert_img_amp)
+                my_path = '/root/autodl-tmp/sunbing/workspace/uap/uap_virtual_data.pytorch/uap/imagenet_imagenet_resnet50_123'
+                plt.savefig(my_path + '/clean_174_' + str(num_plot) + '.png')
+                num_plot = num_plot + 1
+            return
+
+########################################################        instructions      ########################################################
