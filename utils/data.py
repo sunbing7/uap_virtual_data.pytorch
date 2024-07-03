@@ -154,7 +154,7 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
         index_train = [x for x in full_index if x not in index_test]
         train_data = torch.utils.data.Subset(full_val, index_train)
         test_data = torch.utils.data.Subset(full_val, index_test)
-        print('test size {} train size {}'.format(len(test_data), len(train_data)))
+        #print('test size {} train size {}'.format(len(test_data), len(train_data)))
 
     elif dataset == "imagenet_caffe":
         #use imagenet 2012 validation set as uap training set

@@ -13,6 +13,8 @@ from torchsummary import summary
 from matplotlib import pyplot as plt
 
 
+DEBUG = False
+
 def calculate_entropy_tensor(x):
     """
     calculate information entropy
@@ -124,9 +126,10 @@ def train(data_loader,
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
         # Projection
         model.module.generator.uap.data = torch.clamp(model.module.generator.uap.data, -epsilon, epsilon)
-        
+
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
@@ -370,13 +373,15 @@ def adv_train(data_loader,
 
     batch_time = AverageMeter()
     data_time = AverageMeter()
+
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
-    adv_top1 = AverageMeter()
-    adv_top5 = AverageMeter()
-    delta_top1 = AverageMeter()
-    delta_top5 = AverageMeter()
+    if DEBUG:
+        adv_top1 = AverageMeter()
+        adv_top5 = AverageMeter()
+        delta_top1 = AverageMeter()
+        delta_top5 = AverageMeter()
     # switch to train mode
     model.train()
 
@@ -415,22 +420,184 @@ def adv_train(data_loader,
 
             x_adv = input + delta
 
-            #plot x_adv
-            pert_img = delta[0]
-            pert_img = pert_img.cpu().detach().numpy()
-            pert_img_amp = np.transpose(pert_img, (1, 2, 0))
-            pert_img_amp = pert_img_amp / 2 + 0.5
-            tuap_range = np.max(pert_img_amp) - np.min(pert_img_amp)
-            pert_img_amp = pert_img_amp / tuap_range + 0.5
-            pert_img_amp -= np.min(pert_img_amp)
-
-            imgplot = plt.imshow(pert_img_amp)
-            my_path = '/root/autodl-tmp/sunbing/workspace/uap/uap_virtual_data.pytorch/uap/imagenet_imagenet_resnet50_123'
-            plt.savefig(my_path + '/delta_174_' + str(num_batch) + '.png')
-
             uap_x = (input + uap).float()
 
              # compute output
+            if model._get_name() == "Inception3":
+                output, aux_output = model(input)
+                loss1 = criterion(output, target)
+                loss2 = criterion(aux_output, target)
+                loss = loss1 + 0.4 * loss2
+            else:
+                output = model(input)
+                if DEBUG:
+                    delta_output = model(x_adv)
+                    adv_output = model(uap_x)
+
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+
+                poutput = model(x_adv)
+                pce_loss = criterion(poutput, target)
+
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss
+
+            losses.update(loss.item(), input.size(0))
+
+            # measure accuracy and record loss
+            if len(target.shape) > 1:
+                target_ = torch.argmax(target, dim=-1)
+            if use_cuda:
+                target_ = target_.cuda()
+
+            prec1, prec5 = accuracy(output.data, target_, topk=(1, 5))
+            top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
+
+            if DEBUG:
+                adv_prec1, adv_prec5 = accuracy(adv_output.data, target_, topk=(1, 5))
+                adv_top1.update(adv_prec1.item(), input.size(0))
+                adv_top5.update(adv_prec5.item(), input.size(0))
+
+                delta_prec1, delta_prec5 = accuracy(delta_output.data, target_, topk=(1, 5))
+                delta_top1.update(delta_prec1.item(), input.size(0))
+                delta_top5.update(delta_prec5.item(), input.size(0))
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+
+            for pmodel in p_models:
+                del pmodel
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+            if num_batch % 100 == 0:
+                if DEBUG:
+                    print('  Batch: [{:03d}/{}]   '
+                          'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                          'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                          'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                          'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                          'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
+                          'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
+                          .format(
+                        num_batch,len(data_loader),
+                        loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
+                        delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
+                else:
+                    print('  Batch: [{:03d}/{}]   '
+                          'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                          'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                          .format(
+                        num_batch,len(data_loader),
+                        loss=losses, top1=top1, top5=top5) + time_string())
+            num_batch = num_batch + 1
+
+        if DEBUG:
+            print('  Iteration: [{:03d}/{:03d}]   '
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                  'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                  'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
+                   iteration, num_iterations,
+                   loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
+        else:
+            print('  Iteration: [{:03d}/{:03d}]   '
+                  'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                   iteration, num_iterations,
+                   loss=losses, top1=top1, top5=top5) + time_string())
+        iteration += 1
+    print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                top5=top5,
+                                                                                                error1=100 - top1.avg))
+    return model
+
+
+def pgd_train(data_loader,
+              model,
+              target_class,
+              criterion,
+              optimizer,
+              num_iterations,
+              split_layers,
+              uap=None,
+              num_batches=1000,
+              alpha=0.1,
+              use_cuda=True,
+              adv_itr=10,
+              eps=0.0392,
+              mean=[0, 0, 0],
+              std=[1, 1, 1]):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    adv_top1 = AverageMeter()
+    adv_top5 = AverageMeter()
+    delta_top1 = AverageMeter()
+    delta_top5 = AverageMeter()
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+
+    iteration = 0
+    while (iteration < num_iterations):
+        num_batch = 0
+        for input, target in data_loader:
+            if num_batch > num_batches:
+                break
+
+            # measure data loading time
+            data_time.update(time.time() - end)
+
+            if use_cuda:
+                target = target.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+            '''
+            #untarget
+            delta = ae_training_pgd(model,
+                                    input,
+                                    target,
+                                    criterion,
+                                    adv_itr,
+                                    eps,
+                                    True,
+                                    mean,
+                                    std,
+                                    use_cuda)
+            '''
+            #targeted
+            target_class = torch.ones_like(target) * target_class
+
+            delta = ae_training_pgd_tgt(model,
+                                        input,
+                                        target_class,
+                                        criterion,
+                                        adv_itr,
+                                        eps,
+                                        True,
+                                        mean,
+                                        std,
+                                        use_cuda)
+            #'''
+            x_adv = input + delta
+
+            uap_x = (input + uap).float()
+
+            # compute output
             if model._get_name() == "Inception3":
                 output, aux_output = model(input)
                 loss1 = criterion(output, target)
@@ -443,16 +610,6 @@ def adv_train(data_loader,
 
                 if output.shape != target.shape:
                     target = nn.functional.one_hot(target, len(output[0])).float()
-                '''
-                #calculate entropy
-                plosses = 0
-                for pmodel in p_models:
-                    poutput = pmodel(x_adv).view(len(input), -1)
-                    moutput = pmodel(input).view(len(input), -1)
-                    en_cri = hloss(use_cuda)
-                    p_en_b = (en_cri(poutput)).mean()
-                    c_en_b = (en_cri(moutput)).mean()
-                '''
 
                 poutput = model(x_adv)
                 pce_loss = criterion(poutput, target)
@@ -485,33 +642,6 @@ def adv_train(data_loader,
 
             optimizer.step()
 
-            for pmodel in p_models:
-                del pmodel
-
-            '''
-            #calculate entropy
-            p_models = []
-            for split_layer in split_layers:
-                pmodel, _ = split_model(model, arch, split_layer=split_layer)
-                p_models = p_models + [pmodel]
-
-            for pmodel in p_models:
-                poutput = pmodel(x_adv).view(len(input), -1)
-                moutput = pmodel(input).view(len(input), -1)
-                en_cri = hloss(use_cuda)
-                p_en_aft = (en_cri(poutput)).mean()
-                c_en_aft = (en_cri(moutput)).mean()
-
-            print('[DEBUG] before hloss(poutput) {}'.format(p_en_b))
-            #print('[DEBUG] after hloss(poutput) {}'.format(p_en_aft))
-            #print('[DEBUG] before delta hloss(output) {}'.format(c_en_b - p_en_b))
-            print('[DEBUG] clean before hloss(output) {}'.format(c_en_b))
-            #print('[DEBUG] clean after hloss(output) {}'.format(c_en_aft))
-            #print('[DEBUG] after delta hloss(output) {}'.format(c_en_aft - p_en_aft))
-            
-            for pmodel in p_models:
-                del pmodel
-            '''
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -525,7 +655,7 @@ def adv_train(data_loader,
                       'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
                       'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
                       .format(
-                    num_batch,len(data_loader),
+                    num_batch, len(data_loader),
                     loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
                     delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
             num_batch = num_batch + 1
@@ -536,8 +666,8 @@ def adv_train(data_loader,
               'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
               'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
               'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
-               iteration, num_iterations,
-               loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
+            iteration, num_iterations,
+            loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
 
         iteration += 1
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
@@ -796,8 +926,15 @@ def ae_training_individual(pmodels,
                            use_cuda=True):
     delta = torch.zeros_like(x)
 
+    # preprocess mean and std
+    if type(mean) is not torch.Tensor:
+        mean = torch.from_numpy(np.array([0, 0, 0]).reshape(1, 3, 1, 1)).float()
+        std = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1)).float()
+
     if use_cuda:
         delta = delta.cuda()
+        mean = mean.cuda()
+        std = std.cuda()
 
     if rs:
         delta.uniform_(-eps, eps)
@@ -807,14 +944,13 @@ def ae_training_individual(pmodels,
     en_loss = Variable(torch.tensor(.0), requires_grad=True)
     en_cri = hloss(use_cuda)
     for i in range(attack_iters):
-        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), np.array([0., 0., 0.]), np.array(std), use_cuda)
+        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), mean, std)
         ae_x = (x + delta)
-        delta.data = destandardize_delta(delta.data, np.array([0., 0., 0.]), np.array(std), use_cuda)
+        delta.data = destandardize_delta(delta.data, mean, std)
 
         for pmodel in pmodels:
             poutput = pmodel(ae_x).view(len(x), -1)
             en_loss = torch.mean(en_cri(poutput))
-            #print('[DEBUG] itr {} ae entropy before: {}'.format(i, en_loss))
 
         loss = -en_loss
         loss.backward()
@@ -824,13 +960,111 @@ def ae_training_individual(pmodels,
         delta.data = (delta + (eps / 4) * grad_sign)
         delta.data = clamp(delta.data, -eps, eps, use_cuda)
         delta.grad.zero_()
+
+    return standardize_delta(delta.detach(), mean, std)
+
+
+def ae_training_pgd(model,
+                    x,
+                    y,
+                    criterion,
+                    attack_iters=10,
+                    eps=0.0392,
+                    rs=True,
+                    mean=[0, 0, 0],
+                    std=[1, 1, 1],
+                    use_cuda=True):
     '''
-    for pmodel in pmodels:
-        poutput = pmodel(torch.add(x, delta)).view(len(x), -1)
-        en_loss = torch.mean(en_cri(poutput))
-        print('[DEBUG] ae entropy after: {}'.format(en_loss))
+    adversarial training
+
     '''
-    return standardize_delta(delta.detach(), np.array([0., 0., 0.]), np.array(std), use_cuda)
+    delta = torch.zeros_like(x)
+
+    # preprocess mean and std
+    if type(mean) is not torch.Tensor:
+        mean = torch.from_numpy(np.array([0, 0, 0]).reshape(1, 3, 1, 1)).float()
+        std = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1)).float()
+
+    if use_cuda:
+        delta = delta.cuda()
+        mean = mean.cuda()
+        std = std.cuda()
+
+    if rs:
+        delta.uniform_(-eps, eps)
+
+    delta.requires_grad = True
+
+    for i in range(attack_iters):
+        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), mean, std)
+        ae_x = (x + delta)
+        delta.data = destandardize_delta(delta.data, mean, std)
+
+        output = model(ae_x)
+        loss = criterion(output, y)
+
+        loss.backward()
+        grad = delta.grad.detach()
+
+        grad_sign = sign(grad)
+        delta.data = (delta + (eps / 4) * grad_sign)
+        delta.data = clamp(delta.data, -eps, eps, use_cuda)
+        delta.grad.zero_()
+
+    return standardize_delta(delta.detach(), mean, std)
+
+
+def ae_training_pgd_tgt(model,
+                        x,
+                        target_class,
+                        criterion,
+                        attack_iters=10,
+                        eps=0.0392,
+                        rs=True,
+                        mean=[0, 0, 0],
+                        std=[1, 1, 1],
+                        use_cuda=True):
+    '''
+    adversarial training
+
+    '''
+    delta = torch.zeros_like(x)
+
+    # preprocess mean and std
+    if type(mean) is not torch.Tensor:
+        mean = torch.from_numpy(np.array([0, 0, 0]).reshape(1, 3, 1, 1)).float()
+        std = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1)).float()
+
+
+    if use_cuda:
+        delta = delta.cuda()
+        mean = mean.cuda()
+        std = std.cuda()
+        target_class = target_class.cuda()
+
+    if rs:
+        delta.uniform_(-eps, eps)
+
+    delta.requires_grad = True
+
+    for i in range(attack_iters):
+        delta.data = standardize_delta(clamp(delta.data, -eps, eps, use_cuda), mean, std)
+        ae_x = (x + delta)
+        delta.data = destandardize_delta(delta.data, mean, std)
+
+        output = model(ae_x)
+        loss = criterion(output, target_class)
+
+        loss.backward()
+        grad = delta.grad.detach()
+
+        grad_sign = sign(grad)
+        delta.data = (delta - (eps / 4) * grad_sign)
+        delta.data = clamp(delta.data, -eps, eps, use_cuda)
+        delta.grad.zero_()
+
+    return standardize_delta(delta.detach(), mean, std)
+
 
 
 def low_entropy_sample_training(model, pmodels, data_loader, criterion, attack_iters=10, eps=0.0392, rs=True, use_cuda=True):
@@ -944,7 +1178,7 @@ def known_uap_train(data_loader,
                     optimizer,
                     num_iterations,
                     split_layers,
-                    uap,
+                    uaps,
                     alpha=0.1,
                     use_cuda=True):
 
@@ -967,21 +1201,21 @@ def known_uap_train(data_loader,
     while (iteration < num_iterations):
         num_batch = 0
         for input, target in data_loader:
-            p_models = []
-            for split_layer in split_layers:
-                pmodel, _ = split_model(model, arch, split_layer=split_layer)
-                p_models = p_models + [pmodel]
-
             # measure data loading time
             data_time.update(time.time() - end)
 
-            if use_cuda:
-                target = target.cuda()
-                input = input.cuda()
-                uap = uap.cuda()
+            # select a uap
+            indices = torch.randperm(len(uaps))[:len(input)]
+            uap = uaps[indices]
+            pert_input = input
+            for i, uap_i in enumerate(uap):
+                if torch.randint(low=0, high=2, size=(1,1)):
+                    pert_input[i] = input[i] + uap_i
 
-            # generate AEs
-            delta = uap
+            if use_cuda:
+                input = input.cuda()
+                target = target.cuda()
+                pert_input = pert_input.cuda()
 
              # compute output
             if model._get_name() == "Inception3":
@@ -995,22 +1229,11 @@ def known_uap_train(data_loader,
                     target = nn.functional.one_hot(target, len(output[0])).float()
 
                 # cce loss only
-                poutput = model((input + delta).float())
+                poutput = model((pert_input).float())
                 pce_loss = criterion(poutput, target)
-                '''
-                # entropy loss
-                for pmodel in p_models:
-                    poutput_ = pmodel((input + delta).float()).view(len(input), -1)
-                    coutput_ = pmodel(input).view(len(input), -1)
-                    en_cri = hloss(use_cuda)
-                    p_en_b = en_cri(poutput_).mean()
-                    p_en_c = en_cri(coutput_).mean()
-                '''
 
                 ce_loss = criterion(output, target)
-                #loss = (1 - alpha) * ce_loss + alpha * pce_loss# - 0.001 * p_en_b
                 loss = (1 - alpha) * ce_loss + alpha * pce_loss
-                #print('[DEBUG] p_en_c {} p_en_b {}'.format(p_en_c, p_en_b))
 
             # measure accuracy and record loss
             if len(target.shape) > 1:
@@ -1026,9 +1249,6 @@ def known_uap_train(data_loader,
             adv_prec1, adv_prec5 = accuracy(poutput.data, target_, topk=(1, 5))
             adv_top1.update(adv_prec1.item(), input.size(0))
             adv_top5.update(adv_prec5.item(), input.size(0))
-
-            for pmodel in p_models:
-                del pmodel
 
             # compute gradient and do SGD step
             optimizer.zero_grad()
@@ -1070,6 +1290,7 @@ def known_uap_train(data_loader,
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
                                                                                                 top5=top5,
                                                                                                 error1=100 - top1.avg))
+    return model
 
 
 def sign(grad):
@@ -1091,23 +1312,11 @@ def clamp(X, l, u, cuda=True):
     return torch.max(torch.min(X, u), l)
 
 
-def standardize_delta(delta, mean, std, cuda=True):
-    if type(mean) is not torch.Tensor:
-        mean = torch.from_numpy(mean.reshape(1, 3, 1, 1)).float()
-        std = torch.from_numpy(std.reshape(1, 3, 1, 1)).float()
-    if cuda:
-        mean = mean.cuda()
-        std = std.cuda()
+def standardize_delta(delta, mean, std):
     return (delta - mean) / std
 
 
-def destandardize_delta(delta, mean, std, cuda=True):
-    if type(mean) is not torch.Tensor:
-        mean = torch.from_numpy(mean.reshape(1, 3, 1, 1)).float()
-        std = torch.from_numpy(std.reshape(1, 3, 1, 1)).float()
-    if cuda:
-        mean = mean.cuda()
-        std = std.cuda()
+def destandardize_delta(delta, mean, std):
     return (delta * std + mean)
 
 
@@ -1718,6 +1927,80 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
         # insert neuron index
         out = dense_avg
     return out, outputs, clean_outputs
+
+
+def solve_causal_single_both(data_loader, filter_model, uap, filter_arch, targeted, target_class, num_sample, split_layer=43, causal_type='logit', log=None, use_cuda=True):
+    '''
+    perform causality analysis on the dense layer before logit layer
+    Args:
+        data_loader: loader that loads original images with uap
+        filter_model:
+        uap:
+        filter_arch:
+        target_class:
+        num_sample: number of samples to use for causality analysis
+        causal_type:
+            - logit: analyze ACE of dense layer neuron on logits
+            - act: analyze ACE of uap on dense layer
+        log:
+        use_cuda:
+
+    Returns:
+
+    '''
+    #split the model
+    if uap == None:
+        return
+
+    model1, model2 = split_model(filter_model, filter_arch, split_layer=split_layer)
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+    #filter_model.eval()
+
+    total_num_samples = 0
+    pert_dense_avg = []
+    pert_outputs = []
+    clean_dense_avg = []
+    clean_outputs = []
+    for input, gt in data_loader:
+        if total_num_samples >= num_sample:
+            break
+
+        ori_input = input
+        if use_cuda:
+            gt = gt.cuda()
+            input = input.cuda()
+            ori_input = ori_input.cuda()
+            if uap != None:
+                uap = uap.cuda().float()
+
+        input = input + uap
+
+        # compute output
+        with torch.no_grad():
+            perturb_dense = model1(input)
+            perturb_output = model2(perturb_dense)
+            pert_out_class = torch.argmax(perturb_output, dim=-1).cpu().numpy()
+            pert_outputs = pert_outputs + list(pert_out_class)
+            pert_dense_this = torch.reshape(perturb_dense, (perturb_dense.shape[0], -1)).cpu().detach().numpy()
+
+            clean_dense = model1(ori_input)
+            clean_output = model2(clean_dense)
+            clean_output_classs = torch.argmax(clean_output, dim=-1).cpu().numpy()
+            clean_outputs = clean_outputs + list(clean_output_classs)
+            clean_dense_this = torch.reshape(clean_dense, (clean_dense.shape[0], -1)).cpu().detach().numpy()
+
+        pert_dense_avg = pert_dense_avg + list(pert_dense_this)
+        clean_dense_avg = clean_dense_avg + list(clean_dense_this)
+
+        total_num_samples += len(gt)
+    # average of all baches
+    pert_dense_avg = np.array(pert_dense_avg)
+    clean_dense_avg = np.array(clean_dense_avg)
+
+    return clean_dense_avg, pert_dense_avg
 
 
 def solve_causal_uap(filter_model, uap, filter_arch, split_layer=43, causal_type='logit', use_cuda=True):
@@ -2458,6 +2741,11 @@ def reconstruct_model_repair(ori_model, model_name, mask, split_layer=43):
         return None, 0
 
     return model, num_classes
+
+
+def norms(Z):
+    """Compute norms over all but the first dimension"""
+    return Z.view(Z.shape[0], -1).norm(dim=1, p=2)[:,None,None]
 
 
 class AverageMeter(object):

@@ -17,8 +17,7 @@ from causal_analysis import (calculate_shannon_entropy, calculate_ssim, calculat
                              calculate_shannon_entropy_batch, calc_hloss)
 from collections import OrderedDict
 from activation_analysis import outlier_detection
-from utils.training import (train_repair, metrics_evaluate_test, adv_train, known_uap_train, save_checkpoint,
-                            ShannonEntropyFlat, ShannonEntropyBatch, solve_causal_uap)
+from utils.training import *
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -29,7 +28,7 @@ def parse_arguments():
     parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
                                                                        'analyze_layers', 'calc_pcc', 'analyze_clean',
                                                                        'test', 'pcc', 'entropy', 'classify',
-                                                                       'repair_ae',
+                                                                       'repair_ae', 'analyze_entropy',
                                                                        'repair', 'repair_uap', 'gen_en_sample',
                                                                        'repair_enpool', 'repair_enrep'],
                         help='Run options')
@@ -254,6 +253,184 @@ def analyze_inputs(args):
     return
 
 
+def analyze_entropy(args):
+
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.use_cuda:
+        torch.cuda.manual_seed_all(args.seed)
+    cudnn.benchmark = True
+
+    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
+    ####################################
+    # Init model
+    # get a path for loading the model to be attacked
+    model_path = get_model_path(dataset_name=args.dataset,
+                                network_arch=args.arch,
+                                random_seed=args.seed)
+    model_weights_path = os.path.join(model_path, args.model_name)
+
+    network = get_network(args.arch,
+                          input_size=input_size,
+                          num_classes=num_classes,
+                          finetune=False)
+
+    # Set the target model into evaluation mode
+    network.eval()
+
+    if args.dataset == "caltech" or args.dataset == 'asl':
+        if 'repaired' in args.model_name:
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        else:
+            #state dict
+            orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            new_state_dict = OrderedDict()
+            for k, v in network.state_dict().items():
+                if k in orig_state_dict.keys():
+                    new_state_dict[k] = orig_state_dict[k]
+
+            network.load_state_dict(new_state_dict)
+
+    elif args.dataset == 'eurosat':
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    # Imagenet models use the pretrained pytorch weights
+    elif args.dataset == "imagenet" and 'repaired' in args.model_name:
+        network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+
+    # Set all weights to not trainable
+    set_parameter_requires_grad(network, requires_grad=False)
+
+    if args.use_cuda:
+        network.cuda()
+
+    uap = None
+
+    # load dataset
+    _, data_test = get_data(args.dataset, args.dataset)
+
+    data_test_loader = torch.utils.data.DataLoader(data_test,
+                                                   batch_size=args.batch_size,
+                                                   shuffle=True,
+                                                   num_workers=args.workers,
+                                                   pin_memory=True)
+
+    ##################################################################################
+    # anlayze clean inputs
+    '''
+    _, data_class_test = get_data_class(args.dataset, args.target_class)
+    if len(data_class_test) == 0:
+        print('No sample from class {}'.format(args.target_class))
+        return
+    data_test_class_loader = torch.utils.data.DataLoader(data_class_test,
+                                                         batch_size=args.batch_size,
+                                                         shuffle=True,
+                                                         num_workers=args.workers,
+                                                         pin_memory=True)
+    '''
+
+    ##################################################################################
+    # anlayze perturbed inputs
+    # load uap
+    uap_path = get_uap_path(uap_data=args.dataset,
+                            model_data=args.dataset,
+                            network_arch=args.arch,
+                            random_seed=args.seed)
+    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+    uap = torch.from_numpy(uap)
+
+    attribution_map_clean, attribution_map_pert = solve_causal_single_both(data_test_loader,
+                                                                           network,
+                                                                           uap,
+                                                                           args.arch,
+                                                                           split_layer=args.split_layer,
+                                                                           targeted=args.targeted,
+                                                                           target_class=args.target_class,
+                                                                           num_sample=args.num_iterations,
+                                                                           causal_type=args.causal_type,
+                                                                           log=None,
+                                                                           use_cuda=args.use_cuda)
+
+
+    #save multiple maps
+    attribution_path = get_attribution_path()
+    for i in range(0, len(attribution_map_pert)):
+        attribution_map_ = attribution_map_pert[i]
+        uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
+                              + ".npy")
+        np.save(uap_fn, attribution_map_)
+
+    for i in range(0, len(attribution_map_clean)):
+        attribution_map_ = attribution_map_clean[i]
+        uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i)
+                              + ".npy")
+        np.save(uap_fn, attribution_map_)
+
+    ##################################################################################
+    # anlayze entropy
+    clean_hs = []
+    uap_hs = []
+    diff = []
+    args.analyze_clean = 1
+    for i in range(0, args.num_iterations):
+        args.analyze_clean = 1
+        clean_h = calc_entropy_i(i, args)
+        clean_hs.append(clean_h)
+        args.analyze_clean = 0
+        uap_h = calc_entropy_i(i, args)
+        uap_hs.append(uap_h)
+        diff.append(abs(clean_h - uap_h))
+        #print('{}: {}'.format(clean_h, uap_h))
+
+    clean_hs_avg = np.mean(np.array(clean_hs))
+    uap_hs_avg = np.mean(np.array(uap_hs))
+    print('clean_hs_avg,  uap_hs_avg: {} : {}'.format(clean_hs_avg, uap_hs_avg))
+
+    # calculate quartiles
+    clean_q1 = np.quantile(np.array(clean_hs), 0.25)
+    clean_q2 = np.quantile(np.array(clean_hs), 0.5)
+    clean_q3 = np.quantile(np.array(clean_hs), 0.75)
+    clean_min = np.min(np.array(clean_hs))
+    clean_max = np.max(np.array(clean_hs))
+
+    uap_q1 = np.quantile(np.array(uap_hs), 0.25)
+    uap_q2 = np.quantile(np.array(uap_hs), 0.5)
+    uap_q3 = np.quantile(np.array(uap_hs), 0.75)
+    uap_min = np.min(np.array(uap_hs))
+    uap_max = np.max(np.array(uap_hs))
+
+    diff_q1 = np.quantile(np.array(diff), 0.25)
+    diff_q2 = np.quantile(np.array(diff), 0.5)
+    diff_q3 = np.quantile(np.array(diff), 0.75)
+    diff_min = np.min(np.array(diff))
+    diff_max = np.max(np.array(diff))
+
+    #print('clean min, q1, q2, q3, max: {} {} {} {} {}'.format(clean_min, clean_q1, clean_q2, clean_q3, clean_max))
+    #print('uap min, q1, q2, q3, max: {} {} {} {} {}'.format(uap_min, uap_q1, uap_q2, uap_q3, uap_max))
+
+    print('clean:')
+    print('lower whisker={:.2f},'.format(clean_min))
+    print('lower quartile={:.2f},'.format(clean_q1))
+    print('median={:.2f},'.format(clean_q2))
+    print('upper quartile={:.2f},'.format(clean_q3))
+    print('upper whisker={:.2f},'.format(clean_max))
+
+    print('uap:')
+    print('lower whisker={:.2f},'.format(uap_min))
+    print('lower quartile={:.2f},'.format(uap_q1))
+    print('median={:.2f},'.format(uap_q2))
+    print('upper quartile={:.2f},'.format(uap_q3))
+    print('upper whisker={:.2f},'.format(uap_max))
+    '''
+    print('diff:')
+    print('lower whisker={:.2f},'.format(diff_min))
+    print('lower quartile={:.2f},'.format(diff_q1))
+    print('median={:.2f},'.format(diff_q2))
+    print('upper quartile={:.2f},'.format(diff_q3))
+    print('upper whisker={:.2f},'.format(diff_max))
+    '''
+
 def analyze_layers(args):
 
     random.seed(args.seed)
@@ -265,7 +442,6 @@ def analyze_layers(args):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
     ####################################
     # Init model, criterion, and optimizer
-    #print("=> Creating model '{}'".format(args.arch))
     # get a path for loading the model to be attacked
     model_path = get_model_path(dataset_name=args.dataset,
                                 network_arch=args.arch,
@@ -341,10 +517,7 @@ def analyze_layers(args):
         for i in range(0, len(attribution_map)):
             attribution_map_ = attribution_map[i]
             uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
-                                  + '_' + str(outputs[i]) + ".npy")
-            np.save(uap_fn, attribution_map_)
-            uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
-                                  + ".npy")
+                                  + ".npy")#'_' + str(outputs[i]) + ".npy")
             np.save(uap_fn, attribution_map_)
         output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
@@ -372,7 +545,7 @@ def analyze_layers(args):
         for i in range(0, len(attribution_map)):
             attribution_map_ = attribution_map[i]
             uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i)
-                                  + '_' + str(outputs[i]) + ".npy")
+                                  + ".npy")#'_' + str(outputs[i]) + ".npy")
             np.save(uap_fn, attribution_map_)
         output_fn = os.path.join(attribution_path, "clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
@@ -496,10 +669,10 @@ def calc_entropy(args):
 
     if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
-                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+                          str(args.idx) + ".npy")#'_' + str(args.target_class) + ".npy")
     elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
-                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+                          str(args.idx) + ".npy")#'_' + str(args.target_class) + ".npy")
 
     loaded = np.load(fn)
 
@@ -523,11 +696,11 @@ def calc_entropy_i(i, args):
                               str(i) + ".npy")
         else:
             fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
-                              str(i) + '_' + str(args.target_class) + ".npy")
+                              str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
 
     elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
-                          str(i) + '_' + str(args.target_class) + ".npy")
+                          str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
     elif args.analyze_clean == 2:
         fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
 
@@ -571,65 +744,6 @@ def calc_entropy_uap(args):
     return uap_h
 
 
-def calc_entropy_old():
-    attribution_path = get_attribution_path()
-    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
-    uap_fn = os.path.join(attribution_path, "uap_attribution_s_4.npy")
-    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
-    uap_ca = np.transpose(loaded[:, 1].reshape(3, 224, 224), (1, 2, 0))
-    #uap_ca = uap_ca[:, :, 2]
-    uap_h = calculate_shannon_entropy(uap_ca, 224*224*3)
-
-    clean1_fn = os.path.join(attribution_path, "clean_attribution_s_4.npy")
-    loaded = np.load(clean1_fn)
-    clean1_ca = np.transpose(loaded[:, 1].reshape(3, 224, 224), (1, 2, 0))
-    clean1_h = calculate_shannon_entropy(clean1_ca, 224*224*3)
-
-    clean_fn = os.path.join(attribution_path, "clean_attribution.npy")
-    loaded = np.load(clean_fn)
-    clean_ca = np.transpose(loaded[:, -1].reshape(3, 224, 224), (1, 2, 0))
-    #clean_ca = clean_ca[:, :, 2]
-    clean_h = calculate_shannon_entropy(clean_ca, 224*224*3)
-
-    print('uap_h: {}, clean1_h: {}, clean_h: {}'.format(uap_h, clean1_h, clean_h))
-    print('entropy difference uap vs clean: {}'.format((uap_h - clean_h) / (clean_h)))
-    print('entropy difference clean1 vs clean: {}'.format((clean1_h - clean_h) / (clean_h)))
-
-    ssim = calculate_ssim(uap_ca, clean_ca)
-    print("Image similarity uap vs clean: {}".format(ssim))
-
-    ssim = calculate_ssim(clean1_ca, clean_ca)
-    print("Image similarity clean1 vs clean: {}".format(ssim))
-    return uap_h, clean_h, ssim
-
-
-def calc_entropy_layer_old():
-    attribution_path = get_attribution_path()
-    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
-    uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s7.npy")
-    loaded = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
-    uap_ca = loaded[:, 1]
-
-    uap_h = calculate_shannon_entropy_array(uap_ca)
-
-    clean1_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s7.npy")
-    loaded = np.load(clean1_fn)
-    clean1_ca = loaded[:, 1]
-    clean1_h = calculate_shannon_entropy_array(clean1_ca)
-
-    clean_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_avg.npy")
-    loaded = np.load(clean_fn)
-    clean_ca = loaded[:, -1]
-
-    clean_h = calculate_shannon_entropy_array(clean_ca)
-
-    print('uap_h: {}, clean1_h: {}, clean_h: {}'.format(uap_h, clean1_h, clean_h))
-    print('entropy difference uap vs clean: {}'.format((uap_h - clean_h) / (clean_h)))
-    print('entropy difference clean1 vs clean: {}'.format((clean1_h - clean_h) / (clean_h)))
-
-    return
-
-
 def calc_entropy_layer(i):
     attribution_path = get_attribution_path()
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
@@ -657,11 +771,11 @@ def calc_pcc(args):
 
     if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
-                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+                          str(args.idx) + ".npy")#'_' + str(args.target_class) + ".npy")
         prefix = 'uap'
     elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
-                          str(args.idx) + '_' + str(args.target_class) + ".npy")
+                          str(args.idx) + ".npy")#'_' + str(args.target_class) + ".npy")
         prefix = 'clean'
 
     if os.path.exists(fn):
@@ -690,10 +804,10 @@ def calc_pcc_i(i, args):
 
     if args.analyze_clean == 0:
         fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + '_s' +
-                          str(i) + '_' + str(args.target_class) + ".npy")
+                          str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
     elif args.analyze_clean == 1:
         fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + '_s' +
-                          str(i) + '_' + str(args.target_class) + ".npy")
+                          str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
     if os.path.exists(fn):
         loaded = np.load(fn)
     else:
@@ -728,39 +842,6 @@ def calc_pcc_i_old(i, args):
     clean1_ca = loaded[:, 1]
     clean1_pcc = np.corrcoef(clean1_ca, clean1_ca)[0, 1]
     print('{}: {}, {}'.format(i, uap_pcc, clean1_pcc))
-
-
-'''
-def rearrange_outputfile():
-    attribution_path = get_attribution_path()
-    ca_map = []
-    for i in range(0, 224*224*3):
-        fn = os.path.join(attribution_path, "uap_attribution_single_" + str(i) + ".npy")
-        ca_map.append(np.load(fn))
-        os.rename(fn, os.path.join(attribution_path, 'backup', "uap_attribution_single_" + str(i) + ".npy"))
-    ca_map = np.array(ca_map)
-    ca_map = np.transpose(ca_map, (1, 0, 2))
-
-    for i in range(0, len(ca_map)):
-        attribution_map_ = ca_map[i]
-        uap_fn = os.path.join(attribution_path, "uap_attribution_s_" + str(i) + ".npy")
-        np.save(uap_fn, attribution_map_)
-
-    ca_map = []
-    for i in range(0, 224*224*3):
-        fn = os.path.join(attribution_path, "clean_attribution_single_" + str(i) + ".npy")
-        ca_map.append(np.load(fn))
-        os.rename(fn, os.path.join(attribution_path, 'backup', "clean_attribution_single_" + str(i) + ".npy"))
-    ca_map = np.array(ca_map)
-    ca_map = np.transpose(ca_map, (1, 0, 2))
-
-    for i in range(0, len(ca_map)):
-        attribution_map_ = ca_map[i]
-        uap_fn = os.path.join(attribution_path, "clean_attribution_s_" + str(i) + ".npy")
-        np.save(uap_fn, attribution_map_)
-
-    return
-'''
 
 
 def test(args):
@@ -1124,18 +1205,46 @@ def uap_repair(args):
                                      mean=mean,
                                      std=std)
         post_fix = 'ae'
+        '''
+        repaired_network = adv_train(data_train_loader,
+                             target_network,
+                             args.target_class,
+                             criterion,
+                             optimizer,
+                             args.num_iterations,
+                             args.split_layers,
+                             uap=uap,
+                             num_batches=args.num_batches,
+                             alpha=args.alpha,
+                             use_cuda=args.use_cuda,
+                             adv_itr=args.ae_iter,
+                             eps=args.epsilon,
+                             mean=mean,
+                             std=std)
+        '''
+        #post_fix = 'pgd_' + str(args.target_class)
     elif 'uap' in args.option:
+        train_uaps = None
+        for target_i in [755,743,804,700,922,174,547,369]:
+            for idx in range(0, 10):
+                train_uap = 'uap_train_' + str(target_i) + '_' + str(idx) + '.npy'
+                uap_fn = os.path.join(uap_path, train_uap)
+                if train_uaps == None:
+                    train_uaps = torch.from_numpy(np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1))
+                else:
+                    train_uaps = torch.cat((train_uaps, torch.from_numpy(np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1))))
+
         repaired_network = known_uap_train(data_train_loader,
-                        target_network,
-                        args.arch,
-                        criterion,
-                        optimizer,
-                        args.num_iterations,
-                        args.split_layers,
-                        uap,
-                        alpha=args.alpha,
-                        use_cuda=args.use_cuda)
-        post_fix = 'uap'
+                                           target_network,
+                                           args.arch,
+                                           criterion,
+                                           optimizer,
+                                           args.num_iterations,
+                                           args.split_layers,
+                                           train_uaps,
+                                           alpha=args.alpha,
+                                           use_cuda=args.use_cuda)
+        post_fix = 'uap'# + str(args.target_class)
     elif 'enpool' in args.option:
         repaired_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
         print("=> repaired_network :\n {}".format(repaired_network))
@@ -1391,6 +1500,8 @@ if __name__ == '__main__':
         tpr = uap_classification(args)
         fpr = clean_classification(args)
         #print('TPR: {}, FPR: {}'.format(tpr, fpr))
+    elif 'analyze_entropy' in args.option:
+        analyze_entropy(args)
     elif 'repair' in args.option:
         uap_repair(args)
     elif args.option == 'gen_en_sample':
