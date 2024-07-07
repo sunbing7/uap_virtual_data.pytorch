@@ -309,5 +309,13 @@ python plot_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
             return
 3. Generate other UAPs
 3.1 sPGD
+- in sgd-uap-torch project
+  * run run_attack.sh to generate UAPs
+- in era project
+  * run spgd_test.sh to test
+
+3.2 LaVAn
+
+3.3 GAP
 
 ########################################################        instructions      ########################################################

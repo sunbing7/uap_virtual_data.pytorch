@@ -16,20 +16,20 @@
 #    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 #done
 #resnet50
-for TARGET_CLASS in {755,743,804,700,922,174,547,369}
-do
-    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --batch_size=32 --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-done
+#for TARGET_CLASS in {755,743,804,700,922,174,547,369}
+#do
+#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --batch_size=32 --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done
 ################################################################################################################################################
 #googlenet
 #for TARGET_CLASS in {573,807,541,240,475,753,762,505}
 #do
 #    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=googlenet_imagenet.pth --test_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 #done
-#for TARGET_CLASS in {573,807,541,240,475,753,762,505}
-#do
-#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=googlenet_imagenet_finetuned_repaired.pth --test_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-#done
+for TARGET_CLASS in {573,807,541,240,475,753,762,505}
+do
+    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --model_name=googlenet_imagenet_finetuned_repaired.pth --test_arch=googlenet --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+done
 ################################################################################################################################################
 #googlenet caffe
 #for TARGET_CLASS in {573,807,541,240,475,753,762,505}
@@ -64,17 +64,7 @@ done
 #python test_uap.py --targeted=True --dataset=asl --pretrained_dataset=asl --model_name=mobilenet_asl_ae_repaired.pth --test_arch=mobilenet --pretrained_seed=123 --test_dataset=asl --result_subfolder=result --targeted=True --target_class=23 --ngpu=1 --workers=4
 
 
-################################################################################################################################################
-#sPGD resnet50
-#for TARGET_CLASS in {611,734,854,859,497,577,8,5}
-#do
-#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=spgd --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-#done
-#resnet50
-#for TARGET_CLASS in {611,734,854,859,497,577,8,5}
-#do
-#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=spgd --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-#done
+
 
 ################################################################################################################################################
 #lavan resnet50

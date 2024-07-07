@@ -85,7 +85,7 @@ def parse_arguments():
     return args
 
 
-def main(idx):
+def main():
     args = parse_arguments()
 
     random.seed(args.pretrained_seed)
@@ -290,12 +290,10 @@ def main(idx):
 
     imgplot = plt.imshow(plot_tuap_amp)
 
-    np.save(uap_path + '/uap_train_' + str(args.target_class) + adaptive + '_' + str(idx) + '.npy',
-            tuap.cpu().detach().numpy())
-    #plt.savefig(uap_path + '/uap_' + str(args.target_class) + adaptive + '.png')
-    #plt.show()
-    #torch.save(perturbed_net,
-    #           uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
+    np.save(uap_path + '/uap_' + str(args.target_class) + adaptive + '.npy', tuap.cpu().detach().numpy())
+    plt.savefig(model_path + '/uap_' + str(args.target_class) + adaptive + '.png')
+    plt.show()
+    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
     print('uap saved!')
 
 
@@ -315,5 +313,4 @@ def main(idx):
 
 
 if __name__ == '__main__':
-    for idx in range(0, 10):
-        main(idx)
+   main()

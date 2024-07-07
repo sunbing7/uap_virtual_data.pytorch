@@ -296,11 +296,11 @@ def main():
                             network_arch=args.test_arch,
                             random_seed=args.pretrained_seed)
     if 'spgd' in args.uap_name:
-        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.pth')
+        uap_fn = os.path.join(uap_path, 'spgd/uap_' + str(args.target_class) + '.pth')
         tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
         tuap = torch.load(uap_fn) / tstd
     elif 'lavan' in args.uap_name:
-        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.pth')
+        uap_fn = os.path.join(uap_path, 'lavan/uap_' + str(args.target_class) + '.pth')
         tuap = torch.load(uap_fn)
         _, mask = init_patch_square((1, 3, 224, 224), 176, 224, 176, 224)
         if args.use_cuda:
