@@ -23,7 +23,87 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-b
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
+    parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
+                                                                       'analyze_layers', 'calc_pcc', 'analyze_clean',
+                                                                       'test', 'pcc', 'entropy', 'classify',
+                                                                       'repair_ae', 'analyze_entropy',
+                                                                       'repair', 'repair_uap', 'gen_en_sample',
+                                                                       'repair_enpool', 'repair_enrep'],
+                        help='Run options')
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact',
+                                                                   'uap_act', 'inact', 'be_act'],
+                        help='Causality analysis type (default: logit)')
+
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                 'eurosat'],
+                        help='Used dataset to generate UAP (default: cifar10)')
+    parser.add_argument('--is_train', type=int, default=0)
+    parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20',
+                                                           'resnet56', 'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                                           'inception_v3', 'shufflenetv2', 'mobilenet'])
+    parser.add_argument('--model_name', type=str, default='vgg19_cifar10.pth',
+                        help='model name (default: vgg19_cifar10.pth)')
+    parser.add_argument('--seed', type=int, default=123,
+                        help='Seed used in the generation process (default: 123)')
+
+    parser.add_argument('--split_layer', type=int, default=43,
+                        help='causality analysis layer (default: 43)')
+    parser.add_argument('--split_layers', type=int, nargs="*", default=[43])
+    # Parameters regarding UAP
+    parser.add_argument('--num_iterations', type=int, default=32,
+                        help='Number of iterations for causality analysis (default: 32)')
+    parser.add_argument('--num_batches', type=int, default=1500)
+    parser.add_argument('--result_subfolder', default='result', type=str,
+                        help='result subfolder name')
+    parser.add_argument('--postfix', default='',
+                        help='Postfix to attach to result folder')
+
+    parser.add_argument('--idx', type=int, default=0)
+
+    parser.add_argument('--targeted',  type=bool, default='',
+                        help='Target a specific class (default: False)')
+    parser.add_argument('--target_class', type=int, default=1,
+                        help='Target class (default: 1)')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='Batch size (default: 32)')
+
+    parser.add_argument('--ngpu', type=int, default=0,
+                        help='Number of used GPUs (0 = CPU) (default: 1)')
+    parser.add_argument('--workers', type=int, default=4,
+                        help='Number of data loading workers (default: 4)')
+
+    parser.add_argument('--analyze_clean', type=int, default=0)
+
+    parser.add_argument('--th', type=float, default=2)
+
+    parser.add_argument('--alpha', type=float, default=0.1)
+
+    parser.add_argument('--ae_alpha', type=float, default=0.5)
+    parser.add_argument('--ae_iter', type=int, default=10)
+
+    parser.add_argument('--is_nips', default=1, type=int,
+                        help='Evaluation on NIPS data')
+
+    parser.add_argument('--loss_function', default='ce', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
+                                                                  'bounded_logit_fixed_ref', 'bounded_logit_neg'],
+                        help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
+    parser.add_argument('--learning_rate', type=float, default=0.001,
+                        help='Learning Rate (default: 0.001)')
+    parser.add_argument('--print_freq', default=200, type=int, metavar='N',
+                        help='print frequency (default: 200)')
+    parser.add_argument('--epsilon', type=float, default=0.03922,
+                        help='Norm restriction of UAP (default: 10/255)')
+    args = parser.parse_args()
+
+    args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
+    print('use_cuda: {}'.format(args.use_cuda))
+    if args.seed is None:
+        args.seed = random.randint(1, 10000)
+    return args
 
 
 def analyze_inputs(args):
@@ -398,76 +478,79 @@ def analyze_layers(args):
 
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
-    total_params = get_num_parameters(network)
 
     if args.use_cuda:
         network.cuda()
 
     uap = None
     if args.analyze_clean == 0:
-        _, data_test = get_data(args.dataset, args.dataset)
+        data_train, _ = get_data(args.dataset, args.dataset)
 
-        data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                       batch_size=args.batch_size,
-                                                       shuffle=True,
-                                                       num_workers=args.workers,
-                                                       pin_memory=True)
+        data_train_loader = torch.utils.data.DataLoader(data_train,
+                                                        batch_size=args.batch_size,
+                                                        shuffle=False,
+                                                        num_workers=args.workers,
+                                                        pin_memory=True)
         #load uap
         if args.causal_type != 'inact':
-            uap_path = get_uap_path(uap_data=args.dataset,
-                                    model_data=args.dataset,
-                                    network_arch=args.arch,
-                                    random_seed=args.seed)
-            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-            uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
-            uap = torch.from_numpy(uap)
+            ae_path = get_uap_path(uap_data=args.dataset,
+                                   model_data=args.dataset,
+                                   network_arch=args.arch,
+                                   random_seed=args.seed)
+            aes = []
+            for i in range(0, args.num_batches):
+                ae_fn = os.path.join(ae_path, 'ae_tgt_' + str(args.target_class)  + '_' + str(i) +'.npy')
+                ae_i = np.load(ae_fn) / np.array(std).reshape(1, 3, 1, 1)
+                aes.append(ae_i)
+
+            aes_t = torch.from_numpy(np.array(aes))
 
         # perform causality analysis
-        attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, uap, args.arch,
-                                                                      split_layer=args.split_layer,
-                                                                      targeted=args.targeted,
-                                                                      target_class=args.target_class,
-                                                                      num_sample=args.num_iterations,
-                                                                      causal_type=args.causal_type,
-                                                                      log=None,
-                                                                      use_cuda=args.use_cuda)
+        attribution_map, outputs, clean_outputs = solve_causal_ae(data_train_loader, network, aes_t, args.arch,
+                                                                  split_layer=args.split_layer,
+                                                                  targeted=args.targeted,
+                                                                  target_class=args.target_class,
+                                                                  num_sample=args.num_batches,
+                                                                  causal_type=args.causal_type,
+                                                                  log=None,
+                                                                  use_cuda=args.use_cuda)
 
         #save multiple maps
         attribution_path = get_attribution_path()
         for i in range(0, len(attribution_map)):
             attribution_map_ = attribution_map[i]
-            uap_fn = os.path.join(attribution_path, "uap_attribution_" + str(args.split_layer) + "_s" + str(i)
-                                  + ".npy")#'_' + str(outputs[i]) + ".npy")
-            np.save(uap_fn, attribution_map_)
-        output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
+            ae_fn = os.path.join(attribution_path, "ae_attribution_" + str(args.split_layer) + "_s" + str(i)
+                                  + ".npy")
+            np.save(ae_fn, attribution_map_)
+        output_fn = os.path.join(attribution_path, "ae_clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
     elif args.analyze_clean == 1:
-        _, data_test = get_data_class(args.dataset, args.target_class)
-        if len(data_test) == 0:
+        data_train, _ = get_data_class(args.dataset, args.target_class)
+        if len(data_train) == 0:
             print('No sample from class {}'.format(args.target_class))
             return
-        data_test_loader = torch.utils.data.DataLoader(data_test,
+        data_test_loader = torch.utils.data.DataLoader(data_train,
                                                        batch_size=args.batch_size,
-                                                       shuffle=True,
+                                                       shuffle=False,
                                                        num_workers=args.workers,
                                                        pin_memory=True)
 
-        attribution_map, outputs, clean_outputs = solve_causal_single(data_test_loader, network, None, args.arch,
-                                                                      split_layer=args.split_layer,
-                                                                      targeted=args.targeted,
-                                                                      target_class=args.target_class,
-                                                                      num_sample=args.num_iterations,
-                                                                      causal_type=args.causal_type,
-                                                                      log=None,
-                                                                      use_cuda=args.use_cuda)
+        attribution_map, outputs, clean_outputs = solve_causal_ae(data_test_loader, network, None, args.arch,
+                                                                  split_layer=args.split_layer,
+                                                                  targeted=args.targeted,
+                                                                  target_class=args.target_class,
+                                                                  num_sample=args.num_batches,
+                                                                  causal_type=args.causal_type,
+                                                                  log=None,
+                                                                  use_cuda=args.use_cuda)
 
         attribution_path = get_attribution_path()
         for i in range(0, len(attribution_map)):
             attribution_map_ = attribution_map[i]
-            uap_fn = os.path.join(attribution_path, "clean_attribution_" + str(args.split_layer) + "_s" + str(i)
-                                  + ".npy")#'_' + str(outputs[i]) + ".npy")
+            uap_fn = os.path.join(attribution_path, "ae_clean_attribution_" + str(args.split_layer) + "_s" + str(i)
+                                  + ".npy")
             np.save(uap_fn, attribution_map_)
-        output_fn = os.path.join(attribution_path, "clean_outputs_" + str(args.split_layer) + ".npy")
+        output_fn = os.path.join(attribution_path, "ae_clean_outputs_" + str(args.split_layer) + ".npy")
         np.save(output_fn, clean_outputs)
     elif args.analyze_clean == 2: #analyze uap only
         uap_path = get_uap_path(uap_data=args.dataset,
@@ -485,7 +568,7 @@ def analyze_layers(args):
         attribution_path = get_attribution_path()
         for i in range(0, len(attribution_map)):
             attribution_map_ = attribution_map[i]
-            uap_fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+            uap_fn = os.path.join(attribution_path, "aeonly_attribution_" + str(args.split_layer) + ".npy")
             np.save(uap_fn, attribution_map_)
         calc_entropy_uap(args)
 
@@ -553,16 +636,16 @@ def analyze_layers_clean(args):
     if args.use_cuda:
         network.cuda()
 
-    _, data_test = get_data_class(args.dataset, args.target_class)
+    data_train, _ = get_data_class(args.dataset, args.target_class)
     #print('Number of training samples in this class: {}'.format(len(data_train)))
 
-    data_test_loader = torch.utils.data.DataLoader(data_test,
+    data_train_loader = torch.utils.data.DataLoader(data_train,
                                                    batch_size=args.batch_size,
-                                                   shuffle=True,
+                                                   shuffle=False,
                                                    num_workers=args.workers,
                                                    pin_memory=True)
 
-    attribution_map = solve_causal(data_test_loader, network, None, args.arch,
+    attribution_map = solve_causal(data_train_loader, network, None, args.arch,
                                    split_layer=args.split_layer,
                                    targeted=args.targeted,
                                    target_class=args.target_class,
@@ -572,7 +655,7 @@ def analyze_layers_clean(args):
                                    use_cuda=args.use_cuda)
 
     attribution_path = get_attribution_path()
-    file_name = "clean_attribution_" + str(args.split_layer) + '_' + str(args.target_class) + "_avg.npy"
+    file_name = "ae_clean_attribution_" + str(args.split_layer) + '_' + str(args.target_class) + "_avg.npy"
     uap_fn = os.path.join(attribution_path, file_name)
     np.save(uap_fn, attribution_map)
 
@@ -623,6 +706,41 @@ def calc_entropy_i(i, args):
                           str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
     elif args.analyze_clean == 2:
         fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+
+    if os.path.exists(fn):
+        loaded = np.load(fn)
+    else:
+        return
+
+    if args.causal_type == 'logit':
+        ca = loaded[:, 1]
+    elif args.causal_type == 'act':
+        ca = loaded.transpose()
+
+    #uap_h = calculate_shannon_entropy_array(ca)
+    uap_h = calc_hloss(ca)
+
+    #print('entropy {}: {}'.format(i, uap_h))
+    #print('uap_hloss {}: {}'.format(i, uap_hloss))
+    return uap_h
+
+
+def calc_ae_entropy_i(i, args):
+    attribution_path = get_attribution_path()
+
+    if args.analyze_clean == 0:
+        if 'repaired' in args.model_name:
+            fn = os.path.join(attribution_path, "ae_attribution_" + str(args.split_layer) + '_s' +
+                              str(i) + ".npy")
+        else:
+            fn = os.path.join(attribution_path, "ae_attribution_" + str(args.split_layer) + '_s' +
+                              str(i) + ".npy")
+
+    elif args.analyze_clean == 1:
+        fn = os.path.join(attribution_path, "ae_clean_attribution_" + str(args.split_layer) + '_s' +
+                          str(i) + ".npy")#'_' + str(args.target_class) + ".npy")
+    elif args.analyze_clean == 2:
+        fn = os.path.join(attribution_path, "aeonly_attribution_" + str(args.split_layer) + ".npy")
 
     if os.path.exists(fn):
         loaded = np.load(fn)
@@ -958,8 +1076,8 @@ def uap_classification(args):
     #get average entropy of clean data
     clean_hs = []
     args.analyze_clean = 1
-    for i in range(0, args.num_iterations):
-        clean_h = calc_entropy_i(i, args)
+    for i in range(0, args.num_batches):
+        clean_h = calc_ae_entropy_i(i, args)
         if clean_h is not None:
             clean_hs.append(clean_h)
             print('clean_h: {}'.format(clean_h))
@@ -971,20 +1089,17 @@ def uap_classification(args):
     h_result = []
     uap_hs = []
     args.analyze_clean = 0
-    for i in range(0, args.num_iterations):
-        uap_h = calc_entropy_i(i, args)
+    for i in range(0, args.num_batches):
+        uap_h = calc_ae_entropy_i(i, args)
         if uap_h is not None:
             uap_hs.append(uap_h)
             print('uap_h: {}'.format(uap_h))
-            top = outlier_detection((clean_hs + [uap_h]), max(clean_hs + [uap_h]), verbose=False, th=args.th)
-            outliers = [x[0] for x in top]
-            h_result.append(int((len(clean_hs + [uap_h]) - 1) in outliers))
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_hs + [uap_h]) - 1))
     #print('uap_hs : {}'.format(uap_hs))
     uap_hs_avg = np.mean(np.array(uap_hs))
     print('uap_hs_avg : {}'.format(uap_hs_avg))
     #print('Layer {} entropy result[{}]: {}'.format(args.split_layer, len(h_result), h_result))
-
+    '''
     #get average pcc of clean data
     clean_pccs = []
     args.analyze_clean = 1
@@ -1010,6 +1125,7 @@ def uap_classification(args):
             #print('Outliers: {}, uap index: {}'.format(top, len(clean_pccs + [uap_pcc]) - 1))
     #print('Layer {} pcc result[{}]    : {}'.format(args.split_layer, len(pcc_result), pcc_result))
     #return np.sum(np.logical_and(np.array(h_result) == 1, np.array(pcc_result) == 1)) / len(pcc_result) * 100
+    '''
     return 0
 
 
@@ -1334,7 +1450,7 @@ def clean_classification(args):
     clean_hs = []
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
-        clean_h = calc_entropy_i(i, args)
+        clean_h = calc_ae_entropy_i(i, args)
         if clean_h is not None:
             clean_hs.append(clean_h)
             #print('clean_h: {}'.format(clean_h))
@@ -1344,7 +1460,7 @@ def clean_classification(args):
     h_result = []
     uap_hs = []
     for i in range(0, args.num_iterations):
-        uap_h = calc_entropy_i(i, args)
+        uap_h = calc_ae_entropy_i(i, args)
         if uap_h is not None:
             uap_hs.append(uap_h)
             reversed_list = max(clean_hs + [uap_h]) - np.array(clean_hs + [uap_h])
@@ -1418,7 +1534,7 @@ if __name__ == '__main__':
         process_entropy(args)
     elif args.option == 'classify':
         tpr = uap_classification(args)
-        fpr = clean_classification(args)
+        #fpr = clean_classification(args)
         #print('TPR: {}, FPR: {}'.format(tpr, fpr))
     elif 'analyze_entropy' in args.option:
         analyze_entropy(args)

@@ -1054,6 +1054,7 @@ def ae_training_pgd_tgt(model,
 
         output = model(ae_x)
         loss = criterion(output, target_class)
+        #print('Iteration {} loss {}'.format(i, loss))
 
         loss.backward()
         grad = delta.grad.detach()
@@ -1907,6 +1908,76 @@ def solve_causal_single(data_loader, filter_model, uap, filter_arch, targeted, t
                     uap = uap.cuda().float()
             if uap != None:
                 input = input + uap
+
+            # compute output
+            with torch.no_grad():
+                dense_output = model1(input)
+                ori_output = model2(dense_output)
+                #test
+                #test_output = filter_model(input)
+                clean_output = torch.argmax(filter_model(ori_input), dim=-1).cpu().numpy()
+                ori_out_class = torch.argmax(ori_output, dim=-1).cpu().numpy()
+                outputs = outputs + list(ori_out_class)
+                clean_outputs = clean_outputs + list(clean_output)
+                dense_this = torch.reshape(dense_output, (dense_output.shape[0], -1)).cpu().detach().numpy()# 4096
+            dense_avg = dense_avg + list(dense_this)  # batchx4096
+            total_num_samples += len(gt)
+        # average of all baches
+        dense_avg = np.array(dense_avg)# 4096
+        #print('shape of dense_avg {}'.format(dense_avg.shape))
+        # insert neuron index
+        out = dense_avg
+    return out, outputs, clean_outputs
+
+
+def solve_causal_ae(data_loader, filter_model, aes, filter_arch, targeted, target_class, num_sample, split_layer=43, causal_type='logit', log=None, use_cuda=True):
+    '''
+    perform causality analysis on the dense layer before logit layer
+    Args:
+        data_loader: loader that loads original images with uap
+        filter_model:
+        aes:
+        filter_arch:
+        target_class:
+        num_sample: number of samples to use for causality analysis
+        causal_type:
+            - logit: analyze ACE of dense layer neuron on logits
+            - act: analyze ACE of uap on dense layer
+        log:
+        use_cuda:
+
+    Returns:
+
+    '''
+    #split the model
+    model1, model2 = split_model(filter_model, filter_arch, split_layer=split_layer)
+
+    #test
+
+
+    # switch to evaluate mode
+    model1.eval()
+    model2.eval()
+    #filter_model.eval()
+    out = []
+    if causal_type == 'act':
+        total_num_samples = 0
+        dense_avg = []
+        outputs = []
+        clean_outputs = []
+        for input, gt in data_loader:
+            if total_num_samples >= num_sample:
+                break
+
+            ori_input = input
+            if use_cuda:
+                gt = gt.cuda()
+                input = input.cuda()
+                ori_input = ori_input.cuda()
+                if aes != None:
+                    aes = aes.cuda().float()
+            if aes != None:
+                input = input + aes[total_num_samples]
 
             # compute output
             with torch.no_grad():
