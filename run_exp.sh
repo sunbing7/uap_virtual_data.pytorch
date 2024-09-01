@@ -317,5 +317,9 @@ python plot_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=image
 3.2 LaVAn
 
 3.3 GAP
+4. Models
+  * imagenet models are from pytorch
+  * caltech and asl models are from soda
+  * euroSAT model is trained in https://github.com/sunbing7/EuroSAT-image-classification
 
 ########################################################        instructions      ########################################################
