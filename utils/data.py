@@ -73,7 +73,7 @@ def get_data_specs(pretrained_dataset):
     return num_classes, (mean, std), input_size, num_channels
 
 
-def get_data(dataset, pretrained_dataset, preprocess=None):
+def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
 
@@ -264,12 +264,19 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
             transforms.Normalize(mean, std)])
 
         train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
-        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
-                                             size=int(0.5 * len(train_data_full)), replace=False))
+        if is_attack:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                                                   size=int(0.5 * len(train_data_full)),
+                                                                                   replace=False))
+        else:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                 size=int(0.05 * len(train_data_full)), replace=False))
         #train_data = train_data_full
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
         print('[DEBUG] caltech train len: {}'.format(len(train_data_full)))
         print('[DEBUG] caltech test len: {}'.format(len(test_data)))
+        print('[DEBUG] caltech train used len: {}, fraction of training size: {:.2f}'.format(
+            len(train_data), len(train_data) / len(train_data_full)))
     elif dataset == 'asl':
         traindir = os.path.join(ASL_PATH, "train")
         testdir = os.path.join(ASL_PATH, "test")
@@ -287,11 +294,17 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
             transforms.Normalize(mean, std)])
 
         train_data_full = dset.ImageFolder(root=traindir, transform=train_transform)
-        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
-                                             size=int(0.5 * len(train_data_full)), replace=False))
+        if is_attack:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                 size=int(0.5 * len(train_data_full)), replace=False))
+        else:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                 size=int(0.05 * len(train_data_full)), replace=False))
         test_data = dset.ImageFolder(root=testdir, transform=test_transform)
         print('[DEBUG] asl train len: {}'.format(len(train_data_full)))
         print('[DEBUG] asl test len: {}'.format(len(test_data)))
+        print('[DEBUG] asl train used len: {}, fraction of training size: {:.2f}'.format(
+            len(train_data), len(train_data) / len(train_data_full)))
 
     elif dataset == 'eurosat':
         train_transform = transforms.Compose([
@@ -312,11 +325,19 @@ def get_data(dataset, pretrained_dataset, preprocess=None):
 
         trainval, _ = random_split(train_dataset, 0.9, random_state=42)
         train_data_full, _ = random_split(trainval, 0.9, random_state=7)
-        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
-                                             size=int(0.5 * len(train_data_full)), replace=False))
+        if is_attack:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                 size=int(0.5 * len(train_data_full)), replace=False))
+        else:
+            train_data = torch.utils.data.Subset(train_data_full,
+                                                 np.random.choice(len(train_data_full),
+                                                                  size=int(0.05 * len(train_data_full)),
+                                                                  replace=False))
         _, test_data = random_split(test_dataset, 0.9, random_state=42)
-        print('[DEBUG] train len: {}'.format(len(train_data)))
+        print('[DEBUG] train len: {}'.format(len(train_data_full)))
         print('[DEBUG] test len: {}'.format(len(test_data)))
+        print('[DEBUG] eurosat train used len: {}, fraction of training size: {:.2f}'.format(
+            len(train_data), len(train_data) / len(train_data_full)))
     return train_data, test_data
 
 

@@ -13,7 +13,7 @@ from torchsummary import summary
 from matplotlib import pyplot as plt
 
 
-DEBUG = False
+DEBUG = True
 
 def calculate_entropy_tensor(x):
     """
@@ -477,45 +477,29 @@ def adv_train(data_loader,
             batch_time.update(time.time() - end)
             end = time.time()
             if num_batch % 100 == 0:
-                if DEBUG:
-                    print('  Batch: [{:03d}/{}]   '
-                          'Loss {loss.val:.4f} ({loss.avg:.4f})   '
-                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                          'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
-                          'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
-                          'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
-                          'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
-                          'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
-                          .format(
-                        num_batch,len(data_loader),
-                        loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
-                        delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
-                else:
-                    print('  Batch: [{:03d}/{}]   '
-                          'Loss {loss.val:.4f} ({loss.avg:.4f})   '
-                          'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                          'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
-                          .format(
-                        num_batch,len(data_loader),
-                        loss=losses, top1=top1, top5=top5) + time_string())
+                print('  Batch: [{:03d}/{}]   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                      'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                      'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                      'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
+                      'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
+                      .format(
+                    num_batch, len(data_loader),
+                    loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
+                    delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
             num_batch = num_batch + 1
 
-        if DEBUG:
-            print('  Iteration: [{:03d}/{:03d}]   '
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})   '
-                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
-                  'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
-                  'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
-                   iteration, num_iterations,
-                   loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
-        else:
-            print('  Iteration: [{:03d}/{:03d}]   '
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})   '
-                  'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
-                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
-                   iteration, num_iterations,
-                   loss=losses, top1=top1, top5=top5) + time_string())
+        print('  Iteration: [{:03d}/{:03d}]   '
+              'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+              'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+              'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+              'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
+            iteration, num_iterations,
+            loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
+
         iteration += 1
     print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
                                                                                                 top5=top5,
@@ -529,7 +513,6 @@ def pgd_train(data_loader,
               criterion,
               optimizer,
               num_iterations,
-              split_layers,
               uap=None,
               num_batches=1000,
               alpha=0.1,
@@ -674,6 +657,144 @@ def pgd_train(data_loader,
                                                                                                 top5=top5,
                                                                                                 error1=100 - top1.avg))
     return model
+
+
+def pgd_train_untgt(data_loader,
+                    model,
+                    criterion,
+                    optimizer,
+                    num_iterations,
+                    uap=None,
+                    num_batches=1000,
+                    alpha=0.1,
+                    use_cuda=True,
+                    adv_itr=10,
+                    eps=0.0392,
+                    mean=[0, 0, 0],
+                    std=[1, 1, 1]):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    adv_top1 = AverageMeter()
+    adv_top5 = AverageMeter()
+    delta_top1 = AverageMeter()
+    delta_top5 = AverageMeter()
+    # switch to train mode
+    model.train()
+
+    end = time.time()
+
+    iteration = 0
+    while (iteration < num_iterations):
+        num_batch = 0
+        for input, target in data_loader:
+            if num_batch > num_batches:
+                break
+
+            # measure data loading time
+            data_time.update(time.time() - end)
+
+            if use_cuda:
+                target = target.cuda()
+                input = input.cuda()
+                uap = uap.cuda()
+
+            #untarget
+            delta = ae_training_pgd(model,
+                                    input,
+                                    target,
+                                    criterion,
+                                    adv_itr,
+                                    eps,
+                                    True,
+                                    mean,
+                                    std,
+                                    use_cuda)
+
+            x_adv = input + delta
+
+            uap_x = (input + uap).float()
+
+            # compute output
+            if model._get_name() == "Inception3":
+                output, aux_output = model(input)
+                loss1 = criterion(output, target)
+                loss2 = criterion(aux_output, target)
+                loss = loss1 + 0.4 * loss2
+            else:
+                output = model(input)
+                delta_output = model(x_adv)
+                adv_output = model(uap_x)
+
+                if output.shape != target.shape:
+                    target = nn.functional.one_hot(target, len(output[0])).float()
+
+                poutput = model(x_adv)
+                pce_loss = criterion(poutput, target)
+
+                ce_loss = criterion(output, target)
+                loss = (1 - alpha) * ce_loss + alpha * pce_loss
+
+            # measure accuracy and record loss
+            if len(target.shape) > 1:
+                target_ = torch.argmax(target, dim=-1)
+            if use_cuda:
+                target_ = target_.cuda()
+
+            prec1, prec5 = accuracy(output.data, target_, topk=(1, 5))
+            losses.update(loss.item(), input.size(0))
+            top1.update(prec1.item(), input.size(0))
+            top5.update(prec5.item(), input.size(0))
+
+            adv_prec1, adv_prec5 = accuracy(adv_output.data, target_, topk=(1, 5))
+            adv_top1.update(adv_prec1.item(), input.size(0))
+            adv_top5.update(adv_prec5.item(), input.size(0))
+
+            delta_prec1, delta_prec5 = accuracy(delta_output.data, target_, topk=(1, 5))
+            delta_top1.update(delta_prec1.item(), input.size(0))
+            delta_top5.update(delta_prec5.item(), input.size(0))
+
+            # compute gradient and do SGD step
+            optimizer.zero_grad()
+            loss.backward()
+
+            optimizer.step()
+
+            # measure elapsed time
+            batch_time.update(time.time() - end)
+            end = time.time()
+            if num_batch % 100 == 0:
+                print('  Batch: [{:03d}/{}]   '
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                      'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                      'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+                      'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+                      'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '
+                      'deltaPrec@1 {delta_top1.val:.3f} ({delta_top1.avg:.3f})   '
+                      'deltaPrec@5 {delta_top5.val:.3f} ({delta_top5.avg:.3f})   '
+                      .format(
+                    num_batch, len(data_loader),
+                    loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5,
+                    delta_top1=delta_top1, delta_top5=delta_top5) + time_string())
+            num_batch = num_batch + 1
+
+        print('  Iteration: [{:03d}/{:03d}]   '
+              'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+              'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+              'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '
+              'advPrec@1 {adv_top1.val:.3f} ({adv_top1.avg:.3f})   '
+              'advPrec@5 {adv_top5.val:.3f} ({adv_top5.avg:.3f})   '.format(
+            iteration, num_iterations,
+            loss=losses, top1=top1, top5=top5, adv_top1=adv_top1, adv_top5=adv_top5) + time_string())
+
+        iteration += 1
+    print('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                top5=top5,
+                                                                                                error1=100 - top1.avg))
+    return model
+
 
 
 def adv_ae_train( data_loader,

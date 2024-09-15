@@ -114,7 +114,7 @@ def main():
     print_log("Torch  version : {}".format(torch.__version__), log)
     print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
 
-    _, pretrained_data_test = get_data(args.pretrained_dataset, args.pretrained_dataset)
+    _, pretrained_data_test = get_data(args.pretrained_dataset, args.pretrained_dataset, is_attack=True)
 
     pretrained_data_test_loader = torch.utils.data.DataLoader(pretrained_data_test,
                                                     batch_size=args.batch_size,
@@ -125,7 +125,7 @@ def main():
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
 
-    data_train, _ = get_data(args.dataset, args.pretrained_dataset)
+    data_train, _ = get_data(args.dataset, args.pretrained_dataset, is_attack=True)
 
     data_train_loader = torch.utils.data.DataLoader(data_train,
                                                     batch_size=args.batch_size,
@@ -147,7 +147,7 @@ def main():
                                 num_classes=num_classes,
                                 finetune=False)
 
-    print_log("=> Network :\n {}".format(target_network), log)
+    #print_log("=> Network :\n {}".format(target_network), log)
 
     adaptive = ''
     if args.pretrained_dataset == "caltech" or args.pretrained_dataset == 'asl':

@@ -23,7 +23,87 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-b
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Perform Causality Analysis on Input')
+    parser.add_argument('--option', default='analyze_inputs', choices=['analyze_inputs', 'calc_entropy',
+                                                                       'analyze_layers', 'calc_pcc', 'analyze_clean',
+                                                                       'test', 'pcc', 'entropy', 'classify',
+                                                                       'repair_ae', 'analyze_entropy',
+                                                                       'repair', 'repair_uap', 'gen_en_sample',
+                                                                       'repair_enpool', 'repair_enrep'],
+                        help='Run options')
+    parser.add_argument('--causal_type', default='logit', choices=['logit', 'act', 'slogit', 'sact',
+                                                                   'uap_act', 'inact', 'be_act'],
+                        help='Causality analysis type (default: logit)')
+
+    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
+                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
+                                                                 'eurosat'],
+                        help='Used dataset to generate UAP (default: cifar10)')
+    parser.add_argument('--is_train', type=int, default=0)
+    parser.add_argument('--arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar', 'resnet20',
+                                                           'resnet56', 'alexnet', 'googlenet', 'vgg16', 'vgg19',
+                                                           'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152',
+                                                           'inception_v3', 'shufflenetv2', 'mobilenet'])
+    parser.add_argument('--model_name', type=str, default='vgg19_cifar10.pth',
+                        help='model name (default: vgg19_cifar10.pth)')
+    parser.add_argument('--seed', type=int, default=123,
+                        help='Seed used in the generation process (default: 123)')
+
+    parser.add_argument('--split_layer', type=int, default=43,
+                        help='causality analysis layer (default: 43)')
+    parser.add_argument('--split_layers', type=int, nargs="*", default=[43])
+    # Parameters regarding UAP
+    parser.add_argument('--num_iterations', type=int, default=32,
+                        help='Number of iterations for causality analysis (default: 32)')
+    parser.add_argument('--num_batches', type=int, default=1500)
+    parser.add_argument('--result_subfolder', default='result', type=str,
+                        help='result subfolder name')
+    parser.add_argument('--postfix', default='',
+                        help='Postfix to attach to result folder')
+
+    parser.add_argument('--idx', type=int, default=0)
+
+    parser.add_argument('--targeted',  type=bool, default='',
+                        help='Target a specific class (default: False)')
+    parser.add_argument('--target_class', type=int, default=1,
+                        help='Target class (default: 1)')
+    parser.add_argument('--batch_size', type=int, default=32,
+                        help='Batch size (default: 32)')
+
+    parser.add_argument('--ngpu', type=int, default=0,
+                        help='Number of used GPUs (0 = CPU) (default: 1)')
+    parser.add_argument('--workers', type=int, default=4,
+                        help='Number of data loading workers (default: 4)')
+
+    parser.add_argument('--analyze_clean', type=int, default=0)
+
+    parser.add_argument('--th', type=float, default=2)
+
+    parser.add_argument('--alpha', type=float, default=0.1)
+
+    parser.add_argument('--ae_alpha', type=float, default=0.5)
+    parser.add_argument('--ae_iter', type=int, default=10)
+
+    parser.add_argument('--is_nips', default=1, type=int,
+                        help='Evaluation on NIPS data')
+
+    parser.add_argument('--loss_function', default='ce', choices=['ce', 'neg_ce', 'logit', 'bounded_logit',
+                                                                  'bounded_logit_fixed_ref', 'bounded_logit_neg'],
+                        help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
+    parser.add_argument('--learning_rate', type=float, default=0.001,
+                        help='Learning Rate (default: 0.001)')
+    parser.add_argument('--print_freq', default=200, type=int, metavar='N',
+                        help='print frequency (default: 200)')
+    parser.add_argument('--epsilon', type=float, default=0.03922,
+                        help='Norm restriction of UAP (default: 10/255)')
+    args = parser.parse_args()
+
+    args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
+    print('use_cuda: {}'.format(args.use_cuda))
+    if args.seed is None:
+        args.seed = random.randint(1, 10000)
+    return args
 
 
 def analyze_inputs(args):
@@ -1218,12 +1298,13 @@ def uap_repair(args):
 
     torch.save(repaired_network, model_repaired_path)
     print('repaired model saved to {}'.format(model_repaired_path))
-
+    '''
     _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, 2000,
                       use_cuda=args.use_cuda)
     print('overall acc {}'.format(acc))
     print('overall fooling ratio {}'.format(fr))
     print('overall asr {}'.format(asr))
+    '''
 
 
 def uap_gen_low_en_sample(args):

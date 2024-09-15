@@ -1225,40 +1225,36 @@ def uap_repair(args):
     start = time.time()
 
     if 'ae' in args.option:
-        repaired_network = adv_train(data_train_loader,
-                                     target_network,
-                                     args.arch,
-                                     criterion,
-                                     optimizer,
-                                     args.num_iterations,
-                                     args.split_layers,
-                                     uap=uap,
-                                     num_batches=args.num_batches,
-                                     alpha=args.alpha,
-                                     use_cuda=args.use_cuda,
-                                     adv_itr=args.ae_iter,
-                                     eps=args.epsilon,
-                                     mean=mean,
-                                     std=std)
-        post_fix = 'ae'
-        '''
-        repaired_network = adv_train(data_train_loader,
-                                     target_network,
-                                     args.target_class,
-                                     criterion,
-                                     optimizer,
-                                     args.num_iterations,
-                                     args.split_layers,
-                                     uap=uap,
-                                     num_batches=args.num_batches,
-                                     alpha=args.alpha,
-                                     use_cuda=args.use_cuda,
-                                     adv_itr=args.ae_iter,
-                                     eps=args.epsilon,
-                                     mean=mean,
-                                     std=std)
-        '''
-        #post_fix = 'pgd_' + str(args.target_class)
+        if args.targeted:
+            repaired_network = pgd_train(data_train_loader,
+                                         target_network,
+                                         args.target_class,
+                                         criterion,
+                                         optimizer,
+                                         args.num_iterations,
+                                         uap=uap,
+                                         num_batches=args.num_batches,
+                                         alpha=args.alpha,
+                                         use_cuda=args.use_cuda,
+                                         adv_itr=args.ae_iter,
+                                         eps=args.epsilon,
+                                         mean=mean,
+                                         std=std)
+        else:
+            repaired_network = pgd_train_untgt(data_train_loader,
+                                               target_network,
+                                               criterion,
+                                               optimizer,
+                                               args.num_iterations,
+                                               uap=uap,
+                                               num_batches=args.num_batches,
+                                               alpha=args.alpha,
+                                               use_cuda=args.use_cuda,
+                                               adv_itr=args.ae_iter,
+                                               eps=args.epsilon,
+                                               mean=mean,
+                                               std=std)
+        post_fix = 'pgd_untgt'
     elif 'uap' in args.option:
         train_uaps = None
         for target_i in [755,743,804,700,922,174,547,369]:
@@ -1281,28 +1277,6 @@ def uap_repair(args):
                                            alpha=args.alpha,
                                            use_cuda=args.use_cuda)
         post_fix = 'uap'# + str(args.target_class)
-    elif 'enpool' in args.option:
-        repaired_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
-        print("=> repaired_network :\n {}".format(repaired_network))
-        post_fix = 'enpool'
-    elif 'enrep' in args.option:
-        target_network = replace_model(target_network, args.arch, replace_layer=args.split_layers[0])
-        repaired_network = adv_ae_train(data_train_loader,
-                                        target_network,
-                                        args.arch,
-                                        criterion,
-                                        optimizer,
-                                        args.num_iterations,
-                                        args.split_layers,
-                                        uap=uap,
-                                        std=std,
-                                        alpha=args.alpha,
-                                        ae_alpha=args.ae_alpha,
-                                        print_freq=args.print_freq,
-                                        use_cuda=args.use_cuda,
-                                        adv_itr=args.ae_iter,
-                                        eps=args.epsilon)
-        post_fix = 'enrep'
     else:
         #fine tune with clean sample only
         repaired_network = train_repair(data_loader=data_train_loader,
@@ -1334,12 +1308,6 @@ def uap_repair(args):
 
     torch.save(repaired_network, model_repaired_path)
     print('repaired model saved to {}'.format(model_repaired_path))
-
-    _, acc, _, fr, _, asr = my_test_uap(data_test_loader, repaired_network, uap, args.target_class, 2000,
-                      use_cuda=args.use_cuda)
-    print('overall acc {}'.format(acc))
-    print('overall fooling ratio {}'.format(fr))
-    print('overall asr {}'.format(asr))
 
 
 def uap_gen_low_en_sample(args):
