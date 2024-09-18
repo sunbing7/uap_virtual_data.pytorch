@@ -191,7 +191,8 @@ def analyze_inputs(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
@@ -293,7 +294,8 @@ def analyze_entropy(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -471,7 +473,8 @@ def analyze_layers(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -619,7 +622,8 @@ def analyze_layers_clean(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -896,7 +900,8 @@ def test(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -1149,7 +1154,8 @@ def uap_repair(args):
 
     elif args.dataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -1363,7 +1369,8 @@ def uap_gen_low_en_sample(args):
 
     elif args.datasetdataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))

@@ -1,11 +1,11 @@
 # Copy and edit this file to config/config.py
 MY_PATH = "/root/sunbing/workspace/uap"
-RESULT_PATH = MY_PATH + "/uap_virtual_data.pytorch/results"	# Destination folder to store the results to
-MODEL_PATH = MY_PATH + "/uap_virtual_data.pytorch/models"     # Destination folder to store the models to
-UAP_PATH = MY_PATH + "/uap_virtual_data.pytorch/uap"     # fodler store generated uaps
-UAPS_PATH = MY_PATH + "/uap_virtual_data.pytorch/uaps"
-NEURON_PATH = MY_PATH + "/uap_virtual_data.pytorch/outstanding"     # fodler store outstanding neurons
-ATTRIBUTION_PATH = MY_PATH + "/uap_virtual_data.pytorch/attribution"
+MY_DATAPATH = "/root/autodl-tmp/sunbing/workspace/uap/my_result"
+RESULT_PATH = MY_DATAPATH + "/uap_virtual_data.pytorch/results"	# Destination folder to store the results to
+MODEL_PATH = MY_DATAPATH + "/uap_virtual_data.pytorch/models"     # Destination folder to store the models to
+UAP_PATH = MY_DATAPATH + "/uap_virtual_data.pytorch/uap"     # fodler store generated uaps
+NEURON_PATH = MY_DATAPATH + "/uap_virtual_data.pytorch/outstanding"     # fodler store outstanding neurons
+ATTRIBUTION_PATH = MY_DATAPATH + "/uap_virtual_data.pytorch/attribution"
 
 DATA_PATH = "/root/autodl-tmp/sunbing/workspace/uap"
 PROJECT_PATH = MY_PATH + "/uap_virtual_data.pytorch"			# Directory to this project

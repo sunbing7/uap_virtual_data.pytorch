@@ -68,6 +68,7 @@ def parse_arguments():
                         help='Target a specific class (default: False)')
     parser.add_argument('--target_class', type=int, default=1,
                         help='Target class (default: 1)')
+    parser.add_argument('--targets', nargs="+", type=int)
     parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size (default: 32)')
 
@@ -191,7 +192,8 @@ def analyze_inputs(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
@@ -293,7 +295,8 @@ def analyze_entropy(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -471,7 +474,8 @@ def analyze_layers(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -622,7 +626,8 @@ def analyze_layers_clean(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -934,7 +939,8 @@ def test(args):
 
     elif args.dataset == 'eurosat':
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -1185,7 +1191,8 @@ def uap_repair(args):
 
     elif args.dataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
@@ -1257,7 +1264,7 @@ def uap_repair(args):
         post_fix = 'pgd_untgt'
     elif 'uap' in args.option:
         train_uaps = None
-        for target_i in [755,743,804,700,922,174,547,369]:
+        for target_i in args.targets:#[755,743,804,700,922,174,547,369]:
             for idx in range(0, 10):
                 train_uap = 'uap_train_' + str(target_i) + '_' + str(idx) + '.npy'
                 uap_fn = os.path.join(uap_path, train_uap)
@@ -1366,7 +1373,8 @@ def uap_gen_low_en_sample(args):
 
     elif args.datasetdataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))

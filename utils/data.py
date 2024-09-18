@@ -1,27 +1,14 @@
 from __future__ import division
-import os
 import numpy as np
-import glob
-import torch
-import random
-# import cv2
 from torch.utils.data import Dataset
 import pandas as pd
 import h5py
-
 import torchvision.datasets as dset
-import torchvision.transforms as transforms
-import torchvision.transforms.functional as tfunc
 
-from config.config import IMAGENET_PATH, DATASET_BASE_PATH
 from config.config import *
-from dataset_utils.voc0712 import VOCDetection
 
 from utils.data_sat import *
 
-#import utils.utils_backdoor as utils_backdoor
-#DATA_DIR = 'data'  # data folder
-#DATA_FILE = 'cifar_dataset.h5'  # dataset file
 
 def get_data_specs(pretrained_dataset):
     if pretrained_dataset == "imagenet":
@@ -37,18 +24,6 @@ def get_data_specs(pretrained_dataset):
         num_classes = 1000
         input_size = 224
         # input_size = 299 # inception_v3
-        num_channels = 3
-    elif pretrained_dataset == "cifar10":
-        mean = [0., 0., 0.]
-        std = [1., 1., 1.]
-        num_classes = 10
-        input_size = 224#32
-        num_channels = 3
-    elif pretrained_dataset == "cifar100":
-        mean = [0., 0., 0.]
-        std = [1., 1., 1.]
-        num_classes = 100
-        input_size = 32
         num_channels = 3
     elif pretrained_dataset == 'caltech':
         mean = [0.485, 0.456, 0.406]
@@ -77,55 +52,8 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
 
     num_classes, (mean, std), input_size, num_channels = get_data_specs(pretrained_dataset)
 
-    if dataset == 'cifar10':
-        #return get_data_class(data_file=('%s/%s' % (DATA_DIR, DATA_FILE)), cur_class=3)
-        train_transform = transforms.Compose(
-                [transforms.RandomHorizontalFlip(),
-                 transforms.Resize(size=(224, 224)),
-                 transforms.RandomCrop(input_size, padding=4),
-                 transforms.ToTensor(),
-                 #transforms.Normalize(mean, std),
-                 transforms.Normalize(
-                     (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-                 )
-                 ])
-
-
-        test_transform = transforms.Compose(
-                [transforms.ToTensor(),
-                 transforms.Resize(size=(224, 224)),
-                 #transforms.Normalize(mean, std),
-                 transforms.Normalize(
-                     (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-                 )
-                 ])
-
-
-        train_data = dset.CIFAR10(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
-        test_data = dset.CIFAR10(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
-    
-    elif dataset == 'cifar100':
-        train_transform = transforms.Compose(
-                [transforms.RandomHorizontalFlip(),
-                 transforms.RandomCrop(input_size, padding=4),
-                 transforms.ToTensor(),
-                 transforms.Normalize(mean, std)])
-
-        test_transform = transforms.Compose(
-                [transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        train_data = dset.CIFAR100(DATASET_BASE_PATH, train=True, transform=train_transform, download=True)
-        test_data = dset.CIFAR100(DATASET_BASE_PATH, train=False, transform=test_transform, download=True)
-    
-    elif dataset == "imagenet":
-        #use imagenet 2012 validation set as uap training set
-        #use imagenet DEV 1000 sample dataset as the test set
-        #traindir = os.path.join(IMAGENET_PATH, 'train')
-        #valdir = os.path.join(IMAGENET_PATH, 'val')
+    if dataset == "imagenet":
         traindir = os.path.join(IMAGENET_PATH, 'validation')
-        #traindir = IMAGENET_PATH
-        #valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
                 transforms.Resize(256),
@@ -133,18 +61,6 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
                 transforms.RandomCrop(input_size),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)])
-        '''
-        test_transform = transforms.Compose([
-                transforms.Resize(256),
-                # transforms.Resize(299), # inception_v3
-                transforms.CenterCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-        test_data = dset.ImageFolder(root=valdir, transform=test_transform)
-        #if args.is_nips:
-        #    print('is_nips')
-        #    data_test = fix_labels_nips(data_test, pytorch=True)
-        '''
 
         full_val = dset.ImageFolder(root=traindir, transform=train_transform)
         full_val = fix_labels(full_val)
@@ -157,13 +73,7 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
         #print('test size {} train size {}'.format(len(test_data), len(train_data)))
 
     elif dataset == "imagenet_caffe":
-        #use imagenet 2012 validation set as uap training set
-        #use imagenet DEV 1000 sample dataset as the test set
-        #traindir = os.path.join(IMAGENET_PATH, 'train')
-        #valdir = os.path.join(IMAGENET_PATH, 'val')
         traindir = os.path.join(IMAGENET_PATH, 'validation')
-        #traindir = IMAGENET_PATH
-        #valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
                                                transforms.Resize((256, 256), transforms.InterpolationMode.BILINEAR),
@@ -182,69 +92,6 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
         test_data = torch.utils.data.Subset(full_val, index_test)
         print('test size {} train size {}'.format(len(test_data), len(train_data)))
 
-    elif dataset == "coco":
-        train_transform = transforms.Compose([
-                transforms.Resize(int(input_size * 1.143)),
-                transforms.RandomCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        test_transform = transforms.Compose([
-                transforms.Resize(int(input_size * 1.143)),
-                transforms.CenterCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        train_data = dset.CocoDetection(root=COCO_2017_TRAIN_IMGS,
-                                        annFile=COCO_2017_TRAIN_ANN,
-                                        transform=train_transform)
-        test_data = dset.CocoDetection(root=COCO_2017_VAL_IMGS,
-                                        annFile=COCO_2017_VAL_ANN,
-                                        transform=test_transform)
-    
-    elif dataset == "voc":
-        train_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Resize(int(input_size * 1.143)),
-                transforms.RandomCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        test_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                transforms.Resize(int(input_size * 1.143)),
-                transforms.CenterCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        train_data = VOCDetection(root=VOC_2012_ROOT,
-                                year="2012",
-                                image_set='train',
-                                transform=train_transform)
-        test_data = VOCDetection(root=VOC_2012_ROOT,
-                                year="2012",
-                                image_set='val',
-                                transform=test_transform)
-    
-    elif dataset == "places365":
-        traindir = os.path.join(PLACES365_ROOT, "train")
-        testdir = os.path.join(PLACES365_ROOT, "train")
-        # Places365 downloaded as 224x224 images
-
-        train_transform = transforms.Compose([
-                transforms.Resize(input_size), # Places images downloaded as 224
-                transforms.RandomCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        test_transform = transforms.Compose([
-                transforms.Resize(input_size),
-                transforms.CenterCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-        
-        train_data = dset.ImageFolder(root=traindir, transform=train_transform)
-        test_data = dset.ImageFolder(root=testdir, transform=test_transform)
     elif dataset == 'caltech':
         traindir = os.path.join(CALTECH_PATH, "train")
         testdir = os.path.join(CALTECH_PATH, "test")
@@ -314,7 +161,6 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
             transforms.ToTensor(),
             transforms.Normalize(mean, std)])
 
-
         test_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean, std)])
@@ -334,7 +180,7 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
                                                                   size=int(0.05 * len(train_data_full)),
                                                                   replace=False))
         _, test_data = random_split(test_dataset, 0.9, random_state=42)
-        print('[DEBUG] train len: {}'.format(len(train_data_full)))
+        print('[DEBUG] train len: {}'.format(len(train_data)))
         print('[DEBUG] test len: {}'.format(len(test_data)))
         print('[DEBUG] eurosat train used len: {}, fraction of training size: {:.2f}'.format(
             len(train_data), len(train_data) / len(train_data_full)))
@@ -343,36 +189,9 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
 
 def get_data_class(dataset, cur_class=1, preprocess=None):
     num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
-    if dataset == 'cifar10':
-
-        data_file = DATASET_BASE_PATH + '/cifar.h5'
-        train_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-
-        test_transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(size=(224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
-            )
-        ])
-
-        train_data = CustomCifarClassDataSet(data_file, is_train=True, cur_class=cur_class, transform=train_transform)
-        test_data = CustomCifarClassDataSet(data_file, is_train=False, cur_class=cur_class, transform=test_transform)
-    elif dataset == 'imagenet':
-        #'''
+    if dataset == 'imagenet':
         num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
-        #use imagenet 2012 validation set as uap training set
-        #use imagenet DEV 1000 sample dataset as the test set
         traindir = os.path.join(IMAGENET_PATH, 'validation')
-        valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
         train_transform = transforms.Compose([
                 transforms.Resize(256),
@@ -394,35 +213,9 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
         train_data = fix_labels_class(train_data, cur_class=cur_class)
         #test_data = fix_labels_nips_class(test_data, pytorch=True, cur_class=cur_class)
         test_data = train_data
-        '''
-        traindir = os.path.join(IMAGENET_PATH, 'validation')
-
-        train_transform = transforms.Compose([
-                transforms.Resize(256),
-                # transforms.Resize(299), # inception_v3
-                transforms.RandomCrop(input_size),
-                transforms.ToTensor(),
-                transforms.Normalize(mean, std)])
-
-        full_val = dset.ImageFolder(root=traindir, transform=train_transform)
-        full_val = fix_labels(full_val)
-
-        full_index = np.arange(0, len(full_val))
-        index_test = np.load(IMAGENET_PATH + '/validation/index_test.npy').astype(np.int64)
-        index_train = [x for x in full_index if x not in index_test]
-
-        train_data = torch.utils.data.Subset(full_val, index_train)
-        test_data = torch.utils.data.Subset(full_val, index_test)
-
-        train_data = filter_class(train_data, cur_class)
-        test_data = filter_class(test_data, cur_class)
-        print('test size {} train size {}'.format(len(test_data), len(train_data)))
-        '''
 
     elif dataset == 'imagenet_caffe':
         num_classes, (mean, std), input_size, num_channels = get_data_specs(dataset)
-        #use imagenet 2012 validation set as uap training set
-        #use imagenet DEV 1000 sample dataset as the test set
         traindir = os.path.join(IMAGENET_PATH, 'validation')
         valdir = os.path.join(IMAGENET_PATH, 'ImageNet1k')
 
@@ -515,35 +308,6 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
     else:
         return None
     return train_data, test_data
-
-
-class CustomCifarClassDataSet(Dataset):
-    def __init__(self, data_file, cur_class, transform=False, is_train=False):
-        self.transform = transform
-
-        dataset = load_dataset_h5(data_file, keys=['X_train', 'Y_train', 'X_test', 'Y_test'])
-        if is_train:
-            xs = dataset['X_train'].astype("uint8")
-            ys = dataset['Y_train'].T[0]
-        else:
-            xs = dataset['X_test'].astype("uint8")
-            ys = dataset['Y_test'].T[0]
-
-        idxes = (ys == cur_class)
-        self.x = xs[idxes]
-        self.y = ys[idxes]
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, idx):
-        image = self.x[idx]
-        label = self.y[idx]
-
-        if self.transform is not None:
-            image = self.transform(image)
-
-        return image, label
 
 
 def normalize(t):

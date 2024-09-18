@@ -144,6 +144,8 @@ def main():
             target_network.load_state_dict(new_state_dict)
     elif args.pretrained_dataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 

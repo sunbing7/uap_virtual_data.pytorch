@@ -85,7 +85,7 @@ def parse_arguments():
     return args
 
 
-def main():
+def main(idx):
     args = parse_arguments()
 
     random.seed(args.pretrained_seed)
@@ -278,27 +278,12 @@ def main():
       'args'        : copy.deepcopy(args),
     }, uap_path, 'perturbed_checkpoint_' + str(args.target_class) + '.pth')
 
-    #export uap and save it
-    #'''
     tuap = torch.unsqueeze(generator.uap, dim=0)
-
-    plot_tuap = tuap[0].cpu().detach().numpy()
-    plot_tuap = np.transpose(plot_tuap, (1, 2, 0))
-    plot_tuap_normal = plot_tuap + 0.5
-    plot_tuap_amp = plot_tuap / 2 + 0.5
-    tuap_range = np.max(plot_tuap_amp) - np.min(plot_tuap_amp)
-    plot_tuap_amp = plot_tuap_amp / tuap_range + 0.5
-    plot_tuap_amp -= np.min(plot_tuap_amp)
-
-    imgplot = plt.imshow(plot_tuap_amp)
-
-    np.save(uap_path + '/uap_' + str(args.target_class) + adaptive + '.npy', tuap.cpu().detach().numpy())
-    plt.savefig(model_path + '/uap_' + str(args.target_class) + adaptive + '.png')
-    plt.show()
-    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
+    np.save(uap_path + '/uap_train_' + str(args.target_class) + '_' + str(idx) + '.npy', tuap.cpu().detach().numpy())
     print('uap saved!')
     log.close()
 
 
 if __name__ == '__main__':
-   main()
+    for i in range(0, 10):
+        main(i)

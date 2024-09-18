@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 from networks.uap import UAP
 from utils.data import get_data_specs, get_data
-from utils.utils import get_model_path, get_result_path, get_uaps_path
+from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -41,7 +41,7 @@ def main():
 
     # evaluate uap
     #load uap
-    uaps_path = get_uaps_path()
+    uaps_path = get_uap_path()
 
     uap_list = []
     for fn in os.listdir(uaps_path):

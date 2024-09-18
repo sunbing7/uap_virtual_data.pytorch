@@ -72,118 +72,6 @@ def parse_arguments():
     return args
 
 
-def main_():
-    args = parse_arguments()
-
-    random.seed(args.pretrained_seed)
-    torch.manual_seed(args.pretrained_seed)
-    if args.use_cuda:
-        torch.cuda.manual_seed_all(args.pretrained_seed)
-    cudnn.benchmark = True
-
-    # get the result path to store the results
-    result_path = get_result_path(dataset_name=args.dataset,
-                                network_arch=args.test_arch,
-                                random_seed=args.pretrained_seed,
-                                result_subfolder=args.result_subfolder,
-                                postfix=args.postfix)
-
-    # Init logger
-    log_file_name = os.path.join(result_path, 'log.txt')
-    print("Log file: {}".format(log_file_name))
-    log = open(log_file_name, 'w')
-    print_log('save path : {}'.format(result_path), log)
-    state = {k: v for k, v in args._get_kwargs()}
-    for key, value in state.items():
-        print_log("{} : {}".format(key, value), log)
-    print_log("Random Seed: {}".format(args.pretrained_seed), log)
-    print_log("Python version : {}".format(sys.version.replace('\n', ' ')), log)
-    print_log("Torch  version : {}".format(torch.__version__), log)
-    print_log("Cudnn  version : {}".format(torch.backends.cudnn.version()), log)
-
-    _, data_test = get_data(args.test_dataset, args.test_dataset)
-
-    data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=False,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-
-    ##### Dataloader for training ####
-    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
-
-    ####################################
-    # Init model, criterion, and optimizer
-    print_log("=> Creating model '{}'".format(args.test_arch), log)
-    # get a path for loading the model to be attacked
-    model_path = get_model_path(dataset_name=args.test_dataset,
-                                network_arch=args.test_arch,
-                                random_seed=args.pretrained_seed)
-    model_weights_path = os.path.join(model_path, args.test_name)
-
-    target_network = get_network(args.test_arch,
-                                input_size=input_size,
-                                num_classes=num_classes,
-                                finetune=False)
-
-    print_log("=> Network :\n {}".format(target_network), log)
-    #target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
-    # Set the target model into evaluation mode
-    target_network.eval()
-    if args.test_dataset != "imagenet":
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
-    # Set all weights to not trainable
-    #set_parameter_requires_grad(target_network, requires_grad=False)
-
-    total_params = get_num_parameters(target_network)
-    print_log("Target Network Total # parameters: {}".format(total_params), log)
-
-    if args.use_cuda:
-        target_network.cuda()
-
-    #test
-    #for input, gt in pretrained_data_test_loader:
-    #    clean_output = target_network(input)
-    #    attack_output = target_network(input + tuap)
-
-    # evaluate uap
-    #load uap
-    uap_path = get_uap_path(uap_data=args.dataset,
-                            model_data=args.pretrained_dataset,
-                            network_arch=args.test_arch,
-                            random_seed=args.pretrained_seed)
-    uap_fn = os.path.join(uap_path, args.uap_name)
-    uap = np.load(uap_fn) / np.array(std).reshape(1,3,1,1)
-    tuap = torch.from_numpy(uap)
-
-    test_sr, nt_sr, clean_test_acc, _test_sr, _nt_sr = eval_uap(data_test_loader, target_network, tuap,
-                                                                 target_class=args.target_class, log=log, use_cuda=args.use_cuda, targeted=args.targeted)
-    print('All samples: UAP targeted attack testing set SR: %.2f' % (test_sr))
-    print('All samples: UAP non-targeted attack testing set SR: %.2f' % (nt_sr))
-    print('UAP targeted attack testing set SR: %.2f' % (_test_sr))
-    print('UAP non-targeted attack testing set SR: %.2f' % (_nt_sr))
-    print('Clean sample test accuracy: %.2f' % clean_test_acc)
-    '''
-    metrics_evaluate(data_loader=pretrained_data_test_loader,
-                    target_model=target_network,
-                    perturbed_model=perturbed_net,
-                    targeted=args.targeted,
-                    target_class=args.target_class,
-                    log=log,
-                    use_cuda=args.use_cuda)
-
-    save_checkpoint({
-      'arch'        : args.test_arch,
-      # 'state_dict'  : perturbed_net.state_dict(),
-      'state_dict'  : perturbed_net.module.generator.state_dict(),
-      #'optimizer'   : optimizer.state_dict(),
-      'args'        : copy.deepcopy(args),
-    }, result_path, 'checkpoint_cifar10.pth.tar')
-    '''
-    log.close()
-
-
 def main():
     args = parse_arguments()
 
@@ -255,6 +143,8 @@ def main():
             target_network.load_state_dict(new_state_dict)
     elif args.pretrained_dataset == 'eurosat':
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        if 'repaired' in args.model_name:
+            adaptive = '_adaptive'
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
 
@@ -306,7 +196,10 @@ def main():
         if args.use_cuda:
             mask = mask.cuda()
     else:
-        uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+        if 'adaptive' in args.uap_name:
+            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '_adaptive.npy')
+        else:
+            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
         uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
         tuap = torch.from_numpy(uap)
 
