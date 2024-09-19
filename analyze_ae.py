@@ -1247,6 +1247,7 @@ def uap_repair(args):
                                          eps=args.epsilon,
                                          mean=mean,
                                          std=std)
+            post_fix = 'pgd_tgt'
         else:
             repaired_network = pgd_train_untgt(data_train_loader,
                                                target_network,
@@ -1261,7 +1262,7 @@ def uap_repair(args):
                                                eps=args.epsilon,
                                                mean=mean,
                                                std=std)
-        post_fix = 'pgd_untgt'
+            post_fix = 'pgd_untgt'
     elif 'uap' in args.option:
         train_uaps = None
         for target_i in args.targets:#[755,743,804,700,922,174,547,369]:

@@ -549,25 +549,12 @@ def pgd_train(data_loader,
                 target = target.cuda()
                 input = input.cuda()
                 uap = uap.cuda()
-            '''
-            #untarget
-            delta = ae_training_pgd(model,
-                                    input,
-                                    target,
-                                    criterion,
-                                    adv_itr,
-                                    eps,
-                                    True,
-                                    mean,
-                                    std,
-                                    use_cuda)
-            '''
             #targeted
-            target_class = torch.ones_like(target) * target_class
+            tgt_class = torch.ones_like(target) * target_class
 
             delta = ae_training_pgd_tgt(model,
                                         input,
-                                        target_class,
+                                        tgt_class,
                                         criterion,
                                         adv_itr,
                                         eps,
