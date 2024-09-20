@@ -1233,6 +1233,8 @@ def uap_repair(args):
 
     if 'ae' in args.option:
         if args.targeted:
+            post_fix = 'pgd_tgt'
+            print('[DEBUG] pgd_tgt')
             repaired_network = pgd_train(data_train_loader,
                                          target_network,
                                          args.target_class,
@@ -1247,8 +1249,9 @@ def uap_repair(args):
                                          eps=args.epsilon,
                                          mean=mean,
                                          std=std)
-            post_fix = 'pgd_tgt'
         else:
+            post_fix = 'pgd_untgt'
+            print('[DEBUG] pgd_untgt')
             repaired_network = pgd_train_untgt(data_train_loader,
                                                target_network,
                                                criterion,
@@ -1262,7 +1265,6 @@ def uap_repair(args):
                                                eps=args.epsilon,
                                                mean=mean,
                                                std=std)
-            post_fix = 'pgd_untgt'
     elif 'uap' in args.option:
         train_uaps = None
         for target_i in args.targets:
@@ -1307,7 +1309,7 @@ def uap_repair(args):
     metrics_evaluate_test(data_loader=data_test_loader,
                           target_model=repaired_network,
                           uap=uap,
-                          targeted=args.targeted,
+                          targeted=True,
                           target_class=args.target_class,
                           log=None,
                           use_cuda=args.use_cuda)
