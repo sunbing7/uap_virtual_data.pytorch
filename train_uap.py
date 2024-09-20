@@ -26,22 +26,20 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
     # pretrained
-    parser.add_argument('--dataset', default='cifar10', choices=['cifar10', 'cifar100', 'imagenet',
-                                                                 'coco', 'voc', 'places365', 'caltech', 'asl',
-                                                                 'eurosat'],
-                        help='Used dataset to generate UAP (default: cifar10)')
-    parser.add_argument('--pretrained_dataset', default='cifar10', choices=['cifar10', 'cifar100'
-        , 'imagenet', 'caltech', 'asl', 'eurosat'],
-                        help='Used dataset to train the initial model (default: cifar10)')
-    parser.add_argument('--pretrained_arch', default='alexnet', choices=['vgg16_cifar', 'vgg19_cifar',
-                                                                         'resnet20', 'resnet56',
-                                                                       'alexnet', 'googlenet', 'vgg16', 'vgg19',
-                                                                       'resnet18', 'resnet34', 'resnet50', 'resnet101',
-                                                                       'resnet152', 'shufflenetv2',
-                                                                       'inception_v3', 'mobilenet'],
-                        help='Used model architecture: (default: alexnet)')
-    parser.add_argument('--model_name', type=str, default='alexnet_cifar10.pth',
-                        help='model name (default: alexnet_cifar10.pth)')
+    parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+                        help='Used dataset to generate UAP (default: imagenet)')
+
+    parser.add_argument('--pretrained_dataset', default='imagenet', choices=['imagenet', 'caltech',
+                                                                                          'asl', 'eurosat'],
+                        help='Used dataset to train the initial model (default: imagenet)')
+
+    parser.add_argument('--pretrained_arch', default='resnet50', choices=['googlenet', 'vgg19', 'resnet50',
+                                                                                      'shufflenetv2', 'mobilenet'],
+                        help='Used model architecture: (default: resnet50)')
+
+    parser.add_argument('--model_name', type=str, default='vgg19.pth',
+                        help='model name (default: vgg19.pth)')
+
     parser.add_argument('--pretrained_seed', type=int, default=123,
                         help='Seed used in the generation process (default: 123)')
     # Parameters regarding UAP

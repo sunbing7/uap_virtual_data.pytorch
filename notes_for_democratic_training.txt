@@ -1,0 +1,28 @@
+1. useful files
+    train_uap.py
+    test_uap.py
+    analyze_input.py
+
+    additional experiments
+    analyze_ae.py for adversarial example entropy & training
+    train_ae.py for training adversarial example
+    analyze_input_caffe.py  for caffe model testing
+    test_uap_caffe for caffe model testing
+    train_uap_caffe.py to train uap for caffe model
+
+2. scrips
+    train_uap.sh => train uap for models
+    test_uap.sh => test uap for models
+    run_entropy_analysis.sh => run entropy analysis for clean, uap samples
+    run_repair.sh => repair model
+
+    additional experiments
+    run_genae.sh => entropy analysis for ae
+    run_repair_ae.sh => repair model with targeted ae, non-targeted ae and uap
+    spgd_test.sh => spgd test
+    test_adv.sh => test adv fixed model ---- to complete
+
+
+
+
+

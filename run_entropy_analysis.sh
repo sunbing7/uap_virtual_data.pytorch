@@ -12,7 +12,7 @@ do
     rm attribution/clean*.npy
 #  done
 done
-
+#python analyze_input.py --option=analyze_entropy --analyze_clean=0 --causal_type=act --targeted=True --dataset=imagenet --arch=resnet50 --model_name=resnet50_imagenet.pth --split_layer=9 --seed=123 --num_iterations=128 --result_subfolder=result --target_class=547 --batch_size=128 --ngpu=1 --workers=4
 for TARGET_CLASS in {755,743,804,700,922,174,547,369}
 do
   #for LAYER in {9,7,4}
@@ -107,11 +107,6 @@ do
     rm attribution/clean*.npy
 #  done
 done
-#python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --split_layer=6 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=37 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=37 --split_layer=6 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=caltech --arch=shufflenetv2 --model_name=shufflenetv2_caltech.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=37 --split_layer=6 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=classify --causal_type=act --target_class=37 --num_iterations=32 --split_layer=6 --th=1
-
 ################################################################################################################################################
 #mobilenet asl
 for TARGET_CLASS in {19,17,8,21,2,9,23,6}
@@ -139,11 +134,6 @@ do
     rm attribution/clean*.npy
 #  done
 done
-#python analyze_input.py --option=analyze_layers --analyze_clean=0 --causal_type=act --targeted=True --dataset=asl --arch=mobilenet --model_name=mobilenet_asl.pth --split_layer=1 --seed=123 --num_iterations=32 --result_subfolder=result --target_class=19 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=analyze_clean --causal_type=act --targeted=True --dataset=asl --arch=mobilenet --model_name=mobilenet_asl.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=19 --split_layer=3 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=analyze_layers --analyze_clean=1 --causal_type=act --targeted=True --dataset=asl --arch=mobilenet --model_name=mobilenet_asl.pth --seed=123 --num_iterations=50 --result_subfolder=result --target_class=19 --split_layer=3 --batch_size=32 --ngpu=1 --workers=4
-#python analyze_input.py --option=classify --causal_type=act --target_class=19 --num_iterations=32 --split_layer=3 --th=1
-
 ################################################################################################################################################
 #resnet50 eurosat
 for TARGET_CLASS in {9,1,8,2,3,7,4,6}

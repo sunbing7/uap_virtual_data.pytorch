@@ -1265,7 +1265,7 @@ def uap_repair(args):
             post_fix = 'pgd_untgt'
     elif 'uap' in args.option:
         train_uaps = None
-        for target_i in args.targets:#[755,743,804,700,922,174,547,369]:
+        for target_i in args.targets:
             for idx in range(0, 10):
                 train_uap = 'uap_train_' + str(target_i) + '_' + str(idx) + '.npy'
                 uap_fn = os.path.join(uap_path, train_uap)
@@ -1317,110 +1317,6 @@ def uap_repair(args):
     torch.save(repaired_network, model_repaired_path)
     print('repaired model saved to {}'.format(model_repaired_path))
 
-
-def uap_gen_low_en_sample(args):
-    _, data_test = get_data(args.dataset, args.dataset)
-
-    data_test_loader = torch.utils.data.DataLoader(data_test,
-                                                   batch_size=args.batch_size,
-                                                   shuffle=True,
-                                                   num_workers=args.workers,
-                                                   pin_memory=True)
-
-    ##### Dataloader for training ####
-    num_classes, (mean, std), input_size, num_channels = get_data_specs(args.dataset)
-
-    data_train, _ = get_data(args.dataset, args.dataset)
-
-    data_train_loader = torch.utils.data.DataLoader(data_train,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=True,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
-
-    uap_path = get_uap_path(uap_data=args.dataset,
-                            model_data=args.dataset,
-                            network_arch=args.arch,
-                            random_seed=args.seed)
-    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
-    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
-    uap = torch.from_numpy(uap)
-
-    ####################################
-    # Init model, criterion, and optimizer
-    # get a path for loading the model to be attacked
-    model_path = get_model_path(dataset_name=args.dataset,
-                                network_arch=args.arch,
-                                random_seed=args.seed)
-    model_weights_path = os.path.join(model_path, args.model_name)
-
-    target_network = get_network(args.arch,
-                                 input_size=input_size,
-                                 num_classes=num_classes,
-                                 finetune=False)
-
-    if args.dataset == "caltech" or args.dataset == 'asl':
-        if 'repaired' in args.model_name:
-            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        else:
-            #state dict
-            orig_state_dict = torch.load(model_weights_path, map_location=torch.device('cpu'))
-            new_state_dict = OrderedDict()
-            for k, v in target_network.state_dict().items():
-                if k in orig_state_dict.keys():
-                    new_state_dict[k] = orig_state_dict[k]
-
-            target_network.load_state_dict(new_state_dict)
-
-    elif args.datasetdataset == 'eurosat':
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-        if 'repaired' in args.model_name:
-            adaptive = '_adaptive'
-    # Imagenet models use the pretrained pytorch weights
-    elif args.dataset == "imagenet" and 'repaired' in args.model_name:
-        target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
-    #non_trainale_params = get_num_non_trainable_parameters(target_network)
-    trainale_params = get_num_trainable_parameters(target_network)
-    total_params = get_num_parameters(target_network)
-    print("Target Network Trainable parameters: {}".format(trainale_params))
-    print("Target Network Total # parameters: {}".format(total_params))
-
-    target_network.train()
-
-    if args.loss_function == "ce":
-        criterion = torch.nn.CrossEntropyLoss()
-    elif args.loss_function == "neg_ce":
-        criterion = NegativeCrossEntropy()
-    elif args.loss_function == "logit":
-        criterion = LogitLoss(num_classes=num_classes, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit":
-        criterion = BoundedLogitLoss(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_fixed_ref":
-        criterion = BoundedLogitLossFixedRef(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    elif args.loss_function == "bounded_logit_neg":
-        criterion = BoundedLogitLoss_neg(num_classes=num_classes, confidence=args.confidence, use_cuda=args.use_cuda)
-    else:
-        raise ValueError
-
-    print('Criteria: {}'.format(criterion))
-
-    if args.use_cuda:
-        target_network.cuda()
-        criterion.cuda()
-
-    optimizer = torch.optim.SGD(target_network.parameters(), lr=args.learning_rate, momentum=0.9)
-    #'''
-    delta = gen_low_entropy_sample(data_train_loader,
-                                   target_network,
-                                   args.arch,
-                                   criterion,
-                                   args.split_layers,
-                                   use_cuda=args.use_cuda,
-                                   adv_itr=args.ae_iter,
-                                   eps=args.epsilon)
-
-    np.save(model_path + '/' + 'ae', delta.cpu().detach().numpy())
 
 def clean_classification(args):
     #get average entropy of clean data
@@ -1475,16 +1371,6 @@ if __name__ == '__main__':
     args = parse_arguments()
     state = {k: v for k, v in args._get_kwargs()}
     start = time.time()
-    '''
-    attribution_path = get_attribution_path()
-    output_fn = os.path.join(attribution_path, "uap_clean_outputs_" + str(args.split_layer) + ".npy")
-    clean_outputs = np.load(output_fn)
-    print(clean_outputs)
-
-
-    for key, value in state.items():
-        print("{} : {}".format(key, value))
-    '''
     if args.option == 'analyze_inputs':
         analyze_inputs(args)
     elif args.option == 'calc_entropy':
@@ -1517,8 +1403,6 @@ if __name__ == '__main__':
         analyze_entropy(args)
     elif 'repair' in args.option:
         uap_repair(args)
-    elif args.option == 'gen_en_sample':
-        uap_gen_low_en_sample(args)
     end = time.time()
     #print('Process time: {}'.format(end - start))
 
