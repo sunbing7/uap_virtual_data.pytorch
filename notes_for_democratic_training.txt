@@ -20,7 +20,7 @@
     run_genae.sh => entropy analysis for ae
     run_repair_ae.sh => repair model with targeted ae, non-targeted ae and uap
     spgd_test.sh => spgd test
-    test_adv.sh => test adv fixed model ---- to complete
+    test_ae.sh => test adv fixed model 
 
 
 
