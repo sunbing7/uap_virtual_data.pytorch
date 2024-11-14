@@ -60,7 +60,7 @@ def parse_arguments():
                         help='Used loss function for source classes: (default: bounded_logit_fixed_ref)')
     parser.add_argument('--confidence', default=0., type=float,
                         help='Confidence value for C&W losses (default: 0.0)')
-    parser.add_argument('--targeted', default='False', type=bool,
+    parser.add_argument('--targeted', default='', type=bool,
                         help='Target a specific class (default: False)')
     parser.add_argument('--target_class', type=int, default=1,
                         help='Target class (default: 1)')

@@ -114,6 +114,9 @@ def train(data_loader,
             output = model(input)
             loss = criterion(output, target)
 
+        if not targeted:
+            loss = -loss
+
         # measure accuracy and record loss
         if len(target.shape) > 1:
             target = torch.argmax(target, dim=-1)
