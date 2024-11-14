@@ -290,10 +290,15 @@ def main():
 
     imgplot = plt.imshow(plot_tuap_amp)
 
-    np.save(uap_path + '/uap_' + str(args.target_class) + adaptive + '.npy', tuap.cpu().detach().numpy())
-    plt.savefig(model_path + '/uap_' + str(args.target_class) + adaptive + '.png')
+    if args.targeted:
+        target_name = str(args.target_class)
+    else:
+        target_name = 'nontarget'
+
+    np.save(uap_path + '/uap_' + target_name + adaptive + '.npy', tuap.cpu().detach().numpy())
+    plt.savefig(model_path + '/uap_' + target_name + adaptive + '.png')
     plt.show()
-    torch.save(perturbed_net, uap_path + '/perturbed_net_' + str(args.target_class) + adaptive + '.pth')
+    torch.save(perturbed_net, uap_path + '/perturbed_net_' + target_name + adaptive + '.pth')
     print('uap saved!')
     log.close()
 

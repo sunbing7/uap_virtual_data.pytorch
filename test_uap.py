@@ -179,21 +179,27 @@ def main():
                             model_data=args.pretrained_dataset,
                             network_arch=args.test_arch,
                             random_seed=args.pretrained_seed)
+
+    if args.targeted:
+        target_name = str(args.target_class)
+    else:
+        target_name = 'nontarget'
+
     if 'spgd' in args.uap_name:
-        uap_fn = os.path.join(uap_path, 'spgd/uap_' + str(args.target_class) + '.pth')
+        uap_fn = os.path.join(uap_path, 'spgd/uap_' + target_name + '.pth')
         tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
         tuap = torch.load(uap_fn) / tstd
     elif 'lavan' in args.uap_name:
-        uap_fn = os.path.join(uap_path, 'lavan/uap_' + str(args.target_class) + '.pth')
+        uap_fn = os.path.join(uap_path, 'lavan/uap_' + target_name + '.pth')
         tuap = torch.load(uap_fn)
         _, mask = init_patch_square((1, 3, 224, 224), 176, 224, 176, 224)
         if args.use_cuda:
             mask = mask.cuda()
     else:
         if 'adaptive' in args.uap_name:
-            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '_adaptive.npy')
+            uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')
         else:
-            uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+            uap_fn = os.path.join(uap_path, 'uap_' + target_name + '.npy')
         uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
         tuap = torch.from_numpy(uap)
 
