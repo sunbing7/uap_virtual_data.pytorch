@@ -17,11 +17,12 @@ from utils.training import *
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Perform Causality Analysis')
     # dataset used to train UAP
-    parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+    parser.add_argument('--dataset', default='imagenet',
+                        choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to generate UAP (default: imagenet)')
     # dataset used to train UAP model
     parser.add_argument('--pretrained_dataset', default='imagenet',
-                        choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+                        choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to train the initial model (default: imagenet)')
     # model used to train UAP
     parser.add_argument('--model_name', type=str, default='vgg19.pth',
@@ -35,10 +36,10 @@ def parse_arguments():
 
     # model to test
     parser.add_argument('--test_dataset', default='imagenet',
-                        choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+                        choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Test model training set (default: cifar10)')
     parser.add_argument('--test_arch', default='vgg19',
-                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet'],
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'],
                         help='Test model architecture: (default: vgg19)')
 
     # Parameters regarding UAP
@@ -141,6 +142,11 @@ def main():
             adaptive = '_adaptive'
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+    elif args.pretrained_dataset == "cifar10":
+        if 'repaired' in args.model_name:
+            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+        else:
+            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
 
     total_params = get_num_parameters(target_network)
     print_log("Target Network Total # parameters: {}".format(total_params), log)

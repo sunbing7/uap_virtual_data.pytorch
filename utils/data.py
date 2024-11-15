@@ -43,6 +43,12 @@ def get_data_specs(pretrained_dataset):
         num_classes = 10
         input_size = 64
         num_channels = 3
+    elif pretrained_dataset == 'cifar10':
+        mean = [0., 0., 0.]
+        std = [1., 1., 1.]
+        num_classes = 10
+        input_size = 32
+        num_channels = 3
     else:
         raise ValueError
     return num_classes, (mean, std), input_size, num_channels
@@ -184,6 +190,39 @@ def get_data(dataset, pretrained_dataset, preprocess=None, is_attack=False):
         print('[DEBUG] test len: {}'.format(len(test_data)))
         print('[DEBUG] eurosat train used len: {}, fraction of training size: {:.2f}'.format(
             len(train_data), len(train_data) / len(train_data_full)))
+    elif dataset == "cifar10":
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(degrees=15),
+            transforms.ToTensor(),
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+        ])
+
+        trainset = dset.CIFAR10(root=CIFAR10_PATH + '/data', train=True, download=True,
+                                                transform=transform_train)
+
+        testset = dset.CIFAR10(root=CIFAR10_PATH + '/data', train=False, download=True,
+                                               transform=transform_test)
+
+        trainval, _ = random_split(trainset, 0.9, random_state=42)
+        train_data_full, _ = random_split(trainval, 0.9, random_state=7)
+        if is_attack:
+            train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                                 size=int(0.5 * len(train_data_full)), replace=False))
+        else:
+            train_data = torch.utils.data.Subset(train_data_full,
+                                                 np.random.choice(len(train_data_full),
+                                                                  size=int(0.05 * len(train_data_full)),
+                                                                  replace=False))
+        _, test_data = random_split(testset, 0.9, random_state=42)
+        print('[DEBUG] train len: {}'.format(len(train_data)))
+        print('[DEBUG] test len: {}'.format(len(test_data)))
+        print('[DEBUG] cifar10 train used len: {}, fraction of training size: {:.2f}'.format(
+            len(train_data), len(train_data) / len(train_data_full)))
+
     return train_data, test_data
 
 
@@ -304,7 +343,33 @@ def get_data_class(dataset, cur_class=1, preprocess=None):
         class_ids = np.array(list(zip(*train_dataset.imgs))[1])
         wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
         test_data = torch.utils.data.Subset(train_dataset, wanted_idx)
+    elif dataset == 'cifar10':
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ])
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+        ])
 
+        trainset = dset.CIFAR10(root=CIFAR10_PATH + '/data', train=True, download=True,
+                                                transform=transform_train)
+
+        testset = dset.CIFAR10(root=CIFAR10_PATH + '/data', train=False, download=True,
+                                               transform=transform_test)
+
+        trainval, _ = random_split(trainset, 0.9, random_state=42)
+        train_data_full, _ = random_split(trainval, 0.9, random_state=7)
+        train_data = torch.utils.data.Subset(train_data_full, np.random.choice(len(train_data_full),
+                                             size=int(0.5 * len(train_data_full)), replace=False))
+        _, test_data_all = random_split(testset, 0.9, random_state=42)
+        print('[DEBUG] train len: {}'.format(len(train_data)))
+        print('[DEBUG] test len: {}'.format(len(test_data_all)))
+
+        class_ids = np.array(list(zip(*trainset.imgs))[1])
+        wanted_idx = np.arange(len(class_ids))[(class_ids == cur_class)]
+        test_data = torch.utils.data.Subset(trainset, wanted_idx)
     else:
         return None
     return train_data, test_data

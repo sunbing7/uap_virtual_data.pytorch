@@ -13,6 +13,7 @@ DATASET_BASE_PATH = DATA_PATH + "/data"							# Directory path wehre pytorch dat
 IMAGENET_PATH = DATA_PATH + "/data/imagenet"							# Directory to ImageNet for Pytorch
 CALTECH_PATH = DATA_PATH + "/data/caltech"
 ASL_PATH = DATA_PATH + "/data/asl"
+CIFAR10_PATH = DATA_PATH + "/data/cifar10"
 
 # Directories to COCO
 COCO_2017_TRAIN_IMGS = "/path/to/COCO/train2017/"

@@ -26,15 +26,16 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Trains a UAP')
     # pretrained
-    parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+    parser.add_argument('--dataset', default='imagenet',
+                        choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to generate UAP (default: imagenet)')
 
-    parser.add_argument('--pretrained_dataset', default='imagenet', choices=['imagenet', 'caltech',
-                                                                                          'asl', 'eurosat'],
+    parser.add_argument('--pretrained_dataset', default='imagenet',
+                        choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to train the initial model (default: imagenet)')
 
-    parser.add_argument('--pretrained_arch', default='resnet50', choices=['googlenet', 'vgg19', 'resnet50',
-                                                                                      'shufflenetv2', 'mobilenet'],
+    parser.add_argument('--pretrained_arch', default='resnet50',
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'],
                         help='Used model architecture: (default: resnet50)')
 
     parser.add_argument('--model_name', type=str, default='vgg19.pth',
@@ -94,10 +95,10 @@ def main():
 
     # get the result path to store the results
     result_path = get_result_path(dataset_name=args.dataset,
-                                network_arch=args.pretrained_arch,
-                                random_seed=args.pretrained_seed,
-                                result_subfolder=args.result_subfolder,
-                                postfix=args.postfix)
+                                  network_arch=args.pretrained_arch,
+                                  random_seed=args.pretrained_seed,
+                                  result_subfolder=args.result_subfolder,
+                                  postfix=args.postfix)
 
     # Init logger
     log_file_name = os.path.join(result_path, 'log.txt')
@@ -115,10 +116,10 @@ def main():
     _, pretrained_data_test = get_data(args.pretrained_dataset, args.pretrained_dataset, is_attack=True)
 
     pretrained_data_test_loader = torch.utils.data.DataLoader(pretrained_data_test,
-                                                    batch_size=args.batch_size,
-                                                    shuffle=False,
-                                                    num_workers=args.workers,
-                                                    pin_memory=True)
+                                                              batch_size=args.batch_size,
+                                                              shuffle=False,
+                                                              num_workers=args.workers,
+                                                              pin_memory=True)
 
     ##### Dataloader for training ####
     num_classes, (mean, std), input_size, num_channels = get_data_specs(args.pretrained_dataset)
@@ -141,9 +142,9 @@ def main():
     model_weights_path = os.path.join(model_path, args.model_name)
 
     target_network = get_network(args.pretrained_arch,
-                                input_size=input_size,
-                                num_classes=num_classes,
-                                finetune=False)
+                                 input_size=input_size,
+                                 num_classes=num_classes,
+                                 finetune=False)
 
     #print_log("=> Network :\n {}".format(target_network), log)
 
@@ -169,6 +170,14 @@ def main():
     elif args.pretrained_dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         adaptive = '_adaptive'
+    elif args.pretrained_dataset == "cifar10":
+        if 'repaired' in args.model_name:
+            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            adaptive = '_adaptive'
+        else:
+            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+            if 'trades' in args.model_name:
+                adaptive = '_trades'
 
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
     # Set the target model into evaluation mode
@@ -187,10 +196,10 @@ def main():
     print_log("=> Inserting Generator", log)
 
     generator = UAP(shape=(input_size, input_size),
-                num_channels=num_channels,
-                mean=mean,
-                std=std,
-                use_cuda=args.use_cuda)
+                    num_channels=num_channels,
+                    mean=mean,
+                    std=std,
+                    use_cuda=args.use_cuda)
 
     print_log("=> Generator :\n {}".format(generator), log)
     non_trainale_params = get_num_non_trainable_parameters(generator)

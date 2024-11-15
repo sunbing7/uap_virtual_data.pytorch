@@ -34,3 +34,10 @@ python analyze_input.py --option=repair --dataset=caltech --arch=shufflenetv2 --
 python analyze_input.py --option=repair_ae --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat.pth --learning_rate=0.005 --split_layers 9 --seed=123 --num_iterations=200 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=34 --ngpu=1 --workers=4 --alpha=0.9 --ae_alpha=0.5 --ae_iter=10 --target_class=3
 python analyze_input.py --option=repair --dataset=eurosat --arch=resnet50 --model_name=resnet50_eurosat_ae_repaired.pth --learning_rate=0.00002 --split_layers 9 --seed=123 --num_iterations=100 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=34 --ngpu=1 --workers=4 --target_class=3
 
+################################################################################################################################################
+#wideresnet cifar10
+python analyze_input.py --option=repair_ae --dataset=cifar10 --arch=wideresnet --model_name=wideresnet_cifar10.pth --learning_rate=0.001 --split_layers 6 --seed=123 --num_iterations=50 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=64 --ngpu=1 --workers=4 --alpha=0.9 --ae_iter=5 --target_class=3
+python analyze_input.py --option=repair --dataset=cifar10 --arch=wideresnet --model_name=wideresnet_cifar10_ae_repaired_50.pth --learning_rate=0.00001 --split_layers 6 --seed=123 --num_iterations=10 --targeted=True --result_subfolder=result --batch_size=32 --num_batches=64 --ngpu=1 --workers=4 --target_class=3
+
+
+

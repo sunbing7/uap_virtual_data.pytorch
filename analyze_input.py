@@ -30,10 +30,10 @@ def parse_arguments():
                         help='Run options')
     parser.add_argument('--causal_type', default='act', choices=['act'],
                         help='Causality analysis type (default: act)')
-    parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat'],
+    parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to generate UAP (default: imagenet)')
-    parser.add_argument('--arch', default='resnet50', choices=['googlenet', 'vgg19', 'resnet50',
-                                                                           'shufflenetv2', 'mobilenet'])
+    parser.add_argument('--arch', default='resnet50',
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'])
     parser.add_argument('--model_name', type=str, default='vgg19.pth',
                         help='model name')
     parser.add_argument('--seed', type=int, default=123,
@@ -134,6 +134,11 @@ def analyze_entropy(args):
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+    elif args.pretrained_dataset == "cifar10":
+        network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+        if 'repaired' in args.model_name:
+            network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            adaptive = '_adaptive'
 
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
@@ -169,11 +174,16 @@ def analyze_entropy(args):
     ##################################################################################
     # anlayze perturbed inputs
     # load uap
+    if args.targeted:
+        target_name = str(args.target_class)
+    else:
+        target_name = 'nontarget'
+
     uap_path = get_uap_path(uap_data=args.dataset,
                             model_data=args.dataset,
                             network_arch=args.arch,
                             random_seed=args.seed)
-    uap_fn = os.path.join(uap_path, 'uap_' + str(args.target_class) + '.npy')
+    uap_fn = os.path.join(uap_path, 'uap_' + target_name + '.npy')
     uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
     uap = torch.from_numpy(uap)
 
@@ -204,21 +214,41 @@ def analyze_entropy(args):
                               + ".npy")
         np.save(uap_fn, attribution_map_)
 
+    attribution_map, outputs = solve_causal_uap(network, uap, args.arch,
+                                                split_layer=args.split_layer,
+                                                causal_type=args.causal_type,
+                                                use_cuda=args.use_cuda)
+
+    for i in range(0, len(attribution_map)):
+        attribution_map_ = attribution_map[i]
+        uap_fn = os.path.join(attribution_path, "uaponly_attribution_" + str(args.split_layer) + ".npy")
+        np.save(uap_fn, attribution_map_)
+
     ##################################################################################
     # anlayze entropy
     clean_hs = []
     uap_hs = []
-    diff = []
+    #diff = []
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
         args.analyze_clean = 1
         clean_h = calc_entropy_i(i, args)
         clean_hs.append(clean_h)
+        #args.analyze_clean = 0
+        #uap_h = calc_entropy_i(i, args)
+        #uap_hs.append(uap_h)
+        #diff.append(abs(clean_h - uap_h))
+        print('({}, {})'.format(i, clean_h))
+
+    for i in range(0, args.num_iterations):
         args.analyze_clean = 0
         uap_h = calc_entropy_i(i, args)
         uap_hs.append(uap_h)
-        diff.append(abs(clean_h - uap_h))
-        #print('{}: {}'.format(clean_h, uap_h))
+        print('({}, {})'.format(i, uap_h))
+
+    args.analyze_clean = 2
+    uaponly_h = calc_entropy_i(0, args)
+    print('uaponly_h: {}'.format(uaponly_h))
 
     clean_hs_avg = np.mean(np.array(clean_hs))
     uap_hs_avg = np.mean(np.array(uap_hs))
@@ -236,13 +266,13 @@ def analyze_entropy(args):
     uap_q3 = np.quantile(np.array(uap_hs), 0.75)
     uap_min = np.min(np.array(uap_hs))
     uap_max = np.max(np.array(uap_hs))
-
+    '''
     diff_q1 = np.quantile(np.array(diff), 0.25)
     diff_q2 = np.quantile(np.array(diff), 0.5)
     diff_q3 = np.quantile(np.array(diff), 0.75)
     diff_min = np.min(np.array(diff))
     diff_max = np.max(np.array(diff))
-
+    '''
     #print('clean min, q1, q2, q3, max: {} {} {} {} {}'.format(clean_min, clean_q1, clean_q2, clean_q3, clean_max))
     #print('uap min, q1, q2, q3, max: {} {} {} {} {}'.format(uap_min, uap_q1, uap_q2, uap_q3, uap_max))
 
@@ -362,7 +392,12 @@ def uap_repair(args):
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-
+    elif args.dataset == "cifar10":
+        if 'repaired' in args.model_name:
+            target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
+            adaptive = '_adaptive'
+        else:
+            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
     trainale_params = get_num_trainable_parameters(target_network)
     total_params = get_num_parameters(target_network)
