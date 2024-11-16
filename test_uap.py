@@ -201,6 +201,10 @@ def main():
         _, mask = init_patch_square((1, 3, 224, 224), 176, 224, 176, 224)
         if args.use_cuda:
             mask = mask.cuda()
+    elif 'sga' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'sga/uap_' + target_name + '.pth')
+        tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
+        tuap = torch.load(uap_fn) / tstd
     else:
         if 'adaptive' in args.uap_name:
             uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')

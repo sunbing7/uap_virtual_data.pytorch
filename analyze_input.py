@@ -135,11 +135,11 @@ def analyze_entropy(args):
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
     elif args.pretrained_dataset == "cifar10":
-        network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
         if 'repaired' in args.model_name:
             network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
-
+        else:
+            network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
 

@@ -89,18 +89,6 @@
 
 
 ################################################################################################################################################
-#lavan resnet50
-#for TARGET_CLASS in {391,955,901,50,891,862,251,512}
-#do
-#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-#done
-#resnet50
-#for TARGET_CLASS in {391,955,901,50,891,862,251,512}
-#do
-#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
-#done
-
-################################################################################################################################################
 #trades wideresnet
 #for TARGET_CLASS in {0,1,2,3,5,4,6,7,8,9}
 #do
@@ -117,3 +105,18 @@
 #do
 #    python test_uap.py --targeted=True --dataset=cifar10 --pretrained_dataset=cifar10 --model_name=wideresnet_cifar10_trades.pth --test_arch=wideresnet --pretrained_seed=123 --test_dataset=cifar10 --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 #done
+
+
+
+################################################################################################################################################
+#lavan resnet50
+#for TARGET_CLASS in {391,955,901,50,891,862,251,512}
+#do
+#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done
+#resnet50
+#for TARGET_CLASS in {391,955,901,50,891,862,251,512}
+#do
+#    python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=lavan --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
+#done
+
