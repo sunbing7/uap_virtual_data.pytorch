@@ -22,6 +22,30 @@
     spgd_test.sh => spgd test
     test_ae.sh => test adv fixed model
 
+3. Generate other UAPs
+3.1 sPGD
+- in sgd-uap-torch project
+  * run run_attack.sh to generate UAPs
+- in democratic project
+  * run test_spgd.sh to test
+
+3.2 LaVAn
+
+3.3 GAP
+
+3.4 SGA
+- in https://github.com/sunbing7/Stochastic-Gradient-Aggregation.git
+  * run gen_sga_targeted.sh to generate and test targeted sga uap
+- in democratic project
+  * run test_sga.sh to test
+
+
+5. Models
+  * imagenet models are from pytorch
+  * caltech and asl models are from soda
+  * euroSAT model is trained in https://github.com/sunbing7/EuroSAT-image-classification
+
+
 
 
 
