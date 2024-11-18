@@ -13,13 +13,13 @@ done
 #python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=sga --model_name=resnet50_imagenet_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=174 --ngpu=1 --workers=4
 ################################################################################################################################################
 #sga vgg19 imagenet
-for TARGET_CLASS in {150,39,527,65,639,771,412}#214,
+for TARGET_CLASS in {150,39,527,65,639,771,412} #214,
 do
     python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=sga --model_name=vgg19_imagenet.pth --test_arch=vgg19 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 done
 #python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=sga --model_name=vgg19_imagenet.pth --test_arch=vgg19 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=214 --ngpu=1 --workers=4
 
-for TARGET_CLASS in {150,39,527,65,639,771,412}214,
+for TARGET_CLASS in {150,39,527,65,639,771,412} #214,
 do
     python test_uap.py --targeted=True --dataset=imagenet --pretrained_dataset=imagenet --uap_name=sga --model_name=vgg19_imagenet_finetuned_repaired.pth --test_arch=vgg19 --pretrained_seed=123 --test_dataset=imagenet --result_subfolder=result --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4
 done
