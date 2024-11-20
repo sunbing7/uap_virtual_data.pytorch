@@ -11,6 +11,7 @@ from networks.vgg_cifar import VGG
 from networks.shufflenetv2 import shufflenetv2
 from networks.mobilenet import MobileNet
 from networks.wideresnet import WideResNet
+from networks.fns_cifar import resnet110
 
 def get_network(model_arch, input_size, num_classes=1000, finetune=False):
 
@@ -42,6 +43,8 @@ def get_network(model_arch, input_size, num_classes=1000, finetune=False):
         net = models.resnet101(pretrained=True)
     elif model_arch == "resnet152":
         net = models.resnet152(pretrained=True)
+    elif model_arch == "resnet110":
+        net = resnet110()
     elif model_arch == "wideresnet":
         net = WideResNet()
     elif model_arch == "inception_v3":

@@ -6,7 +6,7 @@ import torch
 import argparse
 import torch.backends.cudnn as cudnn
 
-from utils.data import get_data_specs, get_data, get_data_class
+from utils.data import get_data_specs, get_data, get_data_class, Normalizer
 from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
@@ -33,7 +33,7 @@ def parse_arguments():
     parser.add_argument('--dataset', default='imagenet', choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Used dataset to generate UAP (default: imagenet)')
     parser.add_argument('--arch', default='resnet50',
-                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'])
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet', 'resnet110'])
     parser.add_argument('--model_name', type=str, default='vgg19.pth',
                         help='model name')
     parser.add_argument('--seed', type=int, default=123,
@@ -139,9 +139,19 @@ def analyze_entropy(args):
             network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
         else:
-            network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+            if args.arch == 'resnet110':
+                sd0 = torch.load(model_weights_path)['state_dict']
+                network.load_state_dict(sd0, strict=True)
+            else:
+                network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+
     # Set all weights to not trainable
     set_parameter_requires_grad(network, requires_grad=False)
+
+    if args.arch == 'resnet110':
+        # Normalization wrapper, so that we don't have to normalize adversarial perturbations
+        normalize = Normalizer(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+        target_network = nn.Sequential(normalize, network)
 
     if args.use_cuda:
         network.cuda()
@@ -397,7 +407,18 @@ def uap_repair(args):
             target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
         else:
-            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+            if args.arch == 'resnet110':
+                sd0 = torch.load(model_weights_path)['state_dict']
+                target_network.load_state_dict(sd0, strict=True)
+            else:
+                target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+
+    if args.arch == 'resnet110':
+        target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+        # Normalization wrapper, so that we don't have to normalize adversarial perturbations
+        normalize = Normalizer(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+        target_network = nn.Sequential(normalize, target_network)
+
     #non_trainale_params = get_num_non_trainable_parameters(target_network)
     trainale_params = get_num_trainable_parameters(target_network)
     total_params = get_num_parameters(target_network)

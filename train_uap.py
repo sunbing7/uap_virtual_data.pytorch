@@ -9,7 +9,7 @@ import torch.nn as nn
 from collections import OrderedDict
 
 from networks.uap import UAP
-from utils.data import get_data_specs, get_data
+from utils.data import get_data_specs, get_data, Normalizer
 from utils.utils import get_model_path, get_result_path, get_uap_path
 from utils.utils import print_log
 from utils.network import get_network, set_parameter_requires_grad
@@ -35,7 +35,7 @@ def parse_arguments():
                         help='Used dataset to train the initial model (default: imagenet)')
 
     parser.add_argument('--pretrained_arch', default='resnet50',
-                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'],
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet', 'resnet110'],
                         help='Used model architecture: (default: resnet50)')
 
     parser.add_argument('--model_name', type=str, default='vgg19.pth',
@@ -175,11 +175,21 @@ def main():
             target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
         else:
-            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+            if args.pretrained_arch == 'resnet110':
+                sd0 = torch.load(model_weights_path)['state_dict']
+                target_network.load_state_dict(sd0, strict=True)
+            else:
+                target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
             if 'trades' in args.model_name:
                 adaptive = '_trades'
 
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+
+    if args.pretrained_arch == 'resnet110':
+        # Normalization wrapper, so that we don't have to normalize adversarial perturbations
+        normalize = Normalizer(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+        target_network = nn.Sequential(normalize, target_network)
+
     # Set the target model into evaluation mode
     target_network.eval()
 

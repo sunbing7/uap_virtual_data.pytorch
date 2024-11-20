@@ -116,7 +116,25 @@
 #done
 #python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=0 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 
-for TARGET_CLASS in {0,1,2,3,4,5,6,7,8,9}
+#for TARGET_CLASS in {0,1,2,3,4,5,6,7,8,9}
+#do
+#    python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_trades.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#done
+################################################################################################################################################
+#resnet110 cifar10
+
+for TARGET_CLASS in {1,2,3,4,5,6,7,8,9}
 do
-    python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_trades.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+    python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=resnet110 --model_name=resnet110_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
 done
+#python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=resnet110 --model_name=resnet110_cifar10.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=0 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#for TARGET_CLASS in {0,1,2,3,4,5,6,7,8,9}
+#do
+#    python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#done
+#python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_finetuned_repaired.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=0 --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+
+#for TARGET_CLASS in {0,1,2,3,4,5,6,7,8,9}
+#do
+#    python train_uap.py --dataset=cifar10 --pretrained_dataset=cifar10 --pretrained_arch=wideresnet --model_name=wideresnet_cifar10_trades.pth --pretrained_seed=123 --epsilon=0.0392 --num_iterations=1000 --result_subfolder=result --loss_function=bounded_logit_fixed_ref --confidence=10 --targeted=True --target_class=$TARGET_CLASS --ngpu=1 --workers=4 --batch_size=32 --learning_rate=0.005
+#done

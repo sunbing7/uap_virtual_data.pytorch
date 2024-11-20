@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 import h5py
 import torchvision.datasets as dset
-
+import torch.nn as nn
 from config.config import *
 
 from utils.data_sat import *
@@ -566,3 +566,30 @@ def random_split(dataset, ratio=0.9, random_state=None):
     if random_state is not None:
         torch.random.set_rng_state(state)
     return split
+
+
+class Normalizer(nn.Module):
+    def __init__(self, mean, std):
+        super(Normalizer, self).__init__()
+        if not isinstance(mean, torch.Tensor):
+            mean = torch.tensor(mean)
+        if not isinstance(std, torch.Tensor):
+            std = torch.tensor(std)
+        self.register_buffer("mean", mean)
+        self.register_buffer("std", std)
+
+    def forward(self, tensor):
+        return normalize_fn(tensor, self.mean, self.std)
+
+    def extra_repr(self):
+        return 'mean={}, std={}'.format(self.mean, self.std)
+
+
+def normalize_fn(tensor, mean, std):
+    """
+    Differentiable version of torchvision.functional.normalize
+    - default assumes color channel is at dim = 1
+    """
+    mean = mean[None, :, None, None]
+    std = std[None, :, None, None]
+    return tensor.sub(mean).div(std)

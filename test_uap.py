@@ -8,7 +8,7 @@ import torch.backends.cudnn as cudnn
 import torch.nn as nn
 from collections import OrderedDict
 
-from utils.data import get_data_specs, get_data
+from utils.data import get_data_specs, get_data, Normalizer
 from utils.utils import *
 from utils.network import *
 from utils.training import *
@@ -39,7 +39,7 @@ def parse_arguments():
                         choices=['imagenet', 'caltech', 'asl', 'eurosat', 'cifar10'],
                         help='Test model training set (default: cifar10)')
     parser.add_argument('--test_arch', default='vgg19',
-                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet'],
+                        choices=['googlenet', 'vgg19', 'resnet50', 'shufflenetv2', 'mobilenet', 'wideresnet', 'resnet110'],
                         help='Test model architecture: (default: vgg19)')
 
     # Parameters regarding UAP
@@ -146,7 +146,18 @@ def main():
         if 'repaired' in args.model_name:
             target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
-            target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+            if args.pretrained_arch == 'resnet110':
+                sd0 = torch.load(model_weights_path)['state_dict']
+                target_network.load_state_dict(sd0, strict=True)
+            else:
+                target_network.load_state_dict(torch.load(model_weights_path, map_location=torch.device('cpu')))
+
+    target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
+
+    if args.pretrained_arch == 'resnet110':
+        # Normalization wrapper, so that we don't have to normalize adversarial perturbations
+        normalize = Normalizer(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
+        target_network = nn.Sequential(normalize, target_network)
 
     total_params = get_num_parameters(target_network)
     print_log("Target Network Total # parameters: {}".format(total_params), log)
