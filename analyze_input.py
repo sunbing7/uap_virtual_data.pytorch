@@ -7,7 +7,7 @@ import argparse
 import torch.backends.cudnn as cudnn
 
 from utils.data import get_data_specs, get_data, get_data_class, Normalizer
-from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, get_attribution_name
+from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, init_patch_square
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
@@ -193,9 +193,31 @@ def analyze_entropy(args):
                             model_data=args.dataset,
                             network_arch=args.arch,
                             random_seed=args.seed)
-    uap_fn = os.path.join(uap_path, 'uap_' + target_name + '.npy')
-    uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
-    uap = torch.from_numpy(uap)
+    if 'spgd' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'spgd/uap_' + target_name + '.pth')
+        tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
+        tuap = torch.load(uap_fn) / tstd
+    elif 'lavan' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'lavan/uap_' + target_name + '.pth')
+        tuap = torch.load(uap_fn)
+        _, mask = init_patch_square((1, 3, 224, 224), 176, 224, 176, 224)
+        if args.use_cuda:
+            mask = mask.cuda()
+    elif 'sga' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'sga/uap_' + target_name + '.pth')
+        tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
+        tuap = torch.load(uap_fn) / tstd
+    else:
+        if 'adaptive' in args.uap_name:
+            uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')
+        else:
+            uap_fn = os.path.join(uap_path, 'uap_' + target_name + '.npy')
+        uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+        tuap = torch.from_numpy(uap)
+
+    if args.use_cuda:
+        tuap = tuap.cuda()
+
 
     attribution_map_clean, attribution_map_pert = solve_causal_single_both(data_test_loader,
                                                                            network,

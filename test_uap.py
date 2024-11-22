@@ -146,7 +146,7 @@ def main():
         if 'repaired' in args.model_name:
             target_network = torch.load(model_weights_path, map_location=torch.device('cpu'))
         else:
-            if args.pretrained_arch == 'resnet110':
+            if args.test_arch == 'resnet110':
                 sd0 = torch.load(model_weights_path)['state_dict']
                 target_network.load_state_dict(sd0, strict=True)
             else:
@@ -154,7 +154,7 @@ def main():
 
     target_network = torch.nn.DataParallel(target_network, device_ids=list(range(args.ngpu)))
 
-    if args.pretrained_arch == 'resnet110':
+    if args.test_arch == 'resnet110':
         # Normalization wrapper, so that we don't have to normalize adversarial perturbations
         normalize = Normalizer(mean=[0.4914, 0.4822, 0.4465], std=[0.2023, 0.1994, 0.2010])
         target_network = nn.Sequential(normalize, target_network)

@@ -153,6 +153,114 @@ def train(data_loader,
                                                                                                     error1=100-top1.avg), log)
 
 
+def train_advanced(data_loader,
+                   model,
+                   arch,
+                   criterion,
+                   optimizer,
+                   epsilon,
+                   num_iterations,
+                   split_layers,
+                   targeted,
+                   target_class,
+                   log,
+                   print_freq=200,
+                   use_cuda=True,
+                   en_weight=0.5,
+                   adjust=5.0):
+    # train function (forward, backward, update)
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to train mode
+    model.module.generator.train()
+    model.module.target_model.eval()
+
+    end = time.time()
+
+    data_iterator = iter(data_loader)
+
+    en_loss = Variable(torch.tensor(.0), requires_grad=True)
+    en_cri = hloss(use_cuda)
+
+    iteration=0
+    while iteration < num_iterations:
+        try:
+            input, target = next(data_iterator)
+        except StopIteration:
+            # StopIteration is thrown if dataset ends
+            # reinitialize data loader
+            data_iterator = iter(data_loader)
+            input, target = next(data_iterator)
+
+        pmodel1, pmodel2 = split_perturbed_model(model, arch, split_layer=split_layers[0])
+
+        if targeted:
+            target = torch.ones(input.shape[0], dtype=torch.int64) * target_class
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            target = target.cuda()
+            input = input.cuda()
+
+        # compute output
+        if model.module._get_name() == "Inception3":
+            output, aux_output = model(input)
+            loss1 = criterion(output, target)
+            loss2 = criterion(aux_output, target)
+            loss = loss1 + 0.4*loss2
+        else:
+            #output_ori = model(input)
+            poutput = pmodel1(input)
+            output = pmodel2(poutput)
+            en_loss = torch.mean(en_cri(poutput.view(len(input), -1)))
+            lcce = criterion(output, target)
+            #print('[DEBUG] lcce: {}, en_loss: {}'.format(lcce, en_loss))
+            loss = (1.0 - en_weight) * lcce - en_weight * adjust * en_loss
+
+        if not targeted:
+            loss = -loss
+
+        # measure accuracy and record loss
+        if len(target.shape) > 1:
+            target = torch.argmax(target, dim=-1)
+        prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
+        losses.update(loss.item(), input.size(0))
+        top1.update(prec1.item(), input.size(0))
+        top5.update(prec5.item(), input.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Projection
+        model.module.generator.uap.data = torch.clamp(model.module.generator.uap.data, -epsilon, epsilon)
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if iteration % print_freq == 0:
+            print_log('  Iteration: [{:03d}/{:03d}]   '
+                        'Time {batch_time.val:.3f} ({batch_time.avg:.3f})   '
+                        'Data {data_time.val:.3f} ({data_time.avg:.3f})   '
+                        'Loss {loss.val:.4f} ({loss.avg:.4f})   '
+                        'Prec@1 {top1.val:.3f} ({top1.avg:.3f})   '
+                        'Prec@5 {top5.val:.3f} ({top5.avg:.3f})   '.format(
+                        iteration, num_iterations, batch_time=batch_time,
+                        data_time=data_time, loss=losses, top1=top1, top5=top5) + time_string(), log)
+
+        iteration+=1
+    print_log('  **Train** Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f} Error@1 {error1:.3f}'.format(top1=top1,
+                                                                                                    top5=top5,
+                                                                                                    error1=100-top1.avg), log)
+
+
 def train_hidden(data_loader,
                   model,
                   model2,
@@ -2840,6 +2948,166 @@ def split_model(ori_model, model_name, split_layer=43, flat=False):
         return None, None
 
     #summary(ori_model, (3, 224, 224))
+    #summary(model_1st, (3, 224, 224))
+
+    return model_1st, model_2nd
+
+
+def split_perturbed_model(ori_model, model_name, split_layer=43, flat=False):
+    modules = list(ori_model.module.children())
+    generator = modules[0]
+    target_network = modules[1]
+
+    if model_name == 'resnet18' or model_name == 'resnet50':
+        if split_layer < 9:
+            modules = list(target_network.children())
+            module1 = modules[:split_layer]
+            module2 = modules[split_layer:9]
+            module3 = modules[9:]
+
+            model_1st = nn.Sequential(*[*[generator], *module1])
+            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+
+        elif split_layer == 9:
+            modules = list(target_network.children())
+            module1 = modules[:9]
+            module2 = modules[9]
+
+            model_1st = nn.Sequential(*[generator], *module1, Flatten())
+            model_2nd = nn.Sequential(*[module2])
+
+        else:
+            return None, None
+    elif model_name == 'googlenet':
+        if split_layer < 17:
+            modules = list(target_network.children())
+            module1 = modules[:split_layer]
+            module2 = modules[split_layer:17]
+            module3 = modules[17:]
+
+            model_1st = nn.Sequential(*[generator], *module1)
+            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+
+        elif split_layer == 17:
+            modules = list(target_network.children())
+            module1 = modules[:17]
+            module2 = modules[17:]
+
+            model_1st = nn.Sequential(*[generator], *module1, Flatten())
+            model_2nd = nn.Sequential(*module2)
+
+        elif split_layer == 19:  # googlenet caffe
+            modules = list(target_network.children())
+            module1 = modules[:split_layer]
+            module2 = modules[split_layer:22]
+            module3 = modules[22:]
+
+            model_1st = nn.Sequential(*[generator], *module1)
+            model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+
+        elif split_layer == 22: # googlenet caffe
+            modules = list(target_network.children())
+            module1 = modules[:22]
+            module2 = modules[22:]
+
+            model_1st = nn.Sequential(*[generator], *module1, Flatten())
+            model_2nd = nn.Sequential(*module2)
+        else:
+            return None, None
+    elif model_name == 'vgg19':
+        if flat:
+            layers = list(target_network.children())
+            module1 = layers[:split_layer]
+            module2 = layers[split_layer:]
+            model_1st = nn.Sequential(*[generator], *module1)
+            model_2nd = nn.Sequential(*module2)
+        else:
+            if split_layer < 38:
+                modules = list(target_network.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:split_layer]
+                module2 = layers[split_layer:38]
+                module3 = layers[38:]
+                model_1st = nn.Sequential(*[generator], *module1)
+                model_2nd = nn.Sequential(*[*module2, Flatten(), *module3])
+            else:
+                modules = list(target_network.children())
+                layers = list(modules[0]) + [modules[1]] + list(modules[2])
+                module1 = layers[:38]
+                moduel2 = layers[38:split_layer]
+                module3 = layers[split_layer:]
+                model_1st = nn.Sequential(*[*[generator], *module1, Flatten(), *moduel2])
+                model_2nd = nn.Sequential(*module3)
+    elif model_name == 'alexnet':
+        if split_layer == 6:
+            modules = list(target_network.children())
+            module1 = modules[0]
+            module2 = [modules[1]]
+            module_ = list(modules[2])
+            module3 = module_[:5]
+            module4 = module_[5:]
+
+            model_1st = nn.Sequential(*[*[generator], *module1, Flatten(), *module2, *module3])
+            model_2nd = nn.Sequential(*module4)
+    elif model_name == 'shufflenetv2':
+        if split_layer == 6:
+            modules = list(target_network.children())
+            sub_modules = list(modules[-1])
+            module0 = [modules[0]]
+            module1 = modules[1:6]
+            module2 = [sub_modules[0]]
+            module3 = [sub_modules[1]]
+
+            model_1st = nn.Sequential(*[*[generator], *module0, *module1, Avgpool2d_n(poolsize=7), Flatten(), *module2])
+            model_2nd = nn.Sequential(*module3)
+        elif split_layer == 1:
+            modules = list(target_network.children())
+            sub_modules = list(modules[-1])
+            module0 = [modules[0]]
+            module1 = [modules[1]]
+            module2 = modules[2:6]
+            module3 = sub_modules
+
+            model_1st = nn.Sequential(*[*[generator], *module0, *module1])
+            model_2nd = nn.Sequential(*[*module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
+    elif model_name == 'mobilenet':
+        if split_layer == 3:
+            modules = list(target_network.children())
+            module1 = modules[:2]
+            module2 = [modules[2]]
+            module3 = [modules[3]]
+
+            model_1st = nn.Sequential(*[*[generator], *module1, Relu(), *module2, Avgpool2d_n(poolsize=7), Flatten()])
+            model_2nd = nn.Sequential(*module3)
+        if split_layer == 1:
+            modules = list(target_network.children())
+            module0 = [modules[0]]
+            module1 = [modules[1]]
+            module2 = [modules[2]]
+            module3 = [modules[3]]
+            model_1st = nn.Sequential(*[generator], *module0)
+            model_2nd = nn.Sequential(*[*module1, Relu(), *module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
+    elif model_name == 'wideresnet':
+        if split_layer == 6:
+            modules = list(target_network.children())
+            module1 = modules[:2]
+            module2 = modules[3:7]
+            module3 = [modules[-1]]
+
+            model_1st = nn.Sequential(*[*[generator], *module1, *module2, Avgpool2d_n(poolsize=7), Flatten()])
+            model_2nd = nn.Sequential(*module3)
+        if split_layer == 1:
+            modules = list(target_network.children())
+            module1 = modules[:2]
+
+            module2 = modules[3:7]
+            module3 = [modules[-1]]
+            model_1st = nn.Sequential(*[generator], *module1)
+            model_2nd = nn.Sequential(*[*module2, Avgpool2d_n(poolsize=7), Flatten(), *module3])
+    else:
+        return None, None
+
+    #summary(target_network, (3, 224, 224))
     #summary(model_1st, (3, 224, 224))
 
     return model_1st, model_2nd
