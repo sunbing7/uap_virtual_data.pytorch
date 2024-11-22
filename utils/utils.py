@@ -119,3 +119,28 @@ def init_patch_square(data_shape, h_min, h_max, w_min, w_max):
     patch[:, : , h_min: h_max, w_min: w_max] = _patch
 
     return patch, mask
+
+
+def gap_normalize_and_scale(delta_im, batchSize):
+    mean_arr = [0.485, 0.456, 0.406]
+    stddev_arr = [0.229, 0.224, 0.225]
+    mag_in = 10.0
+
+    delta_im = delta_im + 1 # now 0..2
+    delta_im = delta_im * 0.5 # now 0..1
+
+    # normalize image color channels
+    for c in range(3):
+        delta_im[:,c,:,:] = (delta_im[:,c,:,:].clone() - mean_arr[c]) / stddev_arr[c]
+
+    # threshold each channel of each image in deltaIm according to inf norm
+    # do on a per image basis as the inf norm of each image could be different
+    bs = batchSize
+    for i in range(bs):
+        # do per channel l_inf normalization
+        for ci in range(3):
+            l_inf_channel = delta_im[i,ci,:,:].detach().abs().max()
+            mag_in_scaled_c = mag_in/(255.0*stddev_arr[ci])
+            delta_im[i,ci,:,:] = delta_im[i,ci,:,:].clone() * np.minimum(1.0, mag_in_scaled_c / l_inf_channel.cpu().numpy())
+
+    return delta_im

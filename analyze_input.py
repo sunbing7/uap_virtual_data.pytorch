@@ -7,7 +7,7 @@ import argparse
 import torch.backends.cudnn as cudnn
 
 from utils.data import get_data_specs, get_data, get_data_class, Normalizer
-from utils.utils import get_model_path, get_result_path, get_uap_path, get_attribution_path, init_patch_square
+from utils.utils import get_model_path, gap_normalize_and_scale, get_uap_path, get_attribution_path, init_patch_square
 from utils.network import get_network, set_parameter_requires_grad
 from utils.network import get_num_parameters, get_num_non_trainable_parameters, get_num_trainable_parameters
 from utils.training import solve_input_attribution, solve_input_attribution_single, solve_causal, solve_causal_single, \
@@ -80,6 +80,9 @@ def parse_arguments():
                         help='print frequency (default: 200)')
     parser.add_argument('--epsilon', type=float, default=0.03922,
                         help='Norm restriction of UAP (default: 10/255)')
+    parser.add_argument('--uap_name', type=str, default='uap.npy',
+                        help='uap file name (default: uap.npy)')
+
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -134,7 +137,7 @@ def analyze_entropy(args):
     # Imagenet models use the pretrained pytorch weights
     elif args.dataset == "imagenet" and 'repaired' in args.model_name:
         network = torch.load(model_weights_path, map_location=torch.device('cpu'))
-    elif args.pretrained_dataset == "cifar10":
+    elif args.dataset == "cifar10":
         if 'repaired' in args.model_name:
             network = torch.load(model_weights_path, map_location=torch.device('cpu'))
             adaptive = '_adaptive'
@@ -207,6 +210,11 @@ def analyze_entropy(args):
         uap_fn = os.path.join(uap_path, 'sga/uap_' + target_name + '.pth')
         tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
         tuap = torch.load(uap_fn) / tstd
+    if 'gap' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'gap/uap_' + target_name + '.pth')
+        U_loaded = torch.load(uap_fn)
+        U_loaded = U_loaded.expand(1, U_loaded.size(1), U_loaded.size(2), U_loaded.size(3))
+        tuap = gap_normalize_and_scale(U_loaded, 1)
     else:
         if 'adaptive' in args.uap_name:
             uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')
@@ -221,7 +229,7 @@ def analyze_entropy(args):
 
     attribution_map_clean, attribution_map_pert = solve_causal_single_both(data_test_loader,
                                                                            network,
-                                                                           uap,
+                                                                           tuap,
                                                                            args.arch,
                                                                            split_layer=args.split_layer,
                                                                            targeted=args.targeted,
@@ -246,7 +254,7 @@ def analyze_entropy(args):
                               + ".npy")
         np.save(uap_fn, attribution_map_)
 
-    attribution_map, outputs = solve_causal_uap(network, uap, args.arch,
+    attribution_map, outputs = solve_causal_uap(network, tuap, args.arch,
                                                 split_layer=args.split_layer,
                                                 causal_type=args.causal_type,
                                                 use_cuda=args.use_cuda)
@@ -263,6 +271,8 @@ def analyze_entropy(args):
     #diff = []
     args.analyze_clean = 1
     for i in range(0, args.num_iterations):
+        if i >= 25:
+            break
         args.analyze_clean = 1
         clean_h = calc_entropy_i(i, args)
         clean_hs.append(clean_h)
@@ -273,6 +283,8 @@ def analyze_entropy(args):
         print('({}, {})'.format(i, clean_h))
 
     for i in range(0, args.num_iterations):
+        if i >= 25:
+            break
         args.analyze_clean = 0
         uap_h = calc_entropy_i(i, args)
         uap_hs.append(uap_h)

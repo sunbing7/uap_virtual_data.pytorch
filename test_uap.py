@@ -216,6 +216,11 @@ def main():
         uap_fn = os.path.join(uap_path, 'sga/uap_' + target_name + '.pth')
         tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
         tuap = torch.load(uap_fn) / tstd
+    if 'gap' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'gap/uap_' + target_name + '.pth')
+        U_loaded = torch.load(uap_fn)
+        U_loaded = U_loaded.expand(1, U_loaded.size(1), U_loaded.size(2), U_loaded.size(3))
+        tuap = gap_normalize_and_scale(U_loaded, 1)
     else:
         if 'adaptive' in args.uap_name:
             uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')
