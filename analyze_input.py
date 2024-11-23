@@ -82,7 +82,8 @@ def parse_arguments():
                         help='Norm restriction of UAP (default: 10/255)')
     parser.add_argument('--uap_name', type=str, default='uap.npy',
                         help='uap file name (default: uap.npy)')
-
+    parser.add_argument('--en_weight', default=0.5, type=float,
+                        help='control the weight of entropy in loss function')
     args = parser.parse_args()
 
     args.use_cuda = args.ngpu>0 and torch.cuda.is_available()
@@ -210,11 +211,15 @@ def analyze_entropy(args):
         uap_fn = os.path.join(uap_path, 'sga/uap_' + target_name + '.pth')
         tstd = torch.from_numpy(np.array(std).reshape(1, 3, 1, 1))
         tuap = torch.load(uap_fn) / tstd
-    if 'gap' in args.uap_name:
+    elif 'gap' in args.uap_name:
         uap_fn = os.path.join(uap_path, 'gap/uap_' + target_name + '.pth')
         U_loaded = torch.load(uap_fn)
         U_loaded = U_loaded.expand(1, U_loaded.size(1), U_loaded.size(2), U_loaded.size(3))
         tuap = gap_normalize_and_scale(U_loaded, 1)
+    elif 'advanced' in args.uap_name:
+        uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_' + str(args.en_weight) + '.npy')
+        uap = np.load(uap_fn) / np.array(std).reshape(1, 3, 1, 1)
+        tuap = torch.from_numpy(uap)
     else:
         if 'adaptive' in args.uap_name:
             uap_fn = os.path.join(uap_path, 'uap_' + target_name + '_adaptive.npy')
