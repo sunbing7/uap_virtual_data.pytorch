@@ -30,6 +30,7 @@
   * run test_spgd.sh to test
 
 3.2 LaVAn
+- in
 
 3.3 GAP
 
@@ -44,6 +45,19 @@
   * imagenet models are from pytorch
   * caltech and asl models are from soda
   * euroSAT model is trained in https://github.com/sunbing7/EuroSAT-image-classification
+
+
+6. dataset
+   * imagenet:
+    - uncompress imagenet validation set to IMAGENET_PATH/validation/val
+    - in IMAGENET_PATH/validation directory, do below:
+        * copy classes.txt to IMAGENET_PATH/validation
+        * run pre_process_rename.sh
+        * run generate_test_index.py to generate 2000 random indexes for testing
+   * cifar-10: dataset will be downloaded automatically
+   * caltech: uncompress dataset to CALTECH_PATH
+   * asl: uncompress dataset to ASL_PATH
+   * EuroSAT: dataset will be downloaded automatically
 
 
 
