@@ -23,3 +23,7 @@ python test_uap.py --targeted=True --dataset=caltech --pretrained_dataset=caltec
 #gap resnet50 eurosat
 python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=gap --model_name=resnet50_eurosat.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=3 --ngpu=1 --workers=4
 python test_uap.py --targeted=True --dataset=eurosat --pretrained_dataset=eurosat --uap_name=gap --model_name=resnet50_eurosat_finetuned_repaired.pth --test_arch=resnet50 --pretrained_seed=123 --test_dataset=eurosat --result_subfolder=result --targeted=True --target_class=3 --ngpu=1 --workers=4
+################################################################################################################################################
+#gap wideresnet cifar10
+python test_uap.py --targeted=True --dataset=cifar10 --pretrained_dataset=cifar10 --uap_name=gap --model_name=wideresnet_cifar10.pth --test_arch=wideresnet --pretrained_seed=123 --test_dataset=cifar10 --result_subfolder=result --targeted=True --target_class=0 --ngpu=1 --workers=4
+python test_uap.py --targeted=True --dataset=cifar10 --pretrained_dataset=cifar10 --uap_name=gap --model_name=wideresnet_cifar10_finetuned_repaired.pth --test_arch=wideresnet --pretrained_seed=123 --test_dataset=cifar10 --result_subfolder=result --targeted=True --target_class=0 --ngpu=1 --workers=4
